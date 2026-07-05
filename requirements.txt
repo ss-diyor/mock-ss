@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+asyncpg
+aiofiles
+python-multipart
+httpx
+fpdf2
+bcrypt
+PyJWT
+Pillow
+email-validator
+openpyxl

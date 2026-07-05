@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profil — IELTS Mock Exam</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:       #1a56e8;
+  --blue-hover: #1441c0;
+  --blue-light: #eef3ff;
+  --blue-mid:   #c9d8ff;
+  --text:       #0b1733;
+  --muted:      #4a5978;
+  --border:     #c9d8ff;
+  --bg:         #f5f8ff;
+  --surface:    #ffffff;
+  --surface2:   #eef3ff;
+  --shadow:     rgba(26, 86, 232, 0.08);
+  --red:        #e53e3e;
+  --red-light:  #fff5f5;
+  --green:      #16a34a;
+  --green-light:#f0fdf4;
+  --amber:      #d97706;
+  --amber-light:#fffbeb;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* NAV */
+nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 48px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.nav-logo-icon {
+  width: 46px; height: 46px; border-radius: 10px;
+  background: var(--blue); display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 18px; font-weight: 700; color: #fff;
+}
+.nav-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+.nav-logo-text span:first-child { font-size: 14px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.nav-logo-text span:last-child  { font-size: 12px; font-weight: 500; font-family: var(--mono); color: var(--muted); }
+
+/* VIEWS */
+.view { display: none; }
+.view.active { display: block; }
+
+/* SHARED FORM */
+.auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 24px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--surface2); padding: 4px; border-radius: 9px; }
+.tab-btn {
+  flex: 1; padding: 10px; border: none; background: transparent; border-radius: 6px;
+  font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--muted);
+  cursor: pointer; transition: all 0.15s;
+}
+.tab-btn.active { background: var(--surface); color: var(--blue); box-shadow: 0 1px 3px var(--shadow); }
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.form-card-head { padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+.form-card-head-title { font-size: 13px; font-weight: 700; font-family: var(--mono); }
+.form-card-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+label {
+  display: block; font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px;
+}
+input, textarea {
+  width: 100%; font-family: var(--sans); font-size: 14px; color: var(--text);
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 7px; padding: 10px 12px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,232,0.1); }
+textarea { resize: vertical; min-height: 80px; }
+.input-prefix { display: flex; align-items: center; }
+.input-prefix span { font-family: var(--mono); color: var(--muted); padding: 10px 4px 10px 12px; background: var(--bg); border: 1.5px solid var(--border); border-right: none; border-radius: 7px 0 0 7px; }
+.input-prefix input { border-radius: 0 7px 7px 0; }
+
+.btn-primary {
+  background: var(--blue); color: #fff;
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  padding: 12px 22px; border-radius: 6px; border: none;
+  cursor: pointer; transition: background 0.2s, transform 0.2s;
+  width: 100%; text-align: center;
+}
+.btn-primary:hover { background: var(--blue-hover); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; pointer-events: none; }
+.btn-outline {
+  background: var(--surface); color: var(--text);
+  font-family: var(--mono); font-size: 13px; font-weight: 500;
+  padding: 12px 22px; border-radius: 6px;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
+  width: 100%; text-align: center;
+}
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-outline.danger:hover { border-color: var(--red); color: var(--red); }
+
+.alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; font-family: var(--mono); border: 1px solid; }
+.alert.danger { background: var(--red-light); color: var(--red); border-color: #fecaca; }
+.alert.success { background: var(--green-light); color: var(--green); border-color: #bbf7d0; }
+.alert.info { background: var(--blue-light); color: var(--blue); border-color: var(--blue-mid); }
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* DASHBOARD */
+.dash-wrap { max-width: 760px; margin: 48px auto 80px; padding: 0 24px; }
+.profile-header {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 28px; display: flex; align-items: center; gap: 22px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.avatar-wrap { position: relative; width: 88px; height: 88px; flex-shrink: 0; }
+.avatar-img {
+  width: 88px; height: 88px; border-radius: 50%; object-fit: cover;
+  background: var(--blue-light); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--blue);
+}
+.avatar-edit-btn {
+  position: absolute; bottom: -2px; right: -2px; width: 30px; height: 30px;
+  border-radius: 50%; background: var(--blue); color: #fff; border: 2px solid var(--surface);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px;
+}
+.profile-info { flex: 1; min-width: 180px; }
+.profile-name { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+.profile-username { font-family: var(--mono); font-size: 13px; color: var(--blue); margin-top: 2px; }
+.profile-bio { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.dash-stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
+.dash-stat-num { font-size: 28px; font-weight: 900; font-family: var(--mono); color: var(--blue); }
+.dash-stat-label { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+
+.dash-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+.dash-section-head { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); font-size: 13px; font-weight: 700; font-family: var(--mono); display: flex; justify-content: space-between; align-items: center; }
+.dash-section-body { padding: 20px; }
+
+.history-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.history-row:last-child { border-bottom: none; }
+.history-section { font-weight: 600; }
+.history-date { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.history-band { font-family: var(--mono); font-weight: 700; color: var(--blue); }
+
+.empty-state { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
+
+.badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  padding: 3px 8px; border-radius: 4px;
+  background: var(--blue-light); color: var(--blue);
+  display: inline-block; white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  nav { padding: 14px 16px; }
+  .profile-header { flex-direction: column; text-align: center; }
+}
+
+/* VERIFICATION BANNER */
+.verify-banner {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  background: var(--amber-light); border: 1px solid #fde68a; color: var(--amber);
+  border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; font-size: 13px;
+}
+.verify-banner button {
+  background: var(--amber); color: #fff; border: none; border-radius: 6px;
+  font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 8px 14px; cursor: pointer;
+}
+.verify-banner button:disabled { opacity: 0.6; pointer-events: none; }
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(11,23,51,0.45);
+  z-index: 100; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal-box { width: 100%; max-width: 380px; }
+.link-btn {
+  background: none; border: none; color: var(--blue); font-family: var(--mono);
+  font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0;
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-icon">SD</div>
+    <div class="nav-logo-text">
+      <span>IELTS Mock</span>
+      <span>ielts.sultanov.space</span>
+    </div>
+  </a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════
+     VIEW: AUTH (Sign up / Sign in)
+═══════════════════════════════════════════════ -->
+<div class="view active" id="view-auth">
+  <div class="auth-wrap">
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Kirish</button>
+      <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Ro'yxatdan o'tish</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div class="form-card" id="form-login">
+      <div class="form-card-head"><span class="form-card-head-title">$ user --login</span></div>
+      <div class="form-card-body">
+        <div>
+          <label>Email yoki username</label>
+          <input type="text" id="login-id" placeholder="abdulla@gmail.com yoki @abdulla" autocomplete="username">
+        </div>
+        <div>
+          <label>Parol</label>
+          <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div id="login-error" class="alert danger" style="display:none;"></div>
+        <button class="btn-primary" id="login-btn" onclick="doLogin()">→ Kirish</button>
+        <button class="link-btn" style="text-align:left;" onclick="openForgotModal()">Parolni unutdingizmi?</button>
+      </div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div class="form-card" id="form-register" style="display:none;">
+      <div class="form-card-head"><span class="form-card-head-title">$ user --register</span></div>
+      <div class="form-card-body">
+        <div>
+          <label>To'liq ism</label>
+          <input type="text" id="reg-fullname" placeholder="Abdullayev Abdulla" autocomplete="name">
+        </div>
+        <div>
+          <label>Username</label>
+          <div class="input-prefix">
+            <span>@</span>
+            <input type="text" id="reg-username" placeholder="abdulla_01" autocomplete="off">
+          </div>
+        </div>
+        <div>
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="abdulla@gmail.com" autocomplete="email">
+        </div>
+        <div>
+          <label>Parol</label>
+          <input type="password" id="reg-pass" placeholder="kamida 6 belgi" autocomplete="new-password">
+        </div>
+        <div id="reg-error" class="alert danger" style="display:none;"></div>
+        <button class="btn-primary" id="reg-btn" onclick="doRegister()">→ Ro'yxatdan o'tish</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     VIEW: DASHBOARD
+═══════════════════════════════════════════════ -->
+<div class="view" id="view-dashboard">
+  <div class="dash-wrap">
+
+    <div class="verify-banner" id="verify-banner" style="display:none;">
+      <span>⚠ Email tasdiqlanmagan</span>
+      <button id="resend-verify-btn" onclick="openVerifyModal()">Tasdiqlash</button>
+    </div>
+
+    <div class="profile-header">
+      <div class="avatar-wrap">
+        <div class="avatar-img" id="avatar-img">?</div>
+        <div class="avatar-edit-btn" onclick="document.getElementById('avatar-input').click()">✎</div>
+        <input type="file" id="avatar-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="uploadAvatar(event)">
+      </div>
+      <div class="profile-info">
+        <div class="profile-name" id="profile-fullname">—</div>
+        <div class="profile-username" id="profile-username">@—</div>
+        <div class="profile-bio" id="profile-bio"></div>
+      </div>
+    </div>
+
+    <div class="dash-stats" id="dash-stats"></div>
+
+    <div class="dash-section">
+      <div class="dash-section-head">
+        <span>$ profil --edit</span>
+      </div>
+      <div class="dash-section-body" style="display:flex; flex-direction:column; gap:14px;">
+        <div>
+          <label>To'liq ism</label>
+          <input type="text" id="edit-fullname">
+        </div>
+        <div>
+          <label>Username</label>
+          <div class="input-prefix">
+            <span>@</span>
+            <input type="text" id="edit-username">
+          </div>
+        </div>
+        <div>
+          <label>Bio</label>
+          <textarea id="edit-bio" maxlength="280" placeholder="O'zingiz haqingizda qisqacha..."></textarea>
+        </div>
+        <div>
+          <label>Telegram Chat ID (Bildirishnomalar uchun)</label>
+          <input type="text" id="edit-telegram-id" placeholder="Masalan: 123456789">
+        </div>
+        <div id="edit-error" class="alert danger" style="display:none;"></div>
+        <div id="edit-success" class="alert success" style="display:none;"></div>
+        <button class="btn-primary" id="edit-btn" onclick="saveProfile()" style="width:auto;">💾 Saqlash</button>
+      </div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-section-head"><span>$ referral --invite</span></div>
+      <div class="dash-section-body">
+        <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">Do'stlaringizni taklif qiling. Sizning taklif havolangiz orqali ro'yxatdan o'tganlar hisoblanadi.</p>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="referral-link" readonly style="flex:1;">
+          <button class="btn-outline" onclick="copyReferral()" style="width:auto;">📋 Nusxa olish</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-section-head"><span>$ natijalar --tarix</span></div>
+      <div class="dash-section-body" id="history-body">
+        <div class="empty-state">Yuklanmoqda...</div>
+      </div>
+    </div>
+
+    <button class="btn-outline danger" onclick="logout()">⎋ Chiqish</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: Parolni unutdingizmi
+═══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-forgot">
+  <div class="modal-box form-card">
+    <div class="form-card-head"><span class="form-card-head-title">$ parol --tiklash</span></div>
+    <div class="form-card-body">
+      <div>
+        <label>Email</label>
+        <input type="email" id="forgot-email" placeholder="abdulla@gmail.com">
+      </div>
+      <div id="forgot-error" class="alert danger" style="display:none;"></div>
+      <div id="forgot-success" class="alert success" style="display:none;"></div>
+      <button class="btn-primary" id="forgot-btn" onclick="submitForgotPassword()">→ Havola yuborish</button>
+      <button class="btn-outline" onclick="closeModal('modal-forgot')">Bekor qilish</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: Yangi parol o'rnatish
+═══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-reset">
+  <div class="modal-box form-card">
+    <div class="form-card-head"><span class="form-card-head-title">$ parol --yangi</span></div>
+    <div class="form-card-body">
+      <div>
+        <label>Yangi parol</label>
+        <input type="password" id="reset-password" placeholder="kamida 6 belgi">
+      </div>
+      <div id="reset-error" class="alert danger" style="display:none;"></div>
+      <div id="reset-success" class="alert success" style="display:none;"></div>
+      <button class="btn-primary" id="reset-btn" onclick="submitResetPassword()">→ Parolni yangilash</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: Email tasdiqlash
+═══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-verify">
+  <div class="modal-box form-card">
+    <div class="form-card-head"><span class="form-card-head-title">$ email --tasdiqlash</span></div>
+    <div class="form-card-body">
+      <p style="font-size:13px; color:var(--muted);">Emailingizga yuborilgan 6 xonali kodni kiriting.</p>
+      <div>
+        <label>Tasdiqlash kodi</label>
+        <input type="text" id="verify-code" placeholder="123456" maxlength="6">
+      </div>
+      <div id="verify-error" class="alert danger" style="display:none;"></div>
+      <div id="verify-success" class="alert success" style="display:none;"></div>
+      <button class="btn-primary" id="verify-btn" onclick="submitVerifyCode()">→ Tasdiqlash</button>
+      <button class="link-btn" id="resend-code-btn" onclick="resendVerificationCode()">Kodni qayta yuborish</button>
+      <button class="btn-outline" onclick="closeModal('modal-verify')">Yopish</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api/auth';
+let token = localStorage.getItem('ielts_token');
+let currentUser = null;
+const redirectTarget = new URLSearchParams(window.location.search).get('redirect');
+
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('ref')) {
+  localStorage.setItem('referral_code', urlParams.get('ref'));
+}
+
+function handlePostAuthRedirect() {
+  if (redirectTarget !== 'exam' || !currentUser) return;
+  if (currentUser.email_verified) {
+    window.location.href = '/?startExam=1';
+  } else {
+    openVerifyModal();
+  }
+}
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function switchTab(which) {
+  document.getElementById('tab-login').classList.toggle('active', which === 'login');
+  document.getElementById('tab-register').classList.toggle('active', which === 'register');
+  document.getElementById('form-login').style.display = which === 'login' ? 'block' : 'none';
+  document.getElementById('form-register').style.display = which === 'register' ? 'block' : 'none';
+}
+
+async function apiCall(path, options = {}) {
+  const headers = options.headers || {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(API + path, { ...options, headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
+  return data;
+}
+
+// ─── LOGIN ────────────────────────────────────────────────
+async function doLogin() {
+  const id = document.getElementById('login-id').value.trim().replace(/^@/, '');
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  if (!id || !pass) { errEl.textContent = '→ Barcha maydonlarni to\'ldiring'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Kirilmoqda...';
+
+  try {
+    const data = await apiCall('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: id, password: pass })
+    });
+    token = data.token;
+    localStorage.setItem('ielts_token', token);
+    currentUser = data.user;
+    renderDashboard();
+    loadDashboardStats();
+    handlePostAuthRedirect();
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.style.display = 'block';
+    const match = e.message.match(/Try again in (\d+) seconds/);
+    if (match) {
+      let seconds = parseInt(match[1], 10);
+      const countdown = () => {
+        if (seconds <= 0) {
+          errEl.style.display = 'none';
+          btn.disabled = false;
+          btn.textContent = '→ Kirish';
+        } else {
+          errEl.textContent = `→ Juda ko'p urinish. Iltimos ${seconds} soniya kuting.`;
+          seconds--;
+          setTimeout(countdown, 1000);
+        }
+      };
+      btn.disabled = true;
+      countdown();
+      return;
+    }
+  } finally {
+    if (!btn.disabled || errEl.textContent.includes('soniya kuting')) {
+      // Don't re-enable if countdown is running
+      if (!btn.disabled) {
+        btn.disabled = false;
+        btn.textContent = '→ Kirish';
+      }
+    }
+  }
+}
+
+// ─── REGISTER ─────────────────────────────────────────────
+async function doRegister() {
+  const fullname = document.getElementById('reg-fullname').value.trim();
+  const username = document.getElementById('reg-username').value.trim().toLowerCase().replace(/^@/, '');
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const errEl = document.getElementById('reg-error');
+  errEl.style.display = 'none';
+
+  if (!fullname || fullname.length < 3) { errEl.textContent = "→ To'liq ismingizni kiriting"; errEl.style.display = 'block'; return; }
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) { errEl.textContent = '→ Username 3-20 belgi, faqat kichik harf/raqam/_ '; errEl.style.display = 'block'; return; }
+  if (!email.includes('@')) { errEl.textContent = "→ To'g'ri email kiriting"; errEl.style.display = 'block'; return; }
+  if (pass.length < 6) { errEl.textContent = '→ Parol kamida 6 belgidan iborat bo\'lsin'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('reg-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Yuklanmoqda...';
+
+  try {
+    const payload = { full_name: fullname, username, email, password: pass };
+    const refCode = localStorage.getItem('referral_code');
+    if (refCode) payload.referral_code = refCode;
+    
+    const data = await apiCall('/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    token = data.token;
+    localStorage.setItem('ielts_token', token);
+    currentUser = data.user;
+    renderDashboard();
+    loadDashboardStats();
+    handlePostAuthRedirect();
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "→ Ro'yxatdan o'tish";
+  }
+}
+
+// ─── DASHBOARD RENDER ─────────────────────────────────────
+function renderDashboard() {
+  showView('view-dashboard');
+  document.getElementById('profile-fullname').textContent = currentUser.full_name;
+  document.getElementById('profile-username').textContent = '@' + currentUser.username;
+  document.getElementById('profile-bio').textContent = currentUser.bio || '';
+
+  const avatarEl = document.getElementById('avatar-img');
+  if (currentUser.avatar_url) {
+    avatarEl.innerHTML = `<img src="${currentUser.avatar_url}?t=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+  } else {
+    avatarEl.textContent = (currentUser.full_name || '?').trim().charAt(0).toUpperCase();
+  }
+
+  document.getElementById('edit-fullname').value = currentUser.full_name || '';
+  document.getElementById('edit-username').value = currentUser.username || '';
+  document.getElementById('edit-bio').value = currentUser.bio || '';
+  document.getElementById('edit-telegram-id').value = currentUser.telegram_chat_id || '';
+  document.getElementById('referral-link').value = window.location.origin + '/?ref=' + (currentUser.referral_code || '');
+
+  document.getElementById('verify-banner').style.display = currentUser.email_verified ? 'none' : 'flex';
+}
+
+function copyReferral() {
+  const input = document.getElementById('referral-link');
+  input.select();
+  document.execCommand('copy');
+  alert("Havola nusxalandi!");
+}
+
+async function loadDashboardStats() {
+  try {
+    const data = await apiCall('/dashboard');
+    const statsEl = document.getElementById('dash-stats');
+    const bandDisplay = data.overall_band !== null ? data.overall_band : '—';
+    statsEl.innerHTML = `
+      <div class="dash-stat-card"><div class="dash-stat-num">${bandDisplay}</div><div class="dash-stat-label">Umumiy band</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-num">${data.total_attempts}</div><div class="dash-stat-label">Urinishlar</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-num">${data.latest_sections.length}</div><div class="dash-stat-label">Topshirilgan bo'lim</div></div>
+    `;
+
+    const histEl = document.getElementById('history-body');
+    if (data.history.length === 0) {
+      histEl.innerHTML = '<div class="empty-state">Hali hech qanday imtihon topshirmagansiz. <a href="/" style="color:var(--blue);">Boshlash →</a></div>';
+      return;
+    }
+    const sectionNames = { listening: '🎧 Listening', reading: '📖 Reading', writing: '✍️ Writing' };
+    histEl.innerHTML = data.history.map(h => `
+      <div class="history-row">
+        <div>
+          <div class="history-section">${sectionNames[h.section] || h.section}</div>
+          <div class="history-date">${new Date(h.submitted_at).toLocaleDateString('uz-UZ')}</div>
+        </div>
+        <div class="history-band">${h.band !== null ? 'Band ' + h.band : (h.section === 'writing' ? 'Tekshirilmoqda' : '—')}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    if (e.message.includes('Sessiya') || e.message.includes('token') || e.message.includes('Kirish')) {
+      logout();
+    }
+  }
+}
+
+// ─── PROFILE EDIT ─────────────────────────────────────────
+async function saveProfile() {
+  const fullname = document.getElementById('edit-fullname').value.trim();
+  const username = document.getElementById('edit-username').value.trim().toLowerCase().replace(/^@/, '');
+  const bio = document.getElementById('edit-bio').value.trim();
+  const telegramId = document.getElementById('edit-telegram-id').value.trim();
+  const errEl = document.getElementById('edit-error');
+  const okEl = document.getElementById('edit-success');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  const btn = document.getElementById('edit-btn');
+  btn.disabled = true;
+
+  try {
+    const data = await apiCall('/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: fullname, username, bio, telegram_chat_id: telegramId })
+    });
+    currentUser = data.user;
+    renderDashboard();
+    okEl.textContent = '✓ Profil yangilandi';
+    okEl.style.display = 'block';
+    setTimeout(() => okEl.style.display = 'none', 3000);
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─── AVATAR UPLOAD ────────────────────────────────────────
+async function uploadAvatar(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) { alert("Rasm hajmi 5MB dan oshmasin"); return; }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch(API + '/avatar', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Yuklashda xatolik');
+    currentUser.avatar_url = data.avatar_url;
+    renderDashboard();
+  } catch (e) {
+    alert('Xatolik: ' + e.message);
+  }
+}
+
+// ─── MODAL HELPERS ──────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function openForgotModal() {
+  document.getElementById('forgot-error').style.display = 'none';
+  document.getElementById('forgot-success').style.display = 'none';
+  document.getElementById('forgot-email').value = '';
+  openModal('modal-forgot');
+}
+
+async function submitForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const errEl = document.getElementById('forgot-error');
+  const okEl = document.getElementById('forgot-success');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  if (!email.includes('@')) { errEl.textContent = "→ To'g'ri email kiriting"; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('forgot-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(API + '/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
+    okEl.textContent = '✓ ' + data.message;
+    okEl.style.display = 'block';
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+let resetToken = null;
+
+async function submitResetPassword() {
+  const newPassword = document.getElementById('reset-password').value;
+  const errEl = document.getElementById('reset-error');
+  const okEl = document.getElementById('reset-success');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  if (newPassword.length < 6) { errEl.textContent = "→ Parol kamida 6 belgidan iborat bo'lsin"; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('reset-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(API + '/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: resetToken, new_password: newPassword })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
+    okEl.textContent = '✓ Parol yangilandi. Endi tizimga kirishingiz mumkin.';
+    okEl.style.display = 'block';
+    setTimeout(() => {
+      closeModal('modal-reset');
+      window.history.replaceState({}, '', '/profile');
+    }, 1800);
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function openVerifyModal() {
+  document.getElementById('verify-error').style.display = 'none';
+  document.getElementById('verify-success').style.display = 'none';
+  document.getElementById('verify-code').value = '';
+  openModal('modal-verify');
+}
+
+async function submitVerifyCode() {
+  const code = document.getElementById('verify-code').value.trim();
+  const errEl = document.getElementById('verify-error');
+  const okEl = document.getElementById('verify-success');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  if (!code) { errEl.textContent = '→ Kodni kiriting'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('verify-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(API + '/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: currentUser.email, code })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
+    currentUser.email_verified = true;
+    document.getElementById('verify-banner').style.display = 'none';
+    if (redirectTarget === 'exam') {
+      okEl.textContent = "✓ Email tasdiqlandi! Imtihon sahifasiga yo'naltirilmoqda...";
+      okEl.style.display = 'block';
+      setTimeout(() => { window.location.href = '/?startExam=1'; }, 1200);
+    } else {
+      okEl.textContent = '✓ ' + data.message;
+      okEl.style.display = 'block';
+      setTimeout(() => closeModal('modal-verify'), 1200);
+    }
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function resendVerificationCode() {
+  const errEl = document.getElementById('verify-error');
+  const okEl = document.getElementById('verify-success');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+  const btn = document.getElementById('resend-code-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(API + '/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: currentUser.email })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
+    okEl.textContent = '✓ ' + data.message;
+    okEl.style.display = 'block';
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    setTimeout(() => { btn.disabled = false; }, 3000);
+  }
+}
+
+// ─── LOGOUT ───────────────────────────────────────────────
+function logout() {
+  localStorage.removeItem('ielts_token');
+  token = null;
+  currentUser = null;
+  showView('view-auth');
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+(async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const tokenFromUrl = params.get('reset_token');
+  if (tokenFromUrl) {
+    resetToken = tokenFromUrl;
+    document.getElementById('reset-error').style.display = 'none';
+    document.getElementById('reset-success').style.display = 'none';
+    document.getElementById('reset-password').value = '';
+    openModal('modal-reset');
+  }
+
+  if (!token) {
+    showView('view-auth');
+    if (redirectTarget === 'exam') {
+      const hint = document.createElement('div');
+      hint.className = 'alert info';
+      hint.style.marginBottom = '16px';
+      hint.textContent = "→ Imtihonni boshlash uchun avval ro'yxatdan o'ting yoki hisobingizga kiring";
+      document.querySelector('.auth-wrap').prepend(hint);
+    }
+    return;
+  }
+  try {
+    const data = await apiCall('/me');
+    currentUser = data.user;
+    renderDashboard();
+    loadDashboardStats();
+    handlePostAuthRedirect();
+  } catch (e) {
+    logout();
+  }
+})();
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('view-auth').classList.contains('active')) {
+    if (document.getElementById('form-login').style.display !== 'none') doLogin();
+    else doRegister();
+  }
+});
+</script>
+
+</body>
+</html>

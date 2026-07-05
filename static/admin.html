@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — IELTS Mock</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#1a56e8; --blue-hover:#1441c0; --blue-light:#eef3ff; --blue-mid:#c9d8ff;
+  --text:#0b1733; --muted:#4a5978; --border:#c9d8ff; --bg:#f5f8ff;
+  --surface:#ffffff; --surface2:#eef3ff; --shadow:rgba(26,86,232,0.08);
+  --red:#e53e3e; --red-light:#fff5f5; --green:#16a34a; --green-light:#f0fdf4;
+  --amber:#d97706; --amber-light:#fffbeb;
+  --mono:'JetBrains Mono', monospace; --sans:'Inter', system-ui, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(26,86,232,0.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(26,86,232,0.05) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;}
+
+nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+  padding:16px 48px;border-bottom:1px solid var(--border);
+  background:color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.nav-logo{display:flex;align-items:center;gap:12px;}
+.nav-logo-icon{width:46px;height:46px;border-radius:10px;background:var(--blue);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+  font-size:18px;font-weight:700;color:#fff;}
+.nav-logo-text{display:flex;flex-direction:column;line-height:1.2;}
+.nav-logo-text span:first-child{font-size:14px;font-weight:700;font-family:var(--mono);color:var(--text);}
+.nav-logo-text span:last-child{font-size:12px;font-weight:500;font-family:var(--mono);color:var(--muted);}
+
+.wrap{max-width:1100px;margin:0 auto;padding:32px 24px 80px;position:relative;z-index:1;}
+
+/* LOGIN */
+.login-wrap{max-width:420px;margin:100px auto;padding:0 24px;position:relative;z-index:1;}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.form-card-head{padding:16px 24px;border-bottom:1px solid var(--border);background:var(--surface2);
+  font-size:13px;font-weight:700;font-family:var(--mono);}
+.form-card-body{padding:24px;display:flex;flex-direction:column;gap:16px;}
+label{display:block;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+input,textarea{width:100%;font-family:var(--sans);font-size:14px;color:var(--text);
+  background:var(--bg);border:1.5px solid var(--border);border-radius:7px;padding:10px 12px;outline:none;
+  transition:border-color .2s,box-shadow .2s;}
+input:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,86,232,.1);}
+
+.btn-primary{background:var(--blue);color:#fff;font-family:var(--mono);font-size:13px;font-weight:600;
+  padding:11px 20px;border-radius:6px;border:none;cursor:pointer;transition:background .2s,transform .2s;}
+.btn-primary:hover{background:var(--blue-hover);transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.5;pointer-events:none;}
+.btn-outline{background:var(--surface);color:var(--text);font-family:var(--mono);font-size:12px;
+  font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid var(--border);cursor:pointer;
+  transition:border-color .2s,color .2s;}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue);}
+.btn-sm{padding:6px 12px;font-size:11px;}
+
+.badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;
+  background:var(--blue-light);color:var(--blue);display:inline-block;white-space:nowrap;}
+.badge.green{background:var(--green-light);color:var(--green);}
+.badge.amber{background:var(--amber-light);color:var(--amber);}
+.badge.muted{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;font-family:var(--mono);border:1px solid;margin-bottom:16px;}
+.alert.danger{background:var(--red-light);color:var(--red);border-color:#fecaca;}
+.alert.success{background:var(--green-light);color:var(--green);border-color:#bbf7d0;}
+.alert.info{background:var(--blue-light);color:var(--blue);border-color:var(--blue-mid);}
+
+/* DASHBOARD */
+.stats-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:16px 20px;flex:1;min-width:140px;}
+.stat-num{font-size:24px;font-weight:900;color:var(--blue);font-family:var(--mono);}
+.stat-label{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+
+.filters{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
+.filter-btn{font-family:var(--mono);font-size:12px;padding:7px 14px;border-radius:6px;
+  border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--muted);}
+.filter-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;margin-bottom:14px;}
+.result-head{padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface2);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.result-name{font-size:14px;font-weight:700;}
+.result-email{font-size:12px;color:var(--muted);font-family:var(--mono);}
+.result-body{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+.result-info{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.result-score{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--blue);}
+.result-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+.grade-form{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:16px 20px;
+  border-top:1px solid var(--border);background:var(--bg);}
+.grade-form > div{flex:1;min-width:120px;}
+.grade-form textarea{min-height:60px;resize:vertical;}
+
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--blue);
+  border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);font-family:var(--mono);font-size:13px;}
+
+/* SECTION TABS */
+.section-tabs{display:flex;gap:4px;margin-bottom:24px;background:var(--surface2);padding:4px;
+  border-radius:9px;max-width:420px;}
+.section-tab{flex:1;padding:10px;border:none;background:transparent;border-radius:6px;
+  font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;}
+.section-tab.active{background:var(--surface);color:var(--blue);box-shadow:0 1px 3px var(--shadow);}
+.section-view{display:none;}
+.section-view.active{display:block;}
+
+/* USERS TABLE */
+.search-row{display:flex;gap:10px;margin-bottom:20px;}
+.search-row input{max-width:320px;}
+.users-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+table.users-table{width:100%;border-collapse:collapse;font-size:13px;}
+table.users-table th{text-align:left;padding:12px 16px;background:var(--surface2);
+  font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+  border-bottom:1px solid var(--border);}
+table.users-table td{padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle;}
+table.users-table tr:last-child td{border-bottom:none;}
+table.users-table .u-name{font-weight:700;}
+table.users-table .u-username{font-family:var(--mono);color:var(--blue);font-size:12px;}
+table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--muted);}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.btn-outline.danger{color:var(--red);border-color:#fecaca;}
+.btn-outline.danger:hover{background:var(--red-light);}
+
+@media (max-width:768px){
+  nav{padding:14px 16px;}
+  .wrap{padding:20px 16px 60px;}
+  .result-body{flex-direction:column;align-items:flex-start;}
+  .users-table-wrap{overflow-x:auto;}
+  table.users-table{min-width:640px;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">A</div>
+    <div class="nav-logo-text">
+      <span>Admin Panel</span>
+      <span>IELTS Mock — ielts.sultanov.space</span>
+    </div>
+  </div>
+  <div id="nav-status"></div>
+</nav>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="view-login">
+  <p style="font-family:var(--mono);font-size:11px;color:var(--blue);margin-bottom:8px;">$ admin --login</p>
+  <h2 style="font-size:24px;font-weight:800;margin-bottom:24px;">Admin panelga kirish</h2>
+  <div class="form-card">
+    <div class="form-card-head">$ auth --secret</div>
+    <div class="form-card-body">
+      <div>
+        <label>Maxfiy parol (ADMIN_SECRET)</label>
+        <input type="password" id="secret-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()">
+      </div>
+      <div id="login-error" class="alert danger" style="display:none;"></div>
+      <button class="btn-primary" onclick="login()" id="login-btn" style="text-align:center;">→ Kirish</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="wrap" id="view-dashboard" style="display:none;">
+  <p style="font-family:var(--mono);font-size:11px;color:var(--blue);margin-bottom:8px;">$ admin --dashboard</p>
+
+  <div class="section-tabs">
+    <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
+    <button class="section-tab active" id="tab-results" onclick="switchSection('results')">Natijalar</button>
+    <button class="section-tab" id="tab-users" onclick="switchSection('users')">Foydalanuvchilar</button>
+  </div>
+
+  <!-- STATS SECTION -->
+  <div class="section-view" id="section-stats">
+    <div class="stats-row" id="dashboard-stats-row"></div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;">
+      <div style="flex:1;min-width:300px;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border);">
+        <h3 style="font-size:14px;margin-bottom:12px;font-family:var(--mono);">Kunlik ro'yxatdan o'tishlar</h3>
+        <div style="height:250px;"><canvas id="regChart"></canvas></div>
+      </div>
+      <div style="flex:1;min-width:300px;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border);">
+        <h3 style="font-size:14px;margin-bottom:12px;font-family:var(--mono);">Kunlik faol foydalanuvchilar</h3>
+        <div style="height:250px;"><canvas id="activeChart"></canvas></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:300px;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border);">
+        <h3 style="font-size:14px;margin-bottom:12px;font-family:var(--mono);">Band taqsimoti</h3>
+        <div style="height:300px;"><canvas id="bandChart"></canvas></div>
+      </div>
+      <div style="flex:1;min-width:300px;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border);">
+        <h3 style="font-size:14px;margin-bottom:12px;font-family:var(--mono);">Bo'limlar bo'yicha urinishlar</h3>
+        <div style="height:300px;"><canvas id="sectionChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS SECTION -->
+  <div class="section-view active" id="section-results">
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Hammasi</button>
+      <button class="filter-btn" data-filter="listening" onclick="setFilter('listening')">🎧 Listening</button>
+      <button class="filter-btn" data-filter="reading" onclick="setFilter('reading')">📖 Reading</button>
+      <button class="filter-btn" data-filter="writing" onclick="setFilter('writing')">✍️ Writing</button>
+      <button class="filter-btn" data-filter="pending" onclick="setFilter('pending')">⏳ Baholanmagan</button>
+      <button class="btn-outline btn-sm" onclick="exportData('results', 'csv')" style="margin-left:auto;">📥 CSV</button>
+      <button class="btn-outline btn-sm" onclick="exportData('results', 'excel')">📥 Excel</button>
+      <button class="btn-outline btn-sm" onclick="loadResults()">↻ Yangilash</button>
+    </div>
+
+    <div id="results-list"></div>
+  </div>
+
+  <!-- USERS SECTION -->
+  <div class="section-view" id="section-users">
+    <div class="search-row">
+      <input type="text" id="user-search" placeholder="Username, email yoki ism bo'yicha qidirish..." onkeydown="if(event.key==='Enter')loadUsers()">
+      <button class="btn-outline btn-sm" onclick="loadUsers()">🔍 Qidirish</button>
+      <button class="btn-outline btn-sm" onclick="exportData('users', 'csv')" style="margin-left:auto;">📥 CSV</button>
+      <button class="btn-outline btn-sm" onclick="exportData('users', 'excel')">📥 Excel</button>
+      <button class="btn-outline btn-sm" onclick="document.getElementById('user-search').value='';loadUsers();">↻ Yangilash</button>
+    </div>
+    <div class="users-table-wrap">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Foydalanuvchi</th>
+            <th>Email</th>
+            <th>Ro'yxatdan o'tgan</th>
+            <th>Holat</th>
+            <th>Urinishlar</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+    <div id="users-empty" class="empty-state" style="display:none;">Foydalanuvchilar topilmadi</div>
+  </div>
+</div>
+
+<script>
+let currentSecret = '';
+let allResults = [];
+let currentFilter = 'all';
+
+function login() {
+  const secret = document.getElementById('secret-input').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if (!secret) { errEl.textContent = '→ Parolni kiriting'; errEl.style.display='block'; return; }
+
+  currentSecret = secret;
+  loadResults(true);
+}
+
+function exportData(type, format) {
+  window.location.href = `/api/admin/export/${type}?secret=${encodeURIComponent(currentSecret)}&format=${format}`;
+}
+
+async function loadResults(isLogin=false) {
+  const btn = document.getElementById('login-btn');
+  if (isLogin) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Tekshirilmoqda...'; }
+
+  try {
+    const res = await fetch(`/api/admin/results?secret=${encodeURIComponent(currentSecret)}`);
+    if (res.status === 403) throw new Error('Noto\'g\'ri parol');
+    const data = await res.json();
+    allResults = data.results;
+
+    document.getElementById('view-login').style.display = 'none';
+    document.getElementById('view-dashboard').style.display = 'block';
+    document.getElementById('nav-status').innerHTML = `<span class="badge green">● Ulangan</span>`;
+
+    renderStats();
+    renderResults();
+    if (isLogin) loadUsers();
+  } catch(e) {
+    if (isLogin) {
+      const errEl = document.getElementById('login-error');
+      errEl.textContent = '→ ' + e.message;
+      errEl.style.display = 'block';
+    }
+  } finally {
+    if (isLogin) { btn.disabled = false; btn.innerHTML = '→ Kirish'; }
+  }
+}
+
+function switchSection(which) {
+  if (document.getElementById('tab-stats')) document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
+  if (document.getElementById('tab-results')) document.getElementById('tab-results').classList.toggle('active', which === 'results');
+  if (document.getElementById('tab-users')) document.getElementById('tab-users').classList.toggle('active', which === 'users');
+  
+  if (document.getElementById('section-stats')) document.getElementById('section-stats').classList.toggle('active', which === 'stats');
+  if (document.getElementById('section-results')) document.getElementById('section-results').classList.toggle('active', which === 'results');
+  if (document.getElementById('section-users')) document.getElementById('section-users').classList.toggle('active', which === 'users');
+  
+  if (which === 'users') loadUsers();
+  if (which === 'stats') loadStats();
+}
+
+let charts = {};
+async function loadStats() {
+  try {
+    const res = await fetch(`/api/admin/stats?secret=${encodeURIComponent(currentSecret)}`);
+    if (res.status === 403) throw new Error('Noto\'g\'ri parol');
+    const data = await res.json();
+    
+    document.getElementById('dashboard-stats-row').innerHTML = `
+      <div class="stat-card"><div class="stat-num">${data.overview.total_users}</div><div class="stat-label">$ jami foydalanuvchilar</div></div>
+      <div class="stat-card"><div class="stat-num">${data.overview.verified_users}</div><div class="stat-label">$ tasdiqlangan email</div></div>
+      <div class="stat-card"><div class="stat-num">${data.overview.total_results}</div><div class="stat-label">$ jami testlar</div></div>
+      <div class="stat-card"><div class="stat-num">${data.overview.active_today}</div><div class="stat-label">$ bugungi faollar</div></div>
+    `;
+
+    renderChart('regChart', 'line', data.daily_registrations.map(d=>d.date), [{label: "Ro'yxatdan o'tishlar", data: data.daily_registrations.map(d=>d.count), borderColor: '#1a56e8', backgroundColor: 'rgba(26,86,232,0.1)', fill: true, tension: 0.1}]);
+    renderChart('activeChart', 'line', data.daily_active_users.map(d=>d.date), [{label: "Faol foydalanuvchilar", data: data.daily_active_users.map(d=>d.count), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.1)', fill: true, tension: 0.1}]);
+    
+    const bandLabels = Array.from(new Set([
+      ...Object.keys(data.band_distribution.listening || {}),
+      ...Object.keys(data.band_distribution.reading || {}),
+      ...Object.keys(data.band_distribution.writing || {})
+    ])).sort();
+    
+    renderChart('bandChart', 'bar', bandLabels, [
+      {label: 'Listening', data: bandLabels.map(l => (data.band_distribution.listening||{})[l]||0), backgroundColor: '#1a56e8'},
+      {label: 'Reading', data: bandLabels.map(l => (data.band_distribution.reading||{})[l]||0), backgroundColor: '#16a34a'},
+      {label: 'Writing', data: bandLabels.map(l => (data.band_distribution.writing||{})[l]||0), backgroundColor: '#d97706'}
+    ]);
+    
+    renderChart('sectionChart', 'doughnut', Object.keys(data.section_attempts), [{
+      data: Object.values(data.section_attempts),
+      backgroundColor: ['#1a56e8', '#16a34a', '#d97706']
+    }]);
+
+  } catch(e) {
+    console.error("Stats error", e);
+  }
+}
+
+function renderChart(id, type, labels, datasets) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  charts[id] = new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+}
+
+// ─── USERS ────────────────────────────────────────────────
+async function loadUsers() {
+  const search = document.getElementById('user-search').value.trim();
+  const tbody = document.getElementById('users-tbody');
+  const emptyEl = document.getElementById('users-empty');
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);"><span class="spinner"></span> Yuklanmoqda...</td></tr>`;
+  emptyEl.style.display = 'none';
+
+  try {
+    const url = `/api/admin/users?secret=${encodeURIComponent(currentSecret)}` + (search ? `&search=${encodeURIComponent(search)}` : '');
+    const res = await fetch(url);
+    if (res.status === 403) throw new Error('Noto\'g\'ri parol');
+    const data = await res.json();
+    renderUsers(data.users);
+  } catch(e) {
+    tbody.innerHTML = '';
+    emptyEl.textContent = '→ ' + e.message;
+    emptyEl.style.display = 'block';
+  }
+}
+
+function renderUsers(users) {
+  const tbody = document.getElementById('users-tbody');
+  const emptyEl = document.getElementById('users-empty');
+
+  if (!users.length) {
+    tbody.innerHTML = '';
+    emptyEl.textContent = 'Foydalanuvchilar topilmadi';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  tbody.innerHTML = users.map(u => {
+    const date = new Date(u.created_at).toLocaleDateString('uz-UZ', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const verifiedBadge = u.email_verified
+      ? `<span class="badge green">✓ Tasdiqlangan</span>`
+      : `<span class="badge amber">Tasdiqlanmagan</span>`;
+    const suspendedBadge = u.is_suspended ? `<span class="badge" style="background:var(--red-light);color:var(--red);">⛔ Bloklangan</span>` : '';
+    const suspendLabel = u.is_suspended ? '✓ Blokdan chiqarish' : '⛔ Bloklash';
+
+    return `
+    <tr id="user-row-${u.id}">
+      <td>
+        <div class="u-name">${u.full_name}</div>
+        <div class="u-username">@${u.username}</div>
+      </td>
+      <td class="u-email">${u.email}</td>
+      <td class="u-email">${date}</td>
+      <td>${verifiedBadge} ${suspendedBadge}</td>
+      <td>${u.attempts}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-outline btn-sm" onclick="toggleSuspend(${u.id}, this)">${suspendLabel}</button>
+          <button class="btn-outline btn-sm danger" onclick="deleteUser(${u.id}, '${u.username.replace(/'/g, "\\'")}')">🗑 O'chirish</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleSuspend(id, btnEl) {
+  btnEl.disabled = true;
+  try {
+    const res = await fetch(`/api/admin/users/${id}/suspend?secret=${encodeURIComponent(currentSecret)}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik');
+    await loadUsers();
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+    btnEl.disabled = false;
+  }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm(`@${username} foydalanuvchisini butunlay o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi.`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/users/${id}?secret=${encodeURIComponent(currentSecret)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik');
+    await loadUsers();
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+  }
+}
+
+function renderStats() {
+  const total = allResults.length;
+  const pending = allResults.filter(r => r.section === 'writing' && r.band === null).length;
+  const sent = allResults.filter(r => r.notified).length;
+  const students = new Set(allResults.map(r => r.email)).size;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">$ jami natija</div></div>
+    <div class="stat-card"><div class="stat-num">${students}</div><div class="stat-label">$ o'quvchi</div></div>
+    <div class="stat-card"><div class="stat-num">${pending}</div><div class="stat-label">$ baholash kerak</div></div>
+    <div class="stat-card"><div class="stat-num">${sent}</div><div class="stat-label">$ email yuborilgan</div></div>
+  `;
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderResults();
+}
+
+function renderResults() {
+  let filtered = allResults;
+  if (currentFilter === 'pending') {
+    filtered = allResults.filter(r => r.section === 'writing' && r.band === null);
+  } else if (currentFilter !== 'all') {
+    filtered = allResults.filter(r => r.section === currentFilter);
+  }
+
+  const container = document.getElementById('results-list');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state">Natijalar topilmadi</div>`;
+    return;
+  }
+
+  const sectionIcons = {listening:'🎧', reading:'📖', writing:'✍️'};
+  const sectionNames = {listening:'Listening', reading:'Reading', writing:'Writing'};
+
+  container.innerHTML = filtered.map(r => {
+    const date = new Date(r.submitted_at).toLocaleString('uz-UZ', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+    let scoreHtml = '';
+    let gradeForm = '';
+    let notifyBtn = '';
+
+    if (r.section === 'writing') {
+      if (r.band !== null) {
+        scoreHtml = `<span class="result-score">${r.band}</span><span class="badge muted">Band</span>`;
+      } else {
+        scoreHtml = `<span class="badge amber">Baholanmagan</span>`;
+        gradeForm = `
+        <div class="grade-form">
+          <div>
+            <label>Band (0-9)</label>
+            <input type="number" step="0.5" min="0" max="9" id="band-${r.id}" placeholder="6.5">
+          </div>
+          <div style="flex:2;">
+            <label>Izoh (ixtiyoriy)</label>
+            <textarea id="feedback-${r.id}" placeholder="Grammatika yaxshi, lekin so'z boyligini oshirish kerak..."></textarea>
+          </div>
+          <button class="btn-primary btn-sm" onclick="gradeWriting(${r.id})" id="grade-btn-${r.id}">✓ Saqlash va yuborish</button>
+        </div>`;
+      }
+    } else {
+      scoreHtml = `<span class="result-score">${r.score}/${r.total}</span><span class="badge">Band ${r.band}</span>`;
+    }
+
+    if (r.section !== 'writing' || r.band !== null) {
+      notifyBtn = r.notified
+        ? `<span class="badge green">✓ Yuborilgan</span>`
+        : `<button class="btn-outline btn-sm" onclick="notify(${r.id}, this)">✉ Email yuborish</button>`;
+    }
+
+    return `
+    <div class="result-card">
+      <div class="result-head">
+        <div>
+          <div class="result-name">${r.full_name}</div>
+          <div class="result-email">${r.email}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge muted">${sectionIcons[r.section]} ${sectionNames[r.section]}</span>
+          <span class="badge muted">${date}</span>
+        </div>
+      </div>
+      <div class="result-body">
+        <div class="result-info">${scoreHtml}</div>
+        <div class="result-actions">${notifyBtn}</div>
+      </div>
+      ${gradeForm}
+    </div>`;
+  }).join('');
+}
+
+async function gradeWriting(id) {
+  const band = document.getElementById(`band-${id}`).value;
+  const feedback = document.getElementById(`feedback-${id}`).value.trim();
+  if (!band) { alert('Band score kiriting'); return; }
+
+  const btn = document.getElementById(`grade-btn-${id}`);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Yuborilmoqda...';
+
+  try {
+    const res = await fetch(`/api/admin/grade-writing?secret=${encodeURIComponent(currentSecret)}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ result_id: id, band: parseFloat(band), feedback, send_email: true })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik');
+    await loadResults();
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '✓ Saqlash va yuborish';
+  }
+}
+
+async function notify(id, btnEl) {
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<span class="spinner"></span>';
+  try {
+    const res = await fetch(`/api/admin/notify/${id}?secret=${encodeURIComponent(currentSecret)}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik');
+    await loadResults();
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+    btnEl.disabled = false;
+    btnEl.innerHTML = '✉ Email yuborish';
+  }
+}
+</script>
+</body>
+</html>g

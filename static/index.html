@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IELTS Mock Exam — ielts.sultanov.space</title>
+<meta name="description" content="IELTS Listening, Reading va Writing bo'limlari bo'yicha bepul online mock imtihon">
+<meta name="robots" content="index, follow">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:       #1a56e8;
+  --blue-hover: #1441c0;
+  --blue-light: #eef3ff;
+  --blue-mid:   #c9d8ff;
+  --text:       #0b1733;
+  --muted:      #4a5978;
+  --border:     #c9d8ff;
+  --bg:         #f5f8ff;
+  --surface:    #ffffff;
+  --surface2:   #eef3ff;
+  --shadow:     rgba(26, 86, 232, 0.08);
+  --red:        #e53e3e;
+  --red-light:  #fff5f5;
+  --green:      #16a34a;
+  --green-light:#f0fdf4;
+  --amber:      #d97706;
+  --amber-light:#fffbeb;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(26,86,232,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,86,232,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* DEMO MARQUEE BANNER */
+.demo-marquee {
+  position: relative; z-index: 60;
+  overflow: hidden;
+  background: var(--amber-light);
+  border-bottom: 2px solid var(--amber);
+  padding: 10px 0;
+}
+.demo-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: demo-marquee-scroll 22s linear infinite;
+}
+.demo-marquee-item {
+  display: flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+  white-space: nowrap;
+  padding: 0 40px;
+}
+.demo-marquee-item::before {
+  content: '⚠';
+  margin-right: 10px;
+}
+@keyframes demo-marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-marquee-track { animation: none; }
+}
+
+/* NAV */
+nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 48px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.nav-logo { display: flex; align-items: center; gap: 12px; }
+.nav-logo-icon {
+  width: 46px; height: 46px; border-radius: 10px;
+  background: var(--blue); display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 18px; font-weight: 700; color: #fff;
+}
+.nav-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+.nav-logo-text span:first-child { font-size: 14px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.nav-logo-text span:last-child  { font-size: 12px; font-weight: 500; font-family: var(--mono); color: var(--muted); }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+
+/* VIEWS */
+.view { display: none; position: relative; z-index: 1; }
+.view.active { display: block; }
+
+/* LANDING */
+.hero {
+  max-width: 860px; margin: 0 auto;
+  padding: 80px 24px 60px;
+  text-align: center;
+}
+.hero-kicker {
+  font-family: var(--mono); font-size: 12px; color: var(--blue);
+  margin-bottom: 16px; display: inline-flex; align-items: center; gap: 6px;
+}
+.hero h1 {
+  font-size: clamp(36px, 6vw, 60px);
+  font-weight: 900; letter-spacing: -1.5px;
+  line-height: 1.1; margin-bottom: 20px;
+}
+.hero h1 span { color: var(--blue); }
+.hero-sub {
+  font-size: 17px; color: var(--muted); max-width: 520px;
+  margin: 0 auto 36px; line-height: 1.65;
+}
+.hero-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+
+.stats-row {
+  display: flex; justify-content: center; gap: 32px; flex-wrap: wrap;
+  padding: 32px 24px;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: relative; z-index: 1;
+}
+.stat-item { text-align: center; }
+.stat-num { font-size: 28px; font-weight: 900; color: var(--blue); font-family: var(--mono); }
+.stat-label { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+
+.sections-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px; max-width: 920px; margin: 60px auto; padding: 0 24px;
+}
+.section-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.section-card:hover {
+  border-color: var(--blue); transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--shadow);
+}
+.section-card-head {
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface2); display: flex; align-items: center; justify-content: space-between;
+}
+.section-card-head-title { font-size: 13px; font-weight: 700; font-family: var(--mono); }
+.section-card-body { padding: 20px; }
+.section-card-body p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+.section-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* REGISTER */
+.register-wrap {
+  max-width: 480px; margin: 60px auto; padding: 0 24px;
+}
+.form-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.form-card-head {
+  padding: 16px 24px; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.form-card-head-title { font-size: 13px; font-weight: 700; font-family: var(--mono); }
+.form-card-body { padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+label {
+  display: block; font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px;
+}
+input, select, textarea {
+  width: 100%; font-family: var(--sans); font-size: 14px; color: var(--text);
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 7px; padding: 10px 12px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26,86,232,0.1);
+}
+textarea { resize: vertical; min-height: 120px; }
+
+/* SECTION SELECT */
+.section-select-wrap {
+  max-width: 700px; margin: 60px auto; padding: 0 24px;
+}
+.section-options { display: grid; gap: 14px; margin-top: 28px; }
+.section-option {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: all 0.2s;
+}
+.section-option:hover { border-color: var(--blue); background: var(--blue-light); }
+.section-option.done { opacity: 0.5; pointer-events: none; }
+.section-option-left { display: flex; align-items: center; gap: 16px; }
+.section-option-icon {
+  width: 44px; height: 44px; border-radius: 10px; background: var(--blue-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.section-option-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+.section-option-desc { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+/* EXAM */
+.exam-wrap { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
+.exam-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+}
+.timer-box {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 18px; font-weight: 600;
+  border: 1.5px solid var(--border); background: var(--surface);
+  padding: 8px 18px; border-radius: 8px; color: var(--text);
+}
+.timer-box.warning { border-color: var(--amber); color: var(--amber); }
+.timer-box.danger  { border-color: var(--red);   color: var(--red); animation: pulse 1s infinite; }
+
+/* QUESTIONS */
+.question-block {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin-bottom: 16px;
+}
+.question-block-head {
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface2); display: flex; align-items: center; gap: 10px;
+}
+.q-num {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  background: var(--blue); color: #fff;
+  padding: 2px 8px; border-radius: 4px;
+}
+.question-block-body { padding: 18px 20px; }
+.question-text { font-size: 15px; line-height: 1.65; margin-bottom: 14px; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.option-label {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--border);
+  cursor: pointer; transition: all 0.15s; font-size: 14px; line-height: 1.5;
+}
+.option-label:hover { border-color: var(--blue); background: var(--blue-light); }
+.option-label input[type=radio], .option-label input[type=checkbox] { margin-top: 2px; accent-color: var(--blue); }
+.option-label.selected { border-color: var(--blue); background: var(--blue-light); }
+
+/* READING PASSAGE */
+.reading-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.passage-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; position: sticky; top: 80px;
+}
+.passage-card-head {
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface2); font-size: 13px; font-weight: 700; font-family: var(--mono);
+}
+.passage-card-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
+.passage-text { font-size: 14px; line-height: 1.75; color: var(--text); }
+.passage-text p { margin-bottom: 14px; }
+
+/* WRITING */
+.writing-tasks { display: flex; flex-direction: column; gap: 24px; }
+.writing-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.writing-card-head { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); display: flex; justify-content: space-between; align-items: center; }
+.writing-card-body { padding: 20px; }
+.word-count { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+/* AUDIO PLAYER */
+.audio-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 16px;
+}
+.audio-icon { font-size: 28px; }
+audio { flex: 1; }
+
+/* RESULT */
+.result-wrap { max-width: 640px; margin: 60px auto; padding: 0 24px; }
+.result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.result-card-head { padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+.score-display { text-align: center; padding: 40px 24px; }
+.band-score { font-size: 72px; font-weight: 900; font-family: var(--mono); color: var(--blue); line-height: 1; }
+.band-label { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-top: 6px; }
+.score-detail { font-size: 18px; font-weight: 600; margin-top: 12px; }
+.result-sections { padding: 0 24px 24px; display: flex; flex-direction: column; gap: 10px; }
+.result-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg);
+}
+.result-row-name { font-size: 14px; font-weight: 600; }
+.result-row-score { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--blue); }
+
+/* BUTTONS */
+.btn-primary {
+  background: var(--blue); color: #fff;
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  padding: 12px 22px; border-radius: 6px; border: none;
+  cursor: pointer; transition: background 0.2s, transform 0.2s;
+  text-decoration: none; display: inline-block;
+}
+.btn-primary:hover { background: var(--blue-hover); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; pointer-events: none; }
+.btn-outline {
+  background: var(--surface); color: var(--text);
+  font-family: var(--mono); font-size: 13px; font-weight: 500;
+  padding: 12px 22px; border-radius: 6px;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
+}
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); transform: translateY(-1px); }
+
+/* BADGE */
+.badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  padding: 3px 8px; border-radius: 4px;
+  background: var(--blue-light); color: var(--blue);
+  display: inline-block; white-space: nowrap;
+}
+.badge.green  { background: var(--green-light); color: var(--green); }
+.badge.amber  { background: var(--amber-light); color: var(--amber); }
+.badge.muted  { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+/* STATUS DOT */
+.status-dot {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 12px;
+  border: 1px solid var(--border); background: var(--surface);
+  padding: 7px 14px; border-radius: 6px; color: var(--muted);
+}
+.dot { width: 8px; height: 8px; background: var(--blue); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border); padding: 20px 48px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  position: relative; z-index: 1;
+}
+footer a { color: var(--blue); text-decoration: none; }
+
+/* PROGRESS BAR */
+.progress-bar { height: 3px; background: var(--border); margin-bottom: 28px; border-radius: 2px; }
+.progress-fill { height: 100%; background: var(--blue); border-radius: 2px; transition: width 0.3s; }
+
+/* INSTRUCTIONS */
+.instruction-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.instruction-list li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 14px; color: var(--muted); line-height: 1.5;
+}
+.instruction-list li::before {
+  content: '→'; font-family: var(--mono); color: var(--blue);
+  font-weight: 700; margin-top: 1px; flex-shrink: 0;
+}
+
+/* ALERT */
+.alert {
+  padding: 12px 16px; border-radius: 8px;
+  font-size: 13px; font-family: var(--mono);
+  border: 1px solid;
+}
+.alert.info { background: var(--blue-light); color: var(--blue); border-color: var(--blue-mid); }
+.alert.danger { background: var(--red-light); color: var(--red); border-color: #fecaca; }
+.alert.success { background: var(--green-light); color: var(--green); border-color: #bbf7d0; }
+
+/* ANIMATIONS */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+@keyframes spin  { to { transform: rotate(360deg); } }
+.spinner { width: 22px; height: 22px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  nav { padding: 14px 16px; }
+  .reading-layout { grid-template-columns: 1fr; }
+  .passage-card { position: static; }
+  footer { padding: 16px; flex-direction: column; align-items: flex-start; }
+  .sections-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- DEMO MARQUEE BANNER -->
+<div class="demo-marquee">
+  <div class="demo-marquee-track">
+    <span class="demo-marquee-item">Test rejimida ishlamoqda, savollar shunchaki namunaviy. Haqiqiy imtihon formatidagi savollar hali qo'shilmagan.</span>
+    <span class="demo-marquee-item">Test rejimida ishlamoqda, savollar shunchaki namunaviy. Haqiqiy imtihon formatidagi savollar hali qo'shilmagan.</span>
+    <span class="demo-marquee-item">Test rejimida ishlamoqda, savollar shunchaki namunaviy. Haqiqiy imtihon formatidagi savollar hali qo'shilmagan.</span>
+    <span class="demo-marquee-item">Test rejimida ishlamoqda, savollar shunchaki namunaviy. Haqiqiy imtihon formatidagi savollar hali qo'shilmagan.</span>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">SD</div>
+    <div class="nav-logo-text">
+      <span>IELTS Mock</span>
+      <span>ielts.sultanov.space</span>
+    </div>
+  </div>
+  <div class="nav-right" id="nav-right">
+    <a href="/profile" class="btn-outline" style="font-size:12px; padding:8px 16px; text-decoration:none;">👤 Profil</a>
+    <div class="status-dot">
+      <div class="dot"></div>
+      Hello
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════
+     VIEW 1: LANDING
+═══════════════════════════════════════════════════════ -->
+<div class="view active" id="view-landing">
+  <div class="hero">
+    <p class="hero-kicker">
+      <span style="font-family:var(--mono);">$ ielts --mock</span>
+    </p>
+    <h1>IELTS <span>Mock Imtihon</span><br>Online Platformasi</h1>
+    <p class="hero-sub">
+      Haqiqiy IELTS formatida Listening, Reading va Writing bo'limlari. 
+      Faqat ism-familyangiz va emailingiz kifoya.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="startExamFlow()" id="start-exam-btn" style="font-size:14px; padding:14px 28px;">
+        → Ro'yxatdan o'tish
+      </button>
+      <button class="btn-outline" onclick="scrollToInfo()">Batafsil</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-item">
+      <div class="stat-num">3</div>
+      <div class="stat-label">$ bo'lim</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">80+</div>
+      <div class="stat-label">$ savol</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">2:45</div>
+      <div class="stat-label">$ soat</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">9.0</div>
+      <div class="stat-label">$ max band</div>
+    </div>
+  </div>
+
+  <div class="sections-grid" id="info">
+    <div class="section-card">
+      <div class="section-card-head">
+        <span class="section-card-head-title">🎧 Listening</span>
+        <span class="badge">30 daqiqa</span>
+      </div>
+      <div class="section-card-body">
+        <p>Audio yozuvlarni eshiting va 40 ta savolga javob bering. 4 ta qism: ikkita suhbat, ikkita ma'ruza.</p>
+        <div class="section-meta">
+          <span class="badge muted">40 savol</span>
+          <span class="badge muted">Audio</span>
+        </div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-card-head">
+        <span class="section-card-head-title">📖 Reading</span>
+        <span class="badge">60 daqiqa</span>
+      </div>
+      <div class="section-card-body">
+        <p>3 ta akademik matnni o'qing va 40 ta savolga javob bering. True/False/NG, MCQ va boshqa formatlar.</p>
+        <div class="section-meta">
+          <span class="badge muted">40 savol</span>
+          <span class="badge muted">3 ta matn</span>
+        </div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-card-head">
+        <span class="section-card-head-title">✍️ Writing</span>
+        <span class="badge">60 daqiqa</span>
+      </div>
+      <div class="section-card-body">
+        <p>Task 1: grafik/diagramma tavsifi (150 so'z). Task 2: muammo yechimi essay (250 so'z).</p>
+        <div class="section-meta">
+          <span class="badge muted">2 ta topshiriq</span>
+          <span class="badge muted">400+ so'z</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:700px; margin:0 auto 80px; padding:0 24px;">
+    <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px;">$ qoidalar</p>
+    <h2 style="font-size:24px; font-weight:800; letter-spacing:-0.5px; margin-bottom:20px;">Imtihon haqida</h2>
+    <ul class="instruction-list">
+      <li>Har bir bo'limni alohida topshirishingiz mumkin — bir vaqtda hammasi shart emas</li>
+      <li>Natijalar avtomatik saqlanadi va band score hisoblanadi</li>
+      <li>Listening uchun quloqchin tavsiya etiladi</li>
+      <li>Writing natijasi admin tomonidan tekshiriladi va email orqali yuboriladi</li>
+      <li>Sahifani yopmang — imtihon davomida taymer to'xtamaydi</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     VIEW 3: SECTION SELECT
+═══════════════════════════════════════════════════════ -->
+<div class="view" id="view-sections">
+  <div class="section-select-wrap">
+    <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px; margin-top:40px;">$ bo'lim --tanlash</p>
+    <h2 style="font-size:28px; font-weight:800; letter-spacing:-0.5px;">Qaysi bo'limni topshirmoqchisiz?</h2>
+    <p style="font-size:14px; color:var(--muted); margin-top:8px;" id="welcome-name"></p>
+
+    <div class="section-options" id="section-options">
+      <div class="section-option" onclick="startSection('listening')" id="opt-listening">
+        <div class="section-option-left">
+          <div class="section-option-icon">🎧</div>
+          <div>
+            <div class="section-option-name">Listening</div>
+            <div class="section-option-desc">30 daqiqa · 40 savol</div>
+          </div>
+        </div>
+        <span class="badge" id="badge-listening">→ Boshlash</span>
+      </div>
+      <div class="section-option" onclick="startSection('reading')" id="opt-reading">
+        <div class="section-option-left">
+          <div class="section-option-icon">📖</div>
+          <div>
+            <div class="section-option-name">Reading</div>
+            <div class="section-option-desc">20 daqiqa · 13 savol</div>
+          </div>
+        </div>
+        <span class="badge" id="badge-reading">→ Boshlash</span>
+      </div>
+      <div class="section-option" onclick="startSection('writing')" id="opt-writing">
+        <div class="section-option-left">
+          <div class="section-option-icon">✍️</div>
+          <div>
+            <div class="section-option-name">Writing</div>
+            <div class="section-option-desc">60 daqiqa · 2 ta topshiriq</div>
+          </div>
+        </div>
+        <span class="badge" id="badge-writing">→ Boshlash</span>
+      </div>
+    </div>
+
+    <div style="margin-top:20px; text-align:center;">
+      <button class="btn-outline" onclick="showView('view-landing')">← Bosh sahifa</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     VIEW 4: LISTENING
+═══════════════════════════════════════════════════════ -->
+<div class="view" id="view-listening">
+  <div class="exam-wrap">
+    <div class="exam-header">
+      <div>
+        <p style="font-family:var(--mono); font-size:11px; color:var(--blue);">$ listening --exam</p>
+        <h2 style="font-size:22px; font-weight:800;">Listening Bo'limi</h2>
+      </div>
+      <div class="timer-box" id="timer-listening">⏱ 30:00</div>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="prog-listening" style="width:0%"></div></div>
+
+    <div class="audio-card">
+      <div class="audio-icon">🎧</div>
+      <div style="flex:1;">
+        <p style="font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:6px;">$ audio --play</p>
+        <audio controls style="width:100%;" id="listening-audio">
+          <source src="/static/audio/listening.mp3" type="audio/mpeg">
+          Brauzeringiz audio elementini qo'llab-quvvatlamaydi.
+        </audio>
+      </div>
+    </div>
+
+    <div class="alert info" style="margin-bottom:24px;">
+      → Audioni tinglang va quyidagi savollarga javob bering. Audio faqat bir marta tinglanadi.
+    </div>
+
+    <div id="listening-questions"></div>
+
+    <div style="text-align:center; margin-top:32px;">
+      <button class="btn-primary" onclick="submitListening()" style="font-size:14px; padding:14px 32px;">
+        ✓ Javoblarni topshirish
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     VIEW 6: WRITING
+═══════════════════════════════════════════════════════ -->
+<div class="view" id="view-writing">
+  <div class="exam-wrap">
+    <div class="exam-header">
+      <div>
+        <p style="font-family:var(--mono); font-size:11px; color:var(--blue);">$ writing --exam</p>
+        <h2 style="font-size:22px; font-weight:800;">Writing Bo'limi</h2>
+      </div>
+      <div class="timer-box" id="timer-writing">⏱ 60:00</div>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="prog-writing" style="width:0%"></div></div>
+
+    <div class="writing-tasks">
+      <!-- TASK 1 -->
+      <div class="writing-card">
+        <div class="writing-card-head">
+          <span style="font-family:var(--mono); font-size:13px; font-weight:700;">Task 1</span>
+          <span class="badge amber">Minimum 150 so'z</span>
+        </div>
+        <div class="writing-card-body">
+          <div class="alert info" style="margin-bottom:16px;" id="writing-task1-prompt">
+            The bar chart below shows the percentage of people in different age groups who used the internet 
+            in a European country in 2005 and 2015. Summarise the information by selecting and reporting 
+            the main features, and make comparisons where relevant.
+          </div>
+          <label>Javobingiz</label>
+          <textarea id="writing-task1" placeholder="Bu yerga Task 1 uchun javobingizni yozing..." rows="10"
+            oninput="updateWordCount('writing-task1','wc1')"></textarea>
+          <div class="word-count" id="wc1">0 so'z (minimum: 150)</div>
+        </div>
+      </div>
+
+      <!-- TASK 2 -->
+      <div class="writing-card">
+        <div class="writing-card-head">
+          <span style="font-family:var(--mono); font-size:13px; font-weight:700;">Task 2</span>
+          <span class="badge amber">Minimum 250 so'z</span>
+        </div>
+        <div class="writing-card-body">
+          <div class="alert info" style="margin-bottom:16px;">
+            Some people believe that universities should focus only on academic subjects and 
+            not prepare students for employment. Others believe that universities should 
+            prepare students for future jobs. Discuss both views and give your own opinion.
+          </div>
+          <label>Javobingiz</label>
+          <textarea id="writing-task2" placeholder="Bu yerga Task 2 uchun javobingizni yozing..." rows="14"
+            oninput="updateWordCount('writing-task2','wc2')"></textarea>
+          <div class="word-count" id="wc2">0 so'z (minimum: 250)</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:32px;">
+      <button class="btn-primary" onclick="submitWriting()" style="font-size:14px; padding:14px 32px;">
+        ✓ Javoblarni topshirish
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     VIEW 7: RESULT
+═══════════════════════════════════════════════════════ -->
+<div class="view" id="view-result">
+  <div class="result-wrap">
+    <div class="result-card">
+      <div class="result-card-head" style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-family:var(--mono); font-size:13px; font-weight:700;">$ natija --band_score</span>
+        <span class="badge green">Saqlandi ✓</span>
+      </div>
+      <div class="score-display">
+        <div class="band-score" id="result-band">—</div>
+        <div class="band-label">Band Score</div>
+        <div class="score-detail" id="result-detail"></div>
+      </div>
+      <div class="result-sections" id="result-sections"></div>
+      <div style="padding:0 24px 24px; display:flex; flex-direction:column; gap:10px;">
+        <div class="alert success">
+          ✓ Natijangiz muvaffaqiyatli saqlandi. Writing bo'limi uchun baho email orqali yuboriladi.
+        </div>
+        <button class="btn-outline" onclick="downloadResultPdf()" id="btn-download-pdf" style="text-align:center; display:none;">
+          📄 Natijani PDF qilib yuklab olish
+        </button>
+        <button class="btn-primary" onclick="nextSection()" id="btn-next-section" style="text-align:center;">
+          → Keyingi bo'lim
+        </button>
+        <button class="btn-outline" onclick="showView('view-sections')" style="text-align:center;">
+          ☰ Barcha bo'limlarga
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span>IELTS Mock · ielts.sultanov.space · 2026</span>
+  <span><a href="mailto:diyorbeksultanov.ss@gmail.com">Bog'lanish</a></span>
+</footer>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const state = {
+  name: '', email: '', sessionId: null,
+  completed: [], lastSection: null, lastResult: null
+};
+
+let timerInterval = null;
+let authUser = null;
+
+// ─── HISOBGA ULANISH TEKSHIRUVI ─────────────────────────────────────────────────
+async function checkAuthStatus() {
+  const token = localStorage.getItem('ielts_token');
+  if (!token) {
+    updateStartButton();
+    maybeAutoStartExam();
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) { localStorage.removeItem('ielts_token'); updateStartButton(); maybeAutoStartExam(); return; }
+    const data = await res.json();
+    authUser = data.user;
+
+    document.getElementById('nav-right').innerHTML = `
+      <a href="/profile" class="btn-outline" style="font-size:12px; padding:8px 16px; text-decoration:none;">
+        👤 ${authUser.full_name.split(' ')[0]}
+      </a>`;
+  } catch (e) {
+    // Tarmoq xatosi — gost rejimida davom etamiz
+  }
+  updateStartButton();
+  maybeAutoStartExam();
+}
+checkAuthStatus();
+
+// ─── BOSH TUGMA HOLATI ───────────────────────────────────────────────────────────
+function updateStartButton() {
+  const btn = document.getElementById('start-exam-btn');
+  if (!btn) return;
+  if (authUser && authUser.email_verified) {
+    btn.textContent = '→ Imtihonni boshlash';
+  } else if (authUser) {
+    btn.textContent = '→ Emailni tasdiqlash';
+  } else {
+    btn.textContent = "→ Ro'yxatdan o'tish";
+  }
+}
+
+// ─── /profile'DAN QAYTGANDA AVTOMATIK BOSHLASH ──────────────────────────────────
+function maybeAutoStartExam() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('startExam') !== '1') return;
+  window.history.replaceState({}, '', '/');
+  if (authUser && authUser.email_verified) {
+    startSessionFor(authUser.full_name, authUser.email);
+  }
+}
+
+// ─── VIEW ROUTING ──────────────────────────────────────────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function scrollToInfo() {
+  document.getElementById('info').scrollIntoView({behavior:'smooth'});
+}
+
+// ─── IMTIHONNI BOSHLASH ─────────────────────────────────────────────────────────
+function startExamFlow() {
+  if (authUser && authUser.email_verified) {
+    startSessionFor(authUser.full_name, authUser.email);
+  } else {
+    window.location.href = '/profile?redirect=exam';
+  }
+}
+
+async function startSessionFor(name, email) {
+  const data = await (async () => {
+    const res = await fetch('/api/start', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({full_name: name, email: email})
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.detail || 'Xatolik yuz berdi');
+    return json;
+  })();
+
+  state.name = name;
+  state.email = email;
+  state.sessionId = data.session_id;
+
+  sessionStorage.setItem('ielts_session_id', data.session_id);
+  sessionStorage.setItem('ielts_name', name);
+  sessionStorage.setItem('ielts_email', email);
+
+  document.getElementById('welcome-name').textContent =
+    `Salom, ${name}! Qaysi bo'limdan boshlashni xohlaysiz?`;
+
+  if (!authUser) {
+    document.getElementById('nav-right').innerHTML =
+      `<div class="status-dot"><div class="dot"></div>${name}</div>`;
+  }
+
+  showView('view-sections');
+}
+
+// ─── SECTION START ─────────────────────────────────────────────────────────────
+function startSection(section) {
+  state.lastSection = section;
+  clearInterval(timerInterval);
+  if (section === 'listening') { buildListening(); startTimer('timer-listening', 30, 'prog-listening', submitListening); showView('view-listening'); }
+  else if (section === 'reading') { window.location.href = '/static/reading.html'; }
+  else if (section === 'writing') { startTimer('timer-writing', 60, 'prog-writing', submitWriting); showView('view-writing'); }
+}
+
+// ─── TIMER ────────────────────────────────────────────────────────────────────
+function startTimer(elId, minutes, progId, onExpire) {
+  let total = minutes * 60;
+  const el = document.getElementById(elId);
+  const prog = document.getElementById(progId);
+
+  function tick() {
+    const m = Math.floor(total / 60).toString().padStart(2,'0');
+    const s = (total % 60).toString().padStart(2,'0');
+    el.textContent = `⏱ ${m}:${s}`;
+    prog.style.width = (100 - (total / (minutes*60)) * 100) + '%';
+    el.className = 'timer-box';
+    if (total <= 300) el.classList.add('warning');
+    if (total <= 60)  el.classList.add('danger');
+    if (total <= 0) { clearInterval(timerInterval); onExpire(); return; }
+    total--;
+  }
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
+
+// ─── LISTENING ────────────────────────────────────────────────────────────────
+const listeningQuestions = [
+  { id:1, text:"Suhbatda qaysi shahar tilga olingan?", type:"mcq", options:["London","Paris","New York","Sydney"], answer:"London" },
+  { id:2, text:"Talaba qaysi fakultetda o'qiydi?", type:"mcq", options:["Tibbiyot","Muhandislik","Iqtisodiyot","Til va adabiyot"], answer:"Muhandislik" },
+  { id:3, text:"Uchrashув soat nechada belgilangan?", type:"mcq", options:["14:00","15:30","16:00","17:00"], answer:"15:30" },
+  { id:4, text:"Loyiha topshirilish muddati qachon?", type:"mcq", options:["5-may","10-may","15-may","20-may"], answer:"10-may" },
+  { id:5, text:"Guruh necha kishidan iborat?", type:"mcq", options:["3","4","5","6"], answer:"4" },
+  { id:6, text:"Kutubxona soat nechagacha ochiq?", type:"mcq", options:["18:00","19:00","20:00","21:00"], answer:"20:00" },
+  { id:7, text:"Ma'ruza qaysi xonada bo'ladi?", type:"mcq", options:["A101","B202","C303","D404"], answer:"B202" },
+  { id:8, text:"Tekshiruv qaysi kuni?", type:"mcq", options:["Dushanba","Seshanba","Chorshanba","Juma"], answer:"Chorshanba" },
+  { id:9, text:"Taqdimot qancha vaqt davom etadi?", type:"mcq", options:["10 daqiqa","15 daqiqa","20 daqiqa","30 daqiqa"], answer:"20 daqiqa" },
+  { id:10, text:"Qaysi material talab qilingan?", type:"mcq", options:["Darslik","Hisobot","Prezentatsiya","Esse"], answer:"Hisobot" },
+];
+
+function buildListening() {
+  const container = document.getElementById('listening-questions');
+  container.innerHTML = listeningQuestions.map(q => buildMCQ(q, 'l')).join('');
+}
+
+// ─── QUESTION BUILDERS ────────────────────────────────────────────────────────
+function buildMCQ(q, prefix) {
+  const opts = q.options.map(o => `
+    <label class="option-label">
+      <input type="radio" name="${prefix}q${q.id}" value="${o}" onchange="this.closest('.options').querySelectorAll('.option-label').forEach(l=>l.classList.remove('selected')); this.closest('.option-label').classList.add('selected')">
+      ${o}
+    </label>`).join('');
+  return `
+  <div class="question-block">
+    <div class="question-block-head">
+      <span class="q-num">${q.id}</span>
+      <span style="font-size:13px; font-weight:600;">${q.text}</span>
+    </div>
+    <div class="question-block-body">
+      <div class="options">${opts}</div>
+    </div>
+  </div>`;
+}
+
+// ─── SCORE CALCULATION ────────────────────────────────────────────────────────
+function calcScore(questions, prefix) {
+  let score = 0;
+  const answers = {};
+  questions.forEach(q => {
+    const sel = document.querySelector(`input[name="${prefix}q${q.id}"]:checked`);
+    const val = sel ? sel.value : null;
+    answers[q.id] = val;
+    if (val === q.answer) score++;
+  });
+  return { score, total: questions.length, answers };
+}
+
+// ─── SUBMIT ───────────────────────────────────────────────────────────────────
+async function submitListening() {
+  clearInterval(timerInterval);
+  const { score, total, answers } = calcScore(listeningQuestions, 'l');
+  await submitSection('listening', score, total, answers);
+}
+
+async function submitWriting() {
+  clearInterval(timerInterval);
+  const t1 = document.getElementById('writing-task1').value.trim();
+  const t2 = document.getElementById('writing-task2').value.trim();
+  if (!t1 && !t2) { alert('Iltimos, kamida bitta topshiriqni yozing.'); return; }
+  await submitSection('writing', null, null, null, t1, t2);
+}
+
+async function submitSection(section, score, total, answers, wt1='', wt2='') {
+  const payload = {
+    session_id: state.sessionId,
+    full_name: state.name,
+    email: state.email,
+    section,
+    score, total,
+    answers,
+    writing_task1: wt1,
+    writing_task2: wt2
+  };
+
+  try {
+    const res = await fetch('/api/submit', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    state.completed.push(section);
+    state.lastResult = data;
+    updateSectionBadges();
+    showResult(data, section);
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+  }
+}
+
+// ─── RESULT DISPLAY ───────────────────────────────────────────────────────────
+function showResult(data, section) {
+  const bandEl  = document.getElementById('result-band');
+  const detEl   = document.getElementById('result-detail');
+  const sectsEl = document.getElementById('result-sections');
+
+  if (section === 'writing') {
+    bandEl.textContent = '—';
+    detEl.textContent  = 'Writing natijasi admin tomonidan tekshiriladi';
+  } else {
+    bandEl.textContent = data.band || '—';
+    detEl.textContent  = `${data.score} / ${data.total} to'g'ri (${data.percentage}%)`;
+  }
+
+  const sectionName = {listening:'Listening', reading:'Reading', writing:'Writing'}[section];
+  sectsEl.innerHTML = `
+    <div class="result-row">
+      <div class="result-row-name">${sectionName}</div>
+      <div class="result-row-score">${section==='writing' ? 'Tekshirilmoqda' : `Band ${data.band}`}</div>
+    </div>`;
+
+  const remaining = ['listening','reading','writing'].filter(s => !state.completed.includes(s));
+  const nextBtn = document.getElementById('btn-next-section');
+  const pdfBtn  = document.getElementById('btn-download-pdf');
+  if (remaining.length > 0) {
+    const nextName = {listening:'Listening',reading:'Reading',writing:'Writing'}[remaining[0]];
+    nextBtn.textContent = `→ ${nextName} bo'limiga o'tish`;
+    nextBtn.style.display = 'block';
+    pdfBtn.style.display = 'none';
+  } else {
+    nextBtn.style.display = 'none';
+    pdfBtn.style.display = 'block';
+  }
+
+  showView('view-result');
+}
+
+function downloadResultPdf() {
+  if (!state.email) return;
+  window.open(`/api/results/${encodeURIComponent(state.email)}/pdf`, '_blank');
+}
+
+function nextSection() {
+  showView('view-sections');
+}
+
+function updateSectionBadges() {
+  ['listening','reading','writing'].forEach(s => {
+    if (state.completed.includes(s)) {
+      document.getElementById(`badge-${s}`).textContent = '✓ Topshirildi';
+      document.getElementById(`badge-${s}`).className = 'badge green';
+      document.getElementById(`opt-${s}`).classList.add('done');
+    }
+  });
+}
+
+// ─── WORD COUNT ───────────────────────────────────────────────────────────────
+function updateWordCount(textareaId, countId) {
+  const text = document.getElementById(textareaId).value.trim();
+  const count = text ? text.split(/\s+/).length : 0;
+  const min = textareaId.includes('task1') ? 150 : 250;
+  const el = document.getElementById(countId);
+  el.textContent = `${count} so'z (minimum: ${min})`;
+  el.style.color = count >= min ? 'var(--green)' : 'var(--muted)';
+}
+
+// ─── AGAR "READING" TOPSHIRILGAN BO'LSA (reading.html'dan qaytganda) ───────────
+if (sessionStorage.getItem('ielts_reading_done') === '1') {
+  state.completed.push('reading');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (state.completed.includes('reading')) updateSectionBadges();
+});
+</script>
+</body>
+</html>

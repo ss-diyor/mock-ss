@@ -830,9 +830,16 @@ async function startSessionFor(name, email) {
 function startSection(section) {
   state.lastSection = section;
   clearInterval(timerInterval);
-  if (section === 'listening') { buildListening(); startTimer('timer-listening', 30, 'prog-listening', submitListening); showView('view-listening'); }
-  else if (section === 'reading') { window.location.href = '/static/reading.html'; }
-  else if (section === 'writing') { startTimer('timer-writing', 60, 'prog-writing', submitWriting); showView('view-writing'); }
+  const sid = state.sessionId;
+  const name = encodeURIComponent(state.name || '');
+  const email = encodeURIComponent(state.email || '');
+  if (section === 'listening') {
+    window.location.href = `/listening-demo?sid=${sid}&name=${name}&email=${email}`;
+  } else if (section === 'reading') {
+    window.location.href = `/reading-demo?sid=${sid}&name=${name}&email=${email}`;
+  } else if (section === 'writing') {
+    window.location.href = `/writing-demo?sid=${sid}&name=${name}&email=${email}`;
+  }
 }
 
 // ─── TIMER ────────────────────────────────────────────────────────────────────

@@ -996,6 +996,30 @@
 
             if (confirm(`Are you sure you want to submit your test?\n\nPart 1: ${part1WordCount} words\nPart 2: ${part2WordCount} words\n\nA PDF report will be generated automatically.`)) {
                 clearInterval(timerInterval);
+
+                // === IELTS MOCK INTEGRATION: API ga yuborish ===
+                const sid   = sessionStorage.getItem('ielts_session_id');
+                const name  = sessionStorage.getItem('ielts_name')  || '';
+                const email = sessionStorage.getItem('ielts_email') || '';
+                if (sid && email) {
+                    fetch('/api/submit', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            session_id:    parseInt(sid),
+                            full_name:     name,
+                            email:         email,
+                            section:       'writing',
+                            score:         null,
+                            total:         null,
+                            answers:       null,
+                            writing_task1: part1Content,
+                            writing_task2: part2Content
+                        })
+                    }).catch(e => console.warn('Submit xatosi:', e));
+                }
+                // ===
+
                 generatePDFReport();
             }
         }
@@ -1121,6 +1145,16 @@
                 switchPart(parseInt(e.key));
             }
         });
+        // === IELTS MOCK INTEGRATION: URL parametrlardan session o'qish ===
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const sid   = params.get('sid');
+            const name  = params.get('name');
+            const email = params.get('email');
+            if (sid)   sessionStorage.setItem('ielts_session_id', sid);
+            if (name)  sessionStorage.setItem('ielts_name',       decodeURIComponent(name));
+            if (email) sessionStorage.setItem('ielts_email',      decodeURIComponent(email));
+        })();
     </script>
 </body>
 

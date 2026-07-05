@@ -4043,6 +4043,50 @@ Now, I'd like to describe in more detail... That is the end of section 4. You no
                 });
             }
         });
+        // === IELTS MOCK INTEGRATION ===
+        // URL parametrlardan session ma'lumotlarini o'qish
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const sid   = params.get('sid');
+            const name  = params.get('name');
+            const email = params.get('email');
+            if (sid)   sessionStorage.setItem('ielts_session_id', sid);
+            if (name)  sessionStorage.setItem('ielts_name',       decodeURIComponent(name));
+            if (email) sessionStorage.setItem('ielts_email',      decodeURIComponent(email));
+        })();
+
+        // checkAnswers tugagandan keyin API ga submit qilish
+        const _origCheckAnswers = typeof checkAnswers === 'function' ? checkAnswers : null;
+        // Deliver tugmasi bosilganda API ga ham yuborish
+        document.getElementById('deliver-button').addEventListener('click', async function onDeliver() {
+            // Biroz kuting — checkAnswers sahifani yangilagach score tayyor bo'lsin
+            await new Promise(r => setTimeout(r, 800));
+
+            const sid   = sessionStorage.getItem('ielts_session_id');
+            const name  = sessionStorage.getItem('ielts_name')  || '';
+            const email = sessionStorage.getItem('ielts_email') || '';
+            if (!sid || !email) return; // session yo'q — faqat demo ko'rish
+
+            const score = window.testResults ? window.testResults.score : null;
+            const total = 40;
+            const band  = window.testResults ? window.testResults.band  : null;
+
+            try {
+                await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        session_id: parseInt(sid),
+                        full_name:  name,
+                        email:      email,
+                        section:    'listening',
+                        score:      score,
+                        total:      total,
+                        answers:    {}
+                    })
+                });
+            } catch(e) { console.warn('Submit xatosi:', e); }
+        }, {once: true});
     </script>
 </body>
 </html>

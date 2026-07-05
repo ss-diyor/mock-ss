@@ -3632,5 +3632,53 @@
         // This duplicate function has been removed to prevent conflicts
     });
     </script>
+    <script>
+        // === IELTS MOCK INTEGRATION ===
+        // URL parametrlardan session ma'lumotlarini o'qish
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const sid   = params.get('sid');
+            const name  = params.get('name');
+            const email = params.get('email');
+            if (sid)   sessionStorage.setItem('ielts_session_id', sid);
+            if (name)  sessionStorage.setItem('ielts_name',       decodeURIComponent(name));
+            if (email) sessionStorage.setItem('ielts_email',      decodeURIComponent(email));
+        })();
+
+        // Deliver tugmasi bosilganda API ga ham yuborish
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('deliver-button');
+            if (!btn) return;
+            btn.addEventListener('click', async function onApiSubmit() {
+                // checkAnswers tugallanib score tayyorlanishi uchun kuting
+                await new Promise(r => setTimeout(r, 900));
+
+                const sid   = sessionStorage.getItem('ielts_session_id');
+                const name  = sessionStorage.getItem('ielts_name')  || '';
+                const email = sessionStorage.getItem('ielts_email') || '';
+                if (!sid || !email) return;
+
+                const scoreEl = document.getElementById('results-score');
+                const score   = scoreEl ? parseInt(scoreEl.textContent) : null;
+                const total   = 40;
+
+                try {
+                    await fetch('/api/submit', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            session_id: parseInt(sid),
+                            full_name:  name,
+                            email:      email,
+                            section:    'reading',
+                            score:      score,
+                            total:      total,
+                            answers:    {}
+                        })
+                    });
+                } catch(e) { console.warn('Submit xatosi:', e); }
+            }, {once: true});
+        });
+    </script>
 </body>
 </html>

@@ -922,6 +922,18 @@ async def admin_page():
 async def profile_page():
     return FileResponse("static/profile.html")
 
+@app.get("/listening-demo")
+async def listening_demo_page():
+    return FileResponse("static/Listening-demo.html")
+
+@app.get("/reading-demo")
+async def reading_demo_page():
+    return FileResponse("static/Reading-demo.html")
+
+@app.get("/writing-demo")
+async def writing_demo_page():
+    return FileResponse("static/writing-demo.html")
+
 @app.get("/{path:path}")
 async def catch_all(path: str):
     return FileResponse("static/index.html")

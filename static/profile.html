@@ -231,7 +231,15 @@ textarea { resize: vertical; min-height: 80px; }
         </div>
         <div id="login-error" class="alert danger" style="display:none;"></div>
         <button class="btn-primary" id="login-btn" onclick="doLogin()">→ Kirish</button>
-        <button class="link-btn" style="text-align:left;" onclick="openForgotModal()">Parolni unutdingizmi?</button>
+        <div style="text-align: center; margin: 10px 0;">
+          <script async src="https://telegram.org/js/telegram-widget.js?22" 
+                  data-telegram-login="mocksd_bot" 
+                  data-size="large" 
+                  data-onauth="onTelegramAuth(user)" 
+                  data-request-access="write">
+          </script>
+        </div>
+        <button class="link-btn" style="text-align:center;" onclick="openForgotModal()">Parolni unutdingizmi?</button>
       </div>
     </div>
 
@@ -433,6 +441,45 @@ function switchTab(which) {
   document.getElementById('form-register').style.display = which === 'register' ? 'block' : 'none';
 }
 
+let telegramDataCache = null;
+
+async function onTelegramAuth(user) {
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  try {
+    const data = await apiCall('/telegram-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user)
+    });
+
+    if (data.requires_registration) {
+      telegramDataCache = data.telegram_data;
+      switchTab('register');
+      const fname = [user.first_name, user.last_name].filter(Boolean).join(' ');
+      document.getElementById('reg-fullname').value = fname;
+      document.getElementById('reg-username').value = user.username || '';
+      
+      const regErrEl = document.getElementById('reg-error');
+      regErrEl.textContent = '→ Telegram orqali ro\'yxatdan o\'tishni yakunlash uchun pastdagi formani to\'ldiring.';
+      regErrEl.className = 'alert info';
+      regErrEl.style.display = 'block';
+    } else {
+      token = data.token;
+      localStorage.setItem('ielts_token', token);
+      currentUser = data.user;
+      renderDashboard();
+      loadDashboardStats();
+      handlePostAuthRedirect();
+    }
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.className = 'alert danger';
+    errEl.style.display = 'block';
+  }
+}
+
 async function apiCall(path, options = {}) {
   const headers = options.headers || {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -507,6 +554,7 @@ async function doRegister() {
   const pass = document.getElementById('reg-pass').value;
   const errEl = document.getElementById('reg-error');
   errEl.style.display = 'none';
+  errEl.className = 'alert danger';
 
   if (!fullname || fullname.length < 3) { errEl.textContent = "→ To'liq ismingizni kiriting"; errEl.style.display = 'block'; return; }
   if (!/^[a-z0-9_]{3,20}$/.test(username)) { errEl.textContent = '→ Username 3-20 belgi, faqat kichik harf/raqam/_ '; errEl.style.display = 'block'; return; }
@@ -521,6 +569,7 @@ async function doRegister() {
     const payload = { full_name: fullname, username, email, password: pass };
     const refCode = localStorage.getItem('referral_code');
     if (refCode) payload.referral_code = refCode;
+    if (telegramDataCache) payload.telegram_data = telegramDataCache;
     
     const data = await apiCall('/register', {
       method: 'POST',

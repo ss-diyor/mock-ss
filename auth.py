@@ -6,6 +6,9 @@ import random
 import bcrypt
 import jwt
 import httpx
+import hashlib
+import hmac
+import time
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Depends
 from fastapi.responses import Response
@@ -151,12 +154,31 @@ def generate_verification_code() -> str:
 
 # ─── Models ─────────────────────────────────────────────────────────────────────
 
+class TelegramData(BaseModel):
+    id: int
+    first_name: str
+    last_name: Optional[str] = None
+    username: Optional[str] = None
+    photo_url: Optional[str] = None
+    auth_date: int
+    hash: str
+
 class RegisterIn(BaseModel):
     username: str
     email: EmailStr
     full_name: str
     password: str
     referral_code: Optional[str] = None
+    telegram_data: Optional[TelegramData] = None
+
+class TelegramLoginIn(BaseModel):
+    id: int
+    first_name: str
+    last_name: Optional[str] = None
+    username: Optional[str] = None
+    photo_url: Optional[str] = None
+    auth_date: int
+    hash: str
 
 
 class LoginIn(BaseModel):
@@ -208,6 +230,26 @@ def create_token(user_id: int) -> str:
         "exp": datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRE_DAYS)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
+
+def verify_telegram_data(data: dict) -> bool:
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        return False
+    if time.time() - data.get("auth_date", 0) > 3600:
+        return False
+        
+    received_hash = data.get("hash")
+    data_check_arr = []
+    for key, value in data.items():
+        if key != "hash" and value is not None:
+            data_check_arr.append(f"{key}={value}")
+    data_check_arr.sort()
+    data_check_string = "\n".join(data_check_arr)
+    
+    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    expected_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    
+    return hmac.compare_digest(expected_hash, received_hash)
 
 
 async def check_rate_limit(login_key: str):
@@ -342,16 +384,22 @@ async def register(data: RegisterIn):
                 referred_by_id = ref_user["id"]
                 await conn.execute("UPDATE users SET referral_count = referral_count + 1 WHERE id=$1", referred_by_id)
 
+        telegram_chat_id = None
+        if data.telegram_data:
+            if not verify_telegram_data(data.telegram_data.dict()):
+                raise HTTPException(status_code=400, detail="Telegram ma'lumotlari yaroqsiz")
+            telegram_chat_id = str(data.telegram_data.id)
+
         row = await conn.fetchrow(
             """
             INSERT INTO users (username, email, full_name, password_hash,
                                 verification_code, verification_expires, verification_sent_at,
-                                referral_code, referred_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                                referral_code, referred_by, telegram_chat_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING id, username, email, full_name, bio, email_verified, telegram_chat_id, referral_code, referral_count
             """,
             username, data.email.lower(), data.full_name.strip(), hash_password(data.password),
-            code, expires, now, referral_code_val, referred_by_id
+            code, expires, now, referral_code_val, referred_by_id, telegram_chat_id
         )
 
     try:
@@ -374,6 +422,32 @@ async def register(data: RegisterIn):
     token = create_token(row["id"])
     return {"token": token, "user": public_profile(profile)}
 
+
+@router.post("/telegram-login")
+async def telegram_login(data: TelegramLoginIn):
+    if not verify_telegram_data(data.dict()):
+        raise HTTPException(status_code=400, detail="Telegram ma'lumotlari yaroqsiz")
+        
+    telegram_id_str = str(data.id)
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, username, email, full_name, bio, password_hash, email_verified, is_suspended,
+                   telegram_chat_id, referral_code, referral_count,
+                   (avatar_mime IS NOT NULL) AS has_avatar
+            FROM users WHERE telegram_chat_id=$1
+            """,
+            telegram_id_str
+        )
+        
+    if row:
+        if row["is_suspended"]:
+            raise HTTPException(status_code=403, detail="Hisobingiz vaqtincha bloklangan")
+        token = create_token(row["id"])
+        return {"requires_registration": False, "token": token, "user": public_profile(dict(row))}
+    else:
+        return {"requires_registration": True, "telegram_data": data.dict()}
 
 @router.post("/login")
 async def login(data: LoginIn):

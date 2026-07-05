@@ -132,6 +132,13 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
 .btn-outline.danger{color:var(--red);border-color:#fecaca;}
 .btn-outline.danger:hover{background:var(--red-light);}
 
+/* USER AVATAR in table */
+.u-avatar-cell{display:flex;align-items:center;gap:12px;}
+.u-avatar{width:40px;height:40px;border-radius:50%;background:var(--blue-light);border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;font-weight:700;
+  color:var(--blue);flex-shrink:0;overflow:hidden;}
+.u-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+
 @media (max-width:768px){
   nav{padding:14px 16px;}
   .wrap{padding:20px 16px 60px;}
@@ -401,12 +408,21 @@ function renderUsers(users) {
       : `<span class="badge amber">Tasdiqlanmagan</span>`;
     const suspendedBadge = u.is_suspended ? `<span class="badge" style="background:var(--red-light);color:var(--red);">⛔ Bloklangan</span>` : '';
     const suspendLabel = u.is_suspended ? '✓ Blokdan chiqarish' : '⛔ Bloklash';
+    const initials = (u.full_name || u.username || '?').trim().charAt(0).toUpperCase();
+    const avatarHtml = u.avatar_url
+      ? `<div class="u-avatar"><img src="${u.avatar_url}?t=${Date.now()}" alt="${initials}" onerror="this.parentElement.textContent='${initials}'"></div>`
+      : `<div class="u-avatar">${initials}</div>`;
 
     return `
     <tr id="user-row-${u.id}">
       <td>
-        <div class="u-name">${u.full_name}</div>
-        <div class="u-username">@${u.username}</div>
+        <div class="u-avatar-cell">
+          ${avatarHtml}
+          <div>
+            <div class="u-name">${u.full_name}</div>
+            <div class="u-username">@${u.username}</div>
+          </div>
+        </div>
       </td>
       <td class="u-email">${u.email}</td>
       <td class="u-email">${date}</td>

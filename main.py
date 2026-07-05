@@ -538,6 +538,7 @@ async def admin_users(secret: str = "", search: Optional[str] = None):
             """
             SELECT u.id, u.username, u.email, u.full_name, u.created_at,
                    u.email_verified, u.is_suspended,
+                   (u.avatar_mime IS NOT NULL) AS has_avatar,
                    COUNT(er.id) AS attempts
             FROM users u
             LEFT JOIN exam_results er ON er.email = u.email
@@ -559,7 +560,8 @@ async def admin_users(secret: str = "", search: Optional[str] = None):
                 "created_at": r["created_at"].isoformat(),
                 "email_verified": r["email_verified"],
                 "is_suspended": r["is_suspended"],
-                "attempts": r["attempts"]
+                "attempts": r["attempts"],
+                "avatar_url": f"/api/auth/avatar/{r['username']}" if r.get("has_avatar") else None
             }
             for r in rows
         ]

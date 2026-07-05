@@ -139,6 +139,7 @@ textarea { resize: vertical; min-height: 80px; }
 .profile-info { flex: 1; min-width: 180px; }
 .profile-name { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
 .profile-username { font-family: var(--mono); font-size: 13px; color: var(--blue); margin-top: 2px; }
+.profile-email { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-top: 2px; }
 .profile-bio { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 
 .dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; margin-bottom: 24px; }
@@ -293,6 +294,7 @@ textarea { resize: vertical; min-height: 80px; }
       <div class="profile-info">
         <div class="profile-name" id="profile-fullname">—</div>
         <div class="profile-username" id="profile-username">@—</div>
+        <div class="profile-email" id="profile-email">—</div>
         <div class="profile-bio" id="profile-bio"></div>
       </div>
     </div>
@@ -596,6 +598,7 @@ function renderDashboard() {
   showView('view-dashboard');
   document.getElementById('profile-fullname').textContent = currentUser.full_name;
   document.getElementById('profile-username').textContent = '@' + currentUser.username;
+  document.getElementById('profile-email').textContent = currentUser.email;
   document.getElementById('profile-bio').textContent = currentUser.bio || '';
 
   const avatarEl = document.getElementById('avatar-img');

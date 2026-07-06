@@ -1,7 +1,8 @@
 # IELTS Mock Exam Platform
 [![Ask DeepWiki](https://devin.ai/assets/askdeepwiki.png)](https://deepwiki.com/ss-diyor/mock-ss.git)
 
-**https://ielts.sultanov.space**
+- **Website:** https://ielts.sultanov.space
+- **Documentation:** https://ss-diyor.github.io/mock-ss-info/mock-ss-info.pdf
 
 This repository contains the source code for a comprehensive IELTS mock exam platform. It allows users to register, take mock tests for the Listening, Reading, and Writing sections, and receive scores. The platform is built with a FastAPI backend and a vanilla JavaScript frontend.
 

@@ -30,11 +30,6 @@ STATIC_DIR = BASE_DIR / "static"
 router = APIRouter()
 
 
-@router.get("/dashboard")
-async def dashboard_page():
-    return FileResponse(STATIC_DIR / "dashboard.html")
-
-
 @router.get("/tests")
 async def test_bank_page():
    return FileResponse(STATIC_DIR / "test-bank.html")

@@ -1,63 +1,182 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IELTS Mock SS — Speaking Demo</title>
-  <link rel="stylesheet" href="/static/css/ielts-pro.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speaking Demo — IELTS Mock SS</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:       #1a56e8;
+  --blue-hover: #1441c0;
+  --blue-light: #eef3ff;
+  --blue-mid:   #c9d8ff;
+  --text:       #0b1733;
+  --muted:      #4a5978;
+  --border:     #c9d8ff;
+  --bg:         #f5f8ff;
+  --surface:    #ffffff;
+  --surface2:   #eef3ff;
+  --shadow:     rgba(26, 86, 232, 0.08);
+  --red:        #e53e3e;
+  --red-light:  #fff5f5;
+  --green:      #16a34a;
+  --green-light:#f0fdf4;
+  --amber:      #d97706;
+  --amber-light:#fffbeb;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 48px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.nav-logo-icon {
+  width: 46px; height: 46px; border-radius: 10px;
+  background: var(--blue); display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 18px; font-weight: 700; color: #fff;
+}
+.nav-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+.nav-logo-text span:first-child { font-size: 14px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.nav-logo-text span:last-child  { font-size: 12px; font-weight: 500; font-family: var(--mono); color: var(--muted); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.nav-right a { text-decoration: none; }
+
+.btn-outline {
+  background: var(--surface); color: var(--text);
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  padding: 8px 16px; border-radius: 6px;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  display: inline-block;
+}
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-primary {
+  background: var(--blue); color: #fff;
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  padding: 10px 20px; border-radius: 6px; border: none;
+  cursor: pointer; transition: background 0.2s;
+}
+.btn-primary:hover { background: var(--blue-hover); }
+
+.wrap { max-width: 900px; margin: 40px auto 80px; padding: 0 24px; }
+
+.intro-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 20px; }
+@media (max-width: 700px) { .intro-grid { grid-template-columns: 1fr; } }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+.eyebrow { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--blue); text-transform: uppercase; letter-spacing: .05em; }
+.card h1 { font-size: 22px; font-weight: 800; margin-top: 10px; letter-spacing: -0.3px; }
+.card p { font-size: 13px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+
+.timer-card { text-align: center; }
+.timer { font-family: var(--mono); font-size: 40px; font-weight: 800; color: var(--blue); margin: 10px 0; }
+
+.dash-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 18px; }
+.dash-section-head { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); font-size: 13px; font-weight: 700; font-family: var(--mono); display: flex; justify-content: space-between; align-items: center; }
+.dash-section-body { padding: 20px; }
+
+.badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  padding: 4px 10px; border-radius: 4px;
+  background: var(--blue-light); color: var(--blue);
+  display: inline-block; white-space: nowrap;
+}
+.badge.muted { background: var(--surface2); color: var(--muted); }
+
+#promptTitle { font-size: 16px; font-weight: 700; margin-top: 12px; }
+#promptQuestions { margin-top: 14px; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+#promptQuestions li { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+.actions-row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+
+textarea {
+  width: 100%; font-family: var(--sans); font-size: 14px; color: var(--text);
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 7px; padding: 12px; outline: none; resize: vertical; min-height: 100px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,232,0.1); }
+
+@media (max-width: 600px) {
+  nav { padding: 14px 16px; }
+}
+</style>
 </head>
 <body>
-  <main class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="/">
-        <span class="logo-mark">SS</span>
-        <span>IELTS Mock SS</span>
-      </a>
-      <nav class="nav-actions">
-        <a class="btn secondary" href="/tests">Test-bank</a>
-        <a class="btn ghost" href="/dashboard">Dashboard</a>
-      </nav>
-    </header>
 
-    <section class="hero">
-      <article class="card">
-        <span class="eyebrow">Speaking practice</span>
-        <h1>Speaking demo sahifasi.</h1>
-        <p>Bu MVP uchun speaking flow: partlar, timer va self-feedback. Keyingi bosqichda audio upload va teacher grading qo'shiladi.</p>
-      </article>
-      <aside class="card">
-        <span class="eyebrow">Timer</span>
-        <div class="timer" id="timer">00:00</div>
-        <p>Timer real IELTS formatidagi mashq ritmini saqlashga yordam beradi.</p>
-      </aside>
-    </section>
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-icon">SD</div>
+    <div class="nav-logo-text">
+      <span>IELTS Mock</span>
+      <span>ielts.sultanov.space</span>
+    </div>
+  </a>
+  <div class="nav-right">
+    <a class="btn-outline" href="/tests">Test-bank</a>
+    <a class="btn-outline" href="/dashboard">Dashboard</a>
+  </div>
+</nav>
 
-    <section class="grid cols-2">
-      <article class="card">
-        <span class="badge" id="partBadge">Part 1</span>
-        <h2 id="promptTitle" style="margin-top:12px">Prompt</h2>
-        <div class="prompt-box" style="margin-top:16px">
-          <ol id="promptQuestions"></ol>
-        </div>
-        <div class="nav-actions" style="margin-top:18px">
-          <button class="btn" id="startBtn">Timerni boshlash</button>
-          <button class="btn secondary" id="nextBtn">Keyingi part</button>
-        </div>
-      </article>
+<div class="wrap">
+  <div class="intro-grid">
+    <div class="card">
+      <span class="eyebrow">Speaking practice</span>
+      <h1>Speaking demo sahifasi</h1>
+      <p>MVP uchun speaking flow: partlar, timer va self-feedback. Keyingi bosqichda audio upload va teacher grading qo'shiladi.</p>
+    </div>
+    <div class="card timer-card">
+      <span class="eyebrow">Timer</span>
+      <div class="timer" id="timer">00:00</div>
+      <p>Real IELTS formatidagi mashq ritmini saqlashga yordam beradi.</p>
+    </div>
+  </div>
 
-      <article class="card">
-        <span class="eyebrow">Self-feedback</span>
-        <h2>O'zingizni baholang</h2>
-        <p>Gapirish tugagach, kuchli va zaif tomonlaringizni yozib qo'ying.</p>
-        <textarea id="selfFeedback" placeholder="Masalan: fluency yaxshi, lekin grammar va examples ustida ishlash kerak..."></textarea>
-        <div class="nav-actions" style="margin-top:14px">
-          <button class="btn" id="saveBtn">Saqlash</button>
-          <span class="badge muted" id="saveStatus">Hali saqlanmagan</span>
-        </div>
-      </article>
-    </section>
-  </main>
-  <script src="/static/js/speaking-demo.js"></script>
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <span id="partBadge">Part 1</span>
+    </div>
+    <div class="dash-section-body">
+      <div id="promptTitle">Prompt</div>
+      <ol id="promptQuestions"></ol>
+      <div class="actions-row">
+        <button class="btn-primary" id="startBtn">Timerni boshlash</button>
+        <button class="btn-outline" id="nextBtn">Keyingi part</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-head"><span>$ self --feedback</span></div>
+    <div class="dash-section-body">
+      <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">Gapirish tugagach, kuchli va zaif tomonlaringizni yozib qo'ying.</p>
+      <textarea id="selfFeedback" placeholder="Masalan: fluency yaxshi, lekin grammar va examples ustida ishlash kerak..."></textarea>
+      <div class="actions-row">
+        <button class="btn-primary" id="saveBtn">Saqlash</button>
+        <span class="badge muted" id="saveStatus">Hali saqlanmagan</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/speaking-demo.js"></script>
 </body>
 </html>

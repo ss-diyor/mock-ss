@@ -1,0 +1,63 @@
+
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IELTS Mock SS — Speaking Demo</title>
+  <link rel="stylesheet" href="/static/css/ielts-pro.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="logo-mark">SS</span>
+        <span>IELTS Mock SS</span>
+      </a>
+      <nav class="nav-actions">
+        <a class="btn secondary" href="/tests">Test-bank</a>
+        <a class="btn ghost" href="/dashboard">Dashboard</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <article class="card">
+        <span class="eyebrow">Speaking practice</span>
+        <h1>Speaking demo sahifasi.</h1>
+        <p>Bu MVP uchun speaking flow: partlar, timer va self-feedback. Keyingi bosqichda audio upload va teacher grading qo'shiladi.</p>
+      </article>
+      <aside class="card">
+        <span class="eyebrow">Timer</span>
+        <div class="timer" id="timer">00:00</div>
+        <p>Timer real IELTS formatidagi mashq ritmini saqlashga yordam beradi.</p>
+      </aside>
+    </section>
+
+    <section class="grid cols-2">
+      <article class="card">
+        <span class="badge" id="partBadge">Part 1</span>
+        <h2 id="promptTitle" style="margin-top:12px">Prompt</h2>
+        <div class="prompt-box" style="margin-top:16px">
+          <ol id="promptQuestions"></ol>
+        </div>
+        <div class="nav-actions" style="margin-top:18px">
+          <button class="btn" id="startBtn">Timerni boshlash</button>
+          <button class="btn secondary" id="nextBtn">Keyingi part</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <span class="eyebrow">Self-feedback</span>
+        <h2>O'zingizni baholang</h2>
+        <p>Gapirish tugagach, kuchli va zaif tomonlaringizni yozib qo'ying.</p>
+        <textarea id="selfFeedback" placeholder="Masalan: fluency yaxshi, lekin grammar va examples ustida ishlash kerak..."></textarea>
+        <div class="nav-actions" style="margin-top:14px">
+          <button class="btn" id="saveBtn">Saqlash</button>
+          <span class="badge muted" id="saveStatus">Hali saqlanmagan</span>
+        </div>
+      </article>
+    </section>
+  </main>
+  <script src="/static/js/speaking-demo.js"></script>
+</body>
+</html>

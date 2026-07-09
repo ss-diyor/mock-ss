@@ -497,12 +497,58 @@ async def me(current_user: dict = Depends(get_current_user)):
     return {"user": public_profile(current_user)}
 
 
+VERIFY_EMAIL_MAX_ATTEMPTS = 5
+VERIFY_EMAIL_WINDOW_MINUTES = 15
+
+
+def verify_rate_limit_key(email: str) -> str:
+    return f"verify-email:{email}"
+
+
+async def check_verify_rate_limit(email: str):
+    login_key = verify_rate_limit_key(email)
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT COUNT(*) as recent_failures
+            FROM login_attempts
+            WHERE login_key = $1
+              AND success = FALSE
+              AND attempted_at > NOW() - INTERVAL '15 minutes'
+            """,
+            login_key
+        )
+        if row and row["recent_failures"] >= VERIFY_EMAIL_MAX_ATTEMPTS:
+            last_attempt = await conn.fetchrow(
+                """
+                SELECT attempted_at
+                FROM login_attempts
+                WHERE login_key = $1 AND success = FALSE
+                ORDER BY attempted_at DESC LIMIT 1
+                """,
+                login_key
+            )
+            if last_attempt:
+                elapsed = (datetime.utcnow() - last_attempt["attempted_at"]).total_seconds()
+                remaining = max(0, int(VERIFY_EMAIL_WINDOW_MINUTES * 60 - elapsed))
+                if remaining > 0:
+                    minutes = remaining // 60
+                    seconds = remaining % 60
+                    raise HTTPException(
+                        status_code=429,
+                        detail=f"Juda ko'p noto'g'ri urinish. {minutes} daqiqa {seconds} soniyadan so'ng qayta urinib ko'ring."
+                    )
+
+
 @router.post("/verify-email")
 async def verify_email(data: VerifyEmailIn, current_user: dict = Depends(get_current_user)):
     email = data.email.strip().lower()
     code = data.code.strip()
     if email != current_user["email"].strip().lower():
         raise HTTPException(status_code=403, detail="Faqat o'zingizning emailingizni tasdiqlashingiz mumkin")
+
+    await check_verify_rate_limit(email)
 
     db = await get_pool()
     async with db.acquire() as conn:
@@ -515,6 +561,7 @@ async def verify_email(data: VerifyEmailIn, current_user: dict = Depends(get_cur
         if row["email_verified"]:
             return {"message": "Email allaqachon tasdiqlangan", "email_verified": True}
         if not row["verification_code"] or not hmac.compare_digest(row["verification_code"], hash_secret_value(code)):
+            await record_login_attempt(verify_rate_limit_key(email), False)
             raise HTTPException(status_code=400, detail="Tasdiqlash kodi noto'g'ri")
         if not row["verification_expires"] or row["verification_expires"] < datetime.utcnow():
             raise HTTPException(status_code=400, detail="Kod muddati tugagan, qaytadan so'rang")
@@ -526,6 +573,7 @@ async def verify_email(data: VerifyEmailIn, current_user: dict = Depends(get_cur
             """,
             row["id"]
         )
+        await record_login_attempt(verify_rate_limit_key(email), True)
 
     return {"message": "Email muvaffaqiyatli tasdiqlandi", "email_verified": True}
 
@@ -728,62 +776,9 @@ async def get_avatar(username: str):
     return Response(content=bytes(row["avatar_data"]), media_type=row["avatar_mime"])
 
 
-@router.get("/dashboard")
-async def dashboard(current_user: dict = Depends(get_current_user)):
-    db = await get_pool()
-    async with db.acquire() as conn:
-        latest = await conn.fetch(
-            """
-            SELECT DISTINCT ON (section) section, score, total, writing_band, submitted_at
-            FROM exam_results
-            WHERE email = $1
-            ORDER BY section, submitted_at DESC
-            """,
-            current_user["email"]
-        )
-        history_rows = await conn.fetch(
-            """
-            SELECT section, score, total, writing_band, submitted_at
-            FROM exam_results
-            WHERE email = $1
-            ORDER BY submitted_at DESC
-            LIMIT 15
-            """,
-            current_user["email"]
-        )
-
-    def build_entry(r):
-        section = r["section"]
-        if section == "writing":
-            band = float(r["writing_band"]) if r["writing_band"] is not None else None
-        else:
-            band = get_band_score(r["score"], r["total"], section)
-        return {
-            "section": section,
-            "score": r["score"],
-            "total": r["total"],
-            "band": band,
-            "submitted_at": r["submitted_at"].isoformat()
-        }
-
-    latest_sections = [build_entry(r) for r in latest]
-    history = [build_entry(r) for r in history_rows]
-
-    graded = [s["band"] for s in latest_sections if s["band"] is not None]
-    overall_band = round(sum(graded) / len(graded), 1) if graded else None
-
-    return {
-        "user": public_profile(current_user),
-        "overall_band": overall_band,
-        "latest_sections": latest_sections,
-        "history": history,
-        "total_attempts": len(history_rows)
-    }
-
 @router.get("/referral-stats")
 async def referral_stats(current_user: dict = Depends(get_current_user)):
     return {
         "referral_code": current_user.get("referral_code"),
         "referral_count": current_user.get("referral_count", 0)
     }
-

@@ -1,0 +1,81 @@
+
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IELTS Mock SS — Dashboard</title>
+  <link rel="stylesheet" href="/static/css/ielts-pro.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="logo-mark">SS</span>
+        <span>IELTS Mock SS</span>
+      </a>
+      <nav class="nav-actions">
+        <a class="btn secondary" href="/tests">Test-bank</a>
+        <a class="btn ghost" href="/profile">Profil</a>
+        <a class="btn ghost" href="/admin">Admin</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <article class="card">
+        <span class="eyebrow">Personalized dashboard</span>
+        <h1>Natija, progress va keyingi qadamlar.</h1>
+        <p>O'quvchi emailini kiriting. Tizim Listening, Reading, Writing va Speaking holatini bitta dashboardda ko'rsatadi.</p>
+        <div class="input-row">
+          <input id="emailInput" type="email" placeholder="student@example.com" />
+          <button class="btn" id="loadBtn">Dashboardni ochish</button>
+        </div>
+        <p><span id="message" class="badge muted">Email kiriting</span></p>
+      </article>
+
+      <aside class="card">
+        <span class="eyebrow">Student profile</span>
+        <h2 id="profileName">—</h2>
+        <p id="profileEmail">Dashboard hali yuklanmagan</p>
+        <div class="grid cols-2" style="margin-top:18px">
+          <div class="metric"><strong id="overallBand">—</strong><span>Overall band</span></div>
+          <div class="metric"><strong id="totalAttempts">0</strong><span>Urinishlar</span></div>
+          <div class="metric"><strong id="completedSections">0/4</strong><span>Bo'limlar</span></div>
+          <div class="metric"><strong id="verified">Demo</strong><span>Status</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="grid cols-4" id="sectionGrid" style="margin-bottom:22px">
+      <article class="card empty-state">Dashboard ma'lumotlari shu yerda chiqadi.</article>
+    </section>
+
+    <section class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+        <div>
+          <span class="eyebrow">Result history</span>
+          <h2>So'nggi topshirilgan testlar</h2>
+        </div>
+        <a class="btn secondary" href="/api/results/demo@example.com/pdf" onclick="alert('PDF uchun haqiqiy email natijasi kerak.'); return false;">PDF natija</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Bo'lim</th>
+              <th>Raw score</th>
+              <th>Band</th>
+              <th>Sana</th>
+              <th>Feedback</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="5"><div class="empty-state">Hali email tanlanmagan.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

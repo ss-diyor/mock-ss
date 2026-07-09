@@ -974,7 +974,9 @@
                 // Reset the test
                 setTimeout(() => {
                     if (confirm('Would you like to take another test?')) {
-                        localStorage.clear();
+                        localStorage.removeItem('ielts-writing-part-1');
+                        localStorage.removeItem('ielts-writing-part-2');
+                        localStorage.removeItem('ielts-panel-width');
                         location.reload();
                     }
                 }, 1000);
@@ -1001,10 +1003,11 @@
                 const sid   = sessionStorage.getItem('ielts_session_id');
                 const name  = sessionStorage.getItem('ielts_name')  || '';
                 const email = sessionStorage.getItem('ielts_email') || '';
-                if (sid && email) {
+                const token = localStorage.getItem('ielts_token');
+                if (sid && email && token) {
                     fetch('/api/submit', {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
                         body: JSON.stringify({
                             session_id:    parseInt(sid),
                             full_name:     name,

@@ -27,16 +27,23 @@ function getSavedEmail() {
 
 async function loadDashboard(email) {
   const cleanEmail = email.trim().toLowerCase();
+  const token = localStorage.getItem("ielts_token");
 
   if (!cleanEmail || !cleanEmail.includes("@")) {
     showMessage("Iltimos, to'g'ri email kiriting.", "warning");
+    return;
+  }
+  if (!token) {
+    showMessage("Dashboard uchun avval profilingizga kiring.", "warning");
     return;
   }
 
   saveEmail(cleanEmail);
   showMessage("Dashboard yuklanmoqda...", "muted");
 
-  const response = await fetch(`/api/dashboard/${encodeURIComponent(cleanEmail)}`);
+  const response = await fetch("/api/dashboard", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));

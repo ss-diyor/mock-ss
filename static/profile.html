@@ -811,7 +811,7 @@ async function submitVerifyCode() {
   try {
     const res = await fetch(API + '/verify-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ email: currentUser.email, code })
     });
     const data = await res.json();
@@ -845,7 +845,7 @@ async function resendVerificationCode() {
   try {
     const res = await fetch(API + '/resend-verification', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ email: currentUser.email })
     });
     const data = await res.json();
@@ -874,6 +874,7 @@ function logout() {
   const tokenFromUrl = params.get('reset_token');
   if (tokenFromUrl) {
     resetToken = tokenFromUrl;
+    window.history.replaceState({}, '', '/profile');
     document.getElementById('reset-error').style.display = 'none';
     document.getElementById('reset-success').style.display = 'none';
     document.getElementById('reset-password').value = '';

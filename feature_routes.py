@@ -14,10 +14,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from db import get_pool
+from auth import get_current_user
 from mock_catalog import get_test_by_id, public_test_catalog
 from scoring import calculate_overall_band, get_band_score
 
@@ -57,11 +58,9 @@ async def get_test(test_id: str):
     return test
 
 
-@router.get("/api/dashboard/{email}")
-async def user_dashboard(email: str):
-    clean_email = email.strip().lower()
-    if "@" not in clean_email:
-        raise HTTPException(status_code=400, detail="Email noto'g'ri")
+@router.get("/api/dashboard")
+async def user_dashboard(current_user: dict = Depends(get_current_user)):
+    clean_email = current_user["email"].strip().lower()
 
     db = await get_pool()
     async with db.acquire() as conn:

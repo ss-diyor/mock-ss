@@ -723,6 +723,11 @@ const state = {
 let timerInterval = null;
 let authUser = null;
 
+function authHeaders(extra = {}) {
+  const token = localStorage.getItem('ielts_token');
+  return token ? { ...extra, 'Authorization': `Bearer ${token}` } : extra;
+}
+
 // ─── HISOBGA ULANISH TEKSHIRUVI ─────────────────────────────────────────────────
 async function checkAuthStatus() {
   const token = localStorage.getItem('ielts_token');
@@ -799,7 +804,7 @@ async function startSessionFor(name, email) {
   const data = await (async () => {
     const res = await fetch('/api/start', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: authHeaders({'Content-Type':'application/json'}),
       body: JSON.stringify({full_name: name, email: email})
     });
     const json = await res.json();
@@ -830,15 +835,12 @@ async function startSessionFor(name, email) {
 function startSection(section) {
   state.lastSection = section;
   clearInterval(timerInterval);
-  const sid = state.sessionId;
-  const name = encodeURIComponent(state.name || '');
-  const email = encodeURIComponent(state.email || '');
   if (section === 'listening') {
-    window.location.href = `/listening-demo?sid=${sid}&name=${name}&email=${email}`;
+    window.location.href = '/listening-demo';
   } else if (section === 'reading') {
-    window.location.href = `/reading-demo?sid=${sid}&name=${name}&email=${email}`;
+    window.location.href = '/reading-demo';
   } else if (section === 'writing') {
-    window.location.href = `/writing-demo?sid=${sid}&name=${name}&email=${email}`;
+    window.location.href = '/writing-demo';
   }
 }
 
@@ -944,7 +946,7 @@ async function submitSection(section, score, total, answers, wt1='', wt2='') {
   try {
     const res = await fetch('/api/submit', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: authHeaders({'Content-Type':'application/json'}),
       body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -995,9 +997,24 @@ function showResult(data, section) {
   showView('view-result');
 }
 
-function downloadResultPdf() {
+async function downloadResultPdf() {
   if (!state.email) return;
-  window.open(`/api/results/${encodeURIComponent(state.email)}/pdf`, '_blank');
+  const res = await fetch('/api/results/pdf', {
+    headers: authHeaders()
+  });
+  if (!res.ok) {
+    alert('PDF yuklab olish uchun hisobingizga kiring.');
+    return;
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ielts_natija_${state.email.split('@')[0]}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function nextSection() {

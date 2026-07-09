@@ -66,14 +66,16 @@ To run this project locally, follow these steps.
     `.env` file example:
     ```env
     DATABASE_URL="postgresql://user:password@host:port/dbname"
-    JWT_SECRET="your-strong-jwt-secret"
-    ADMIN_SECRET="your-secure-admin-password"
+    JWT_SECRET="at-least-32-random-characters"
+    ADMIN_SECRET="at-least-32-random-characters"
     RESEND_API_KEY="your-resend-api-key"
     EMAIL_FROM="noreply@yourdomain.com"
     TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
     TELEGRAM_ADMIN_CHAT_ID="your-telegram-chat-id-for-admin-notifications"
     FRONTEND_BASE_URL="http://localhost:8000"
     ```
+
+    `JWT_SECRET` and `ADMIN_SECRET` are required. The application will not start with missing, short, or known insecure default secrets.
 
 ### Running the Application
 

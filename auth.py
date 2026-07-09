@@ -21,7 +21,16 @@ from scoring import get_band_score
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production")
+def require_secret_env(name: str, insecure_default: str, min_length: int = 32) -> str:
+    value = os.environ.get(name)
+    if not value or value == insecure_default or len(value) < min_length:
+        raise RuntimeError(
+            f"{name} must be set to a strong secret with at least {min_length} characters"
+        )
+    return value
+
+
+JWT_SECRET = require_secret_env("JWT_SECRET", "change-me-in-production")
 JWT_ALGO = "HS256"
 JWT_EXPIRE_DAYS = 30
 
@@ -224,6 +233,10 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
+def hash_secret_value(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
 def create_token(user_id: int) -> str:
     payload = {
         "sub": str(user_id),
@@ -399,7 +412,7 @@ async def register(data: RegisterIn):
             RETURNING id, username, email, full_name, bio, email_verified, telegram_chat_id, referral_code, referral_count
             """,
             username, data.email.lower(), data.full_name.strip(), hash_password(data.password),
-            code, expires, now, referral_code_val, referred_by_id, telegram_chat_id
+            hash_secret_value(code), expires, now, referral_code_val, referred_by_id, telegram_chat_id
         )
 
     try:
@@ -485,9 +498,11 @@ async def me(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/verify-email")
-async def verify_email(data: VerifyEmailIn):
+async def verify_email(data: VerifyEmailIn, current_user: dict = Depends(get_current_user)):
     email = data.email.strip().lower()
     code = data.code.strip()
+    if email != current_user["email"].strip().lower():
+        raise HTTPException(status_code=403, detail="Faqat o'zingizning emailingizni tasdiqlashingiz mumkin")
 
     db = await get_pool()
     async with db.acquire() as conn:
@@ -499,7 +514,7 @@ async def verify_email(data: VerifyEmailIn):
             raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi")
         if row["email_verified"]:
             return {"message": "Email allaqachon tasdiqlangan", "email_verified": True}
-        if not row["verification_code"] or row["verification_code"] != code:
+        if not row["verification_code"] or not hmac.compare_digest(row["verification_code"], hash_secret_value(code)):
             raise HTTPException(status_code=400, detail="Tasdiqlash kodi noto'g'ri")
         if not row["verification_expires"] or row["verification_expires"] < datetime.utcnow():
             raise HTTPException(status_code=400, detail="Kod muddati tugagan, qaytadan so'rang")
@@ -516,8 +531,10 @@ async def verify_email(data: VerifyEmailIn):
 
 
 @router.post("/resend-verification")
-async def resend_verification(data: ResendVerificationIn):
+async def resend_verification(data: ResendVerificationIn, current_user: dict = Depends(get_current_user)):
     email = data.email.strip().lower()
+    if email != current_user["email"].strip().lower():
+        raise HTTPException(status_code=403, detail="Faqat o'zingizning emailingizga kod yuborishingiz mumkin")
 
     db = await get_pool()
     async with db.acquire() as conn:
@@ -541,7 +558,7 @@ async def resend_verification(data: ResendVerificationIn):
         expires = now + timedelta(minutes=VERIFICATION_CODE_TTL_MINUTES)
         await conn.execute(
             "UPDATE users SET verification_code=$1, verification_expires=$2, verification_sent_at=$3 WHERE id=$4",
-            code, expires, now, row["id"]
+            hash_secret_value(code), expires, now, row["id"]
         )
 
     try:
@@ -574,7 +591,7 @@ async def forgot_password(data: ForgotPasswordIn):
         expires = datetime.utcnow() + timedelta(minutes=RESET_TOKEN_TTL_MINUTES)
         await conn.execute(
             "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)",
-            row["id"], token, expires
+            row["id"], hash_secret_value(token), expires
         )
 
     reset_link = f"{FRONTEND_BASE_URL}/profile?reset_token={token}"
@@ -599,7 +616,7 @@ async def reset_password(data: ResetPasswordIn):
     async with db.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT id, user_id, expires_at, used FROM password_reset_tokens WHERE token=$1",
-            data.token
+            hash_secret_value(data.token)
         )
         if not row:
             raise HTTPException(status_code=400, detail="Havola yaroqsiz")

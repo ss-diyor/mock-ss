@@ -352,8 +352,9 @@ async function submitReading() {
   };
 
   try {
+    const token = localStorage.getItem('ielts_token');
     const res = await fetch('/api/submit', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json', ...(token ? {'Authorization': `Bearer ${token}`} : {})},
       body: JSON.stringify(payload)
     });
     const data = await res.json();

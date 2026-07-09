@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from feature_routes import router as feature_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -11,6 +11,7 @@ import asyncio
 import io
 import base64
 import csv
+import hmac
 try:
     import openpyxl
 except ImportError:
@@ -20,7 +21,7 @@ from fpdf import FPDF
 
 from db import get_pool
 from scoring import get_band_score
-from auth import router as auth_router, ensure_users_table
+from auth import router as auth_router, ensure_users_table, get_current_user, require_secret_env
 
 app = FastAPI(title="IELTS Mock Exam")
 app.include_router(feature_router)
@@ -35,7 +36,7 @@ async def no_cache_api(request, call_next):
         response.headers["Pragma"] = "no-cache"
     return response
 
-ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "admin123")
+ADMIN_SECRET = require_secret_env("ADMIN_SECRET", "admin123")
 
 # Email konfiguratsiyasi (Resend)
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
@@ -189,7 +190,10 @@ def build_result_email(name: str, section: str, score, total, band, feedback=Non
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.post("/api/start")
-async def start_session(data: StartSession):
+async def start_session(data: StartSession, current_user: dict = Depends(get_current_user)):
+    if not current_user.get("email_verified"):
+        raise HTTPException(status_code=403, detail="Emailni tasdiqlash talab qilinadi")
+
     db = await get_pool()
     async with db.acquire() as conn:
         row = await conn.fetchrow(
@@ -198,8 +202,8 @@ async def start_session(data: StartSession):
             VALUES ($1, $2)
             RETURNING id, started_at
             """,
-            data.full_name.strip(),
-            data.email.strip().lower()
+            current_user["full_name"].strip(),
+            current_user["email"].strip().lower()
         )
     return {
         "session_id": row["id"],
@@ -209,9 +213,27 @@ async def start_session(data: StartSession):
 
 
 @app.post("/api/submit")
-async def submit_result(data: SubmitResult):
+async def submit_result(data: SubmitResult, current_user: dict = Depends(get_current_user)):
+    if not current_user.get("email_verified"):
+        raise HTTPException(status_code=403, detail="Emailni tasdiqlash talab qilinadi")
+    if data.section not in {"listening", "reading", "writing", "speaking"}:
+        raise HTTPException(status_code=400, detail="Bo'lim noto'g'ri")
+    if data.score is not None and data.total is not None:
+        if data.total <= 0 or data.score < 0 or data.score > data.total:
+            raise HTTPException(status_code=400, detail="Natija qiymatlari noto'g'ri")
+
+    user_email = current_user["email"].strip().lower()
+    user_name = current_user["full_name"].strip()
+
     db = await get_pool()
     async with db.acquire() as conn:
+        session_row = await conn.fetchrow(
+            "SELECT id FROM exam_sessions WHERE id = $1 AND email = $2",
+            data.session_id, user_email
+        )
+        if not session_row:
+            raise HTTPException(status_code=403, detail="Bu sessiyaga ruxsat yo'q")
+
         result_row = await conn.fetchrow(
             """
             INSERT INTO exam_results 
@@ -220,8 +242,8 @@ async def submit_result(data: SubmitResult):
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id
             """,
-            data.full_name,
-            data.email,
+            user_name,
+            user_email,
             data.section,
             data.score,
             data.total,
@@ -236,20 +258,21 @@ async def submit_result(data: SubmitResult):
             UPDATE exam_sessions
             SET sections_completed = array_append(sections_completed, $1)
             WHERE id = $2
+              AND NOT ($1 = ANY(sections_completed))
             """,
             data.section,
             data.session_id
         )
 
-        user_row = await conn.fetchrow("SELECT telegram_chat_id FROM users WHERE email = $1", data.email.lower())
+        user_row = await conn.fetchrow("SELECT telegram_chat_id FROM users WHERE email = $1", user_email)
         chat_id = user_row["telegram_chat_id"] if user_row else None
 
-    percentage = round((data.score / data.total) * 100) if data.score and data.total else None
-    band = get_band_score(data.score, data.total, data.section) if data.score and data.total else None
+    percentage = round((data.score / data.total) * 100) if data.score is not None and data.total else None
+    band = get_band_score(data.score, data.total, data.section) if data.score is not None and data.total else None
 
     try:
         from telegram import notify_admin_new_result
-        await notify_admin_new_result(data.full_name, data.email, data.section, data.score, data.total, band)
+        await notify_admin_new_result(user_name, user_email, data.section, data.score, data.total, band)
     except Exception:
         pass
 
@@ -264,7 +287,7 @@ async def submit_result(data: SubmitResult):
                     WHERE email = $1
                     ORDER BY section, submitted_at DESC
                     """,
-                    data.email.lower()
+                    user_email
                 )
             
             sections = []
@@ -280,12 +303,12 @@ async def submit_result(data: SubmitResult):
                     "band": r_band
                 })
             
-            pdf_bytes = build_result_pdf(data.full_name, data.email.lower(), sections)
-            html = build_result_email(data.full_name, data.section, data.score, data.total, band)
+            pdf_bytes = build_result_pdf(user_name, user_email, sections)
+            html = build_result_email(user_name, data.section, data.score, data.total, band)
             
             await send_email_with_attachment(
-                data.email, data.full_name, f"IELTS Mock — {data.section.capitalize()} natijangiz",
-                html, pdf_bytes, f"ielts_natija_{data.email.lower().split('@')[0]}.pdf"
+                user_email, user_name, f"IELTS Mock — {data.section.capitalize()} natijangiz",
+                html, pdf_bytes, f"ielts_natija_{user_email.split('@')[0]}.pdf"
             )
             
             async with db.acquire() as conn:
@@ -293,7 +316,7 @@ async def submit_result(data: SubmitResult):
                 
             if chat_id:
                 from telegram import notify_user_result_ready
-                await notify_user_result_ready(chat_id, data.full_name, data.section, band, data.score, data.total)
+                await notify_user_result_ready(chat_id, user_name, data.section, band, data.score, data.total)
                 
         except Exception as e:
             print("Email/PDF jo'natishda xatolik:", e)
@@ -308,9 +331,21 @@ async def submit_result(data: SubmitResult):
         "band": band
     }
 
+@app.get("/api/results")
+async def get_my_results(current_user: dict = Depends(get_current_user)):
+    return await get_results(current_user["email"], current_user)
+
+
+@app.get("/api/results/pdf")
+async def get_my_results_pdf(current_user: dict = Depends(get_current_user)):
+    return await get_results_pdf(current_user["email"], current_user)
+
 
 @app.get("/api/results/{email}")
-async def get_results(email: str):
+async def get_results(email: str, current_user: dict = Depends(get_current_user)):
+    if email.strip().lower() != current_user["email"].strip().lower():
+        raise HTTPException(status_code=403, detail="Faqat o'zingizning natijalaringizni ko'rishingiz mumkin")
+
     db = await get_pool()
     async with db.acquire() as conn:
         rows = await conn.fetch(
@@ -443,7 +478,10 @@ def build_result_pdf(full_name: str, email: str, sections: list) -> bytes:
 
 
 @app.get("/api/results/{email}/pdf")
-async def get_results_pdf(email: str):
+async def get_results_pdf(email: str, current_user: dict = Depends(get_current_user)):
+    if email.strip().lower() != current_user["email"].strip().lower():
+        raise HTTPException(status_code=403, detail="Faqat o'zingizning natijalaringizni yuklab olishingiz mumkin")
+
     db = await get_pool()
     async with db.acquire() as conn:
         rows = await conn.fetch(
@@ -488,13 +526,16 @@ async def get_results_pdf(email: str):
 # ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────────────
 
 def check_admin(secret: str):
-    if secret != ADMIN_SECRET:
+    if not hmac.compare_digest(secret, ADMIN_SECRET):
         raise HTTPException(status_code=403, detail="Ruxsat yo'q — noto'g'ri parol")
 
 
+def require_admin(x_admin_secret: str = Header("", alias="X-Admin-Secret")):
+    check_admin(x_admin_secret)
+
+
 @app.get("/api/admin/results")
-async def admin_results(secret: str = ""):
-    check_admin(secret)
+async def admin_results(_: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
         rows = await conn.fetch(
@@ -531,8 +572,7 @@ async def admin_results(secret: str = ""):
 
 
 @app.get("/api/admin/users")
-async def admin_users(secret: str = "", search: Optional[str] = None):
-    check_admin(secret)
+async def admin_users(search: Optional[str] = None, _: None = Depends(require_admin)):
     db = await get_pool()
     search_term = f"%{search.strip()}%" if search and search.strip() else None
     async with db.acquire() as conn:
@@ -571,8 +611,7 @@ async def admin_users(secret: str = "", search: Optional[str] = None):
 
 
 @app.post("/api/admin/users/{user_id}/suspend")
-async def admin_suspend_user(user_id: int, secret: str = ""):
-    check_admin(secret)
+async def admin_suspend_user(user_id: int, _: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
         row = await conn.fetchrow(
@@ -589,8 +628,7 @@ async def admin_suspend_user(user_id: int, secret: str = ""):
 
 
 @app.delete("/api/admin/users/{user_id}")
-async def admin_delete_user(user_id: int, secret: str = ""):
-    check_admin(secret)
+async def admin_delete_user(user_id: int, _: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
         row = await conn.fetchrow("DELETE FROM users WHERE id = $1 RETURNING id", user_id)
@@ -601,8 +639,7 @@ async def admin_delete_user(user_id: int, secret: str = ""):
 
 
 @app.post("/api/admin/grade-writing")
-async def grade_writing(data: GradeWriting, secret: str = ""):
-    check_admin(secret)
+async def grade_writing(data: GradeWriting, _: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
         row = await conn.fetchrow(
@@ -665,9 +702,8 @@ async def grade_writing(data: GradeWriting, secret: str = ""):
 
 
 @app.post("/api/admin/notify/{result_id}")
-async def notify_result(result_id: int, secret: str = ""):
+async def notify_result(result_id: int, _: None = Depends(require_admin)):
     """Listening/Reading natijasini emailga yuborish"""
-    check_admin(secret)
     db = await get_pool()
     async with db.acquire() as conn:
         row = await conn.fetchrow(
@@ -724,8 +760,7 @@ async def notify_result(result_id: int, secret: str = ""):
 
 
 @app.get("/api/admin/stats")
-async def admin_stats(secret: str = "", days: int = 30):
-    check_admin(secret)
+async def admin_stats(days: int = 30, _: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
         total_users = await conn.fetchval("SELECT COUNT(*) FROM users")
@@ -789,8 +824,7 @@ async def admin_stats(secret: str = "", days: int = 30):
 
 
 @app.get("/api/admin/export/results")
-async def export_results(secret: str = "", format: str = "csv"):
-    check_admin(secret)
+async def export_results(format: str = "csv", _: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
         rows = await conn.fetch(
@@ -847,8 +881,7 @@ async def export_results(secret: str = "", format: str = "csv"):
         )
 
 @app.get("/api/admin/export/users")
-async def export_users(secret: str = "", format: str = "csv"):
-    check_admin(secret)
+async def export_users(format: str = "csv", _: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
         rows = await conn.fetch(

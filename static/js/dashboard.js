@@ -17,29 +17,30 @@ function bandText(value) {
   return value === null || value === undefined ? "—" : Number(value).toFixed(1);
 }
 
-function saveEmail(email) {
-  localStorage.setItem("ielts_mock_email", email.trim().toLowerCase());
+function showMessage(message, type = "info") {
+  const box = $("#message-box");
+  if (!box) return;
+  if (!message) {
+    box.style.display = "none";
+    return;
+  }
+  box.className = `alert ${type}`;
+  box.textContent = message;
+  box.style.display = "block";
 }
 
-function getSavedEmail() {
-  return localStorage.getItem("ielts_mock_email") || "";
-}
-
-async function loadDashboard(email) {
-  const cleanEmail = email.trim().toLowerCase();
+async function loadDashboard() {
   const token = localStorage.getItem("ielts_token");
 
-  if (!cleanEmail || !cleanEmail.includes("@")) {
-    showMessage("Iltimos, to'g'ri email kiriting.", "warning");
-    return;
-  }
   if (!token) {
-    showMessage("Dashboard uchun avval profilingizga kiring.", "warning");
+    $("#auth-required").style.display = "block";
+    $("#dash-content").style.display = "none";
     return;
   }
 
-  saveEmail(cleanEmail);
-  showMessage("Dashboard yuklanmoqda...", "muted");
+  $("#auth-required").style.display = "none";
+  $("#dash-content").style.display = "block";
+  showMessage("Dashboard yuklanmoqda...", "info");
 
   const response = await fetch("/api/dashboard", {
     headers: { Authorization: `Bearer ${token}` }
@@ -55,14 +56,6 @@ async function loadDashboard(email) {
   showMessage(data.overview.recommendation, "success");
 }
 
-function showMessage(message, type = "muted") {
-  const box = $("#message");
-  if (!box) return;
-
-  box.className = `badge ${type}`;
-  box.textContent = message;
-}
-
 function renderDashboard(data) {
   const profileName =
     data.profile.full_name || data.profile.username || data.profile.email;
@@ -72,7 +65,15 @@ function renderDashboard(data) {
   $("#overallBand").textContent = bandText(data.overview.overall_band);
   $("#totalAttempts").textContent = data.overview.total_attempts;
   $("#completedSections").textContent = `${data.overview.completed_sections}/4`;
-  $("#verified").textContent = data.profile.email_verified ? "Verified" : "Demo";
+
+  const statusBadge = $("#statusBadge");
+  if (data.profile.email_verified) {
+    statusBadge.textContent = "Verified";
+    statusBadge.className = "badge success";
+  } else {
+    statusBadge.textContent = "Email tasdiqlanmagan";
+    statusBadge.className = "badge warning";
+  }
 
   const sectionGrid = $("#sectionGrid");
 
@@ -80,68 +81,47 @@ function renderDashboard(data) {
     .map((item) => {
       const latest = item.latest;
       const score =
-        latest && latest.score !== null ? `${latest.score}/${latest.total}` : "—";
+        latest && latest.score !== null && latest.score !== undefined
+          ? `${latest.score}/${latest.total}`
+          : "—";
       const band = latest ? bandText(latest.band) : "—";
-      const badge = latest ? "success" : "muted";
       const status = latest ? "Topshirildi" : "Boshlanmagan";
+      const badgeClass = latest ? "success" : "muted";
 
       return `
-        <article class="card section-card">
-          <span class="badge ${badge}">${status}</span>
-          <h3>${sectionLabels[item.section] || item.section}</h3>
-          <div class="band">${band}</div>
-          <p>So'nggi natija: <strong>${score}</strong></p>
-          <p>Urinishlar: <strong>${item.attempts}</strong></p>
-          <a class="btn ghost" href="/tests">Bo'limni ochish</a>
-        </article>
+        <div class="section-card">
+          <span class="badge ${badgeClass}" style="align-self:flex-start;">${status}</span>
+          <div class="section-title">${sectionLabels[item.section] || item.section}</div>
+          <div class="section-band">${band}</div>
+          <div class="section-meta">So'nggi natija: ${score}</div>
+          <div class="section-meta">Urinishlar: ${item.attempts}</div>
+          <a href="/tests">Bo'limni ochish</a>
+        </div>
       `;
     })
     .join("");
 
-  const historyBody = $("#historyBody");
+  const historyList = $("#historyList");
 
   if (!data.history.length) {
-    historyBody.innerHTML = `
-      <tr>
-        <td colspan="5">
-          <div class="empty-state">
-            Hali natija yo'q. Test-bankdan mock boshlang.
-          </div>
-        </td>
-      </tr>
-    `;
+    historyList.innerHTML = `<div class="empty-state">Hali natija yo'q. Test-bankdan mock boshlang.</div>`;
     return;
   }
 
-  historyBody.innerHTML = data.history
+  historyList.innerHTML = data.history
     .map(
       (row) => `
-        <tr>
-          <td>${sectionLabels[row.section] || row.section}</td>
-          <td>${row.score === null ? "—" : `${row.score}/${row.total}`}</td>
-          <td>${bandText(row.band)}</td>
-          <td>${formatDate(row.submitted_at)}</td>
-          <td>${row.writing_feedback || "—"}</td>
-        </tr>
+        <div class="history-row">
+          <span class="history-section">${sectionLabels[row.section] || row.section}</span>
+          <span>${row.score === null || row.score === undefined ? "—" : `${row.score}/${row.total}`}</span>
+          <span class="history-band">${bandText(row.band)}</span>
+          <span class="history-date">${formatDate(row.submitted_at)}</span>
+        </div>
       `
     )
     .join("");
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  const input = $("#emailInput");
-
-  input.value = getSavedEmail();
-
-  $("#loadBtn").addEventListener("click", () => {
-    loadDashboard(input.value).catch((error) =>
-      showMessage(error.message, "warning")
-    );
-  });
-
-  if (input.value) {
-    loadDashboard(input.value).catch((error) =>
-      showMessage(error.message, "warning")
-    );
-  }
+  loadDashboard().catch((error) => showMessage(error.message, "danger"));
 });

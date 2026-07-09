@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Profil — IELTS Mock Exam</title>
+<title>Profil — IELTS Mock SS</title>
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -165,6 +165,25 @@ textarea { resize: vertical; min-height: 80px; }
   background: var(--blue-light); color: var(--blue);
   display: inline-block; white-space: nowrap;
 }
+.badge.success { background: var(--green-light); color: var(--green); }
+.badge.warning { background: var(--amber-light); color: var(--amber); }
+.badge.muted   { background: var(--surface2); color: var(--muted); }
+
+.section-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.section-card {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; display: flex; flex-direction: column; gap: 6px;
+}
+.section-card .section-title { font-weight: 700; font-size: 13px; }
+.section-card .section-band { font-family: var(--mono); font-size: 22px; font-weight: 800; color: var(--blue); }
+.section-card .section-meta { font-size: 11px; color: var(--muted); }
+.section-card a {
+  margin-top: 4px; text-align: center; text-decoration: none;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--blue); border: 1px solid var(--blue-mid); border-radius: 6px; padding: 6px;
+  transition: background 0.15s;
+}
+.section-card a:hover { background: var(--blue-light); }
 
 @media (max-width: 600px) {
   nav { padding: 14px 16px; }
@@ -300,6 +319,15 @@ textarea { resize: vertical; min-height: 80px; }
     </div>
 
     <div class="dash-stats" id="dash-stats"></div>
+
+    <div class="dash-section">
+      <div class="dash-section-head"><span>$ bo'limlar --status</span></div>
+      <div class="dash-section-body">
+        <div class="section-cards" id="section-status-cards">
+          <div class="empty-state">Yuklanmoqda...</div>
+        </div>
+      </div>
+    </div>
 
     <div class="dash-section">
       <div class="dash-section-head">
@@ -626,14 +654,39 @@ function copyReferral() {
 
 async function loadDashboardStats() {
   try {
-    const data = await apiCall('/dashboard');
+    const res = await fetch('/api/dashboard', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Sessiya muddati tugagan, qayta kiring");
+
     const statsEl = document.getElementById('dash-stats');
-    const bandDisplay = data.overall_band !== null ? data.overall_band : '—';
+    const bandDisplay = data.overview.overall_band !== null ? data.overview.overall_band : '—';
     statsEl.innerHTML = `
       <div class="dash-stat-card"><div class="dash-stat-num">${bandDisplay}</div><div class="dash-stat-label">Umumiy band</div></div>
-      <div class="dash-stat-card"><div class="dash-stat-num">${data.total_attempts}</div><div class="dash-stat-label">Urinishlar</div></div>
-      <div class="dash-stat-card"><div class="dash-stat-num">${data.latest_sections.length}</div><div class="dash-stat-label">Topshirilgan bo'lim</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-num">${data.overview.total_attempts}</div><div class="dash-stat-label">Urinishlar</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-num">${data.overview.completed_sections}</div><div class="dash-stat-label">Topshirilgan bo'lim</div></div>
     `;
+
+    const sectionLabels = { listening: 'Listening', reading: 'Reading', writing: 'Writing', speaking: 'Speaking' };
+    const sectionCardsEl = document.getElementById('section-status-cards');
+    sectionCardsEl.innerHTML = data.sections.map(item => {
+      const latest = item.latest;
+      const score = latest && latest.score !== null && latest.score !== undefined ? `${latest.score}/${latest.total}` : '—';
+      const band = latest && latest.band !== null && latest.band !== undefined ? Number(latest.band).toFixed(1) : '—';
+      const status = latest ? 'Topshirildi' : 'Boshlanmagan';
+      const badgeClass = latest ? 'success' : 'muted';
+      return `
+        <div class="section-card">
+          <span class="badge ${badgeClass}" style="align-self:flex-start;">${status}</span>
+          <div class="section-title">${sectionLabels[item.section] || item.section}</div>
+          <div class="section-band">${band}</div>
+          <div class="section-meta">So'nggi natija: ${score}</div>
+          <div class="section-meta">Urinishlar: ${item.attempts}</div>
+          <a href="/tests">Bo'limni ochish</a>
+        </div>
+      `;
+    }).join('');
 
     const histEl = document.getElementById('history-body');
     if (data.history.length === 0) {

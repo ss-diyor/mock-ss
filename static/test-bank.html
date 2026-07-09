@@ -1,41 +1,160 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IELTS Mock SS — Test-bank</title>
-  <link rel="stylesheet" href="/static/css/ielts-pro.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test-bank — IELTS Mock SS</title>
+<meta name="description" content="IELTS Mock testlar katalogi: Listening, Reading, Writing, Speaking">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:       #1a56e8;
+  --blue-hover: #1441c0;
+  --blue-light: #eef3ff;
+  --blue-mid:   #c9d8ff;
+  --text:       #0b1733;
+  --muted:      #4a5978;
+  --border:     #c9d8ff;
+  --bg:         #f5f8ff;
+  --surface:    #ffffff;
+  --surface2:   #eef3ff;
+  --shadow:     rgba(26, 86, 232, 0.08);
+  --red:        #e53e3e;
+  --red-light:  #fff5f5;
+  --green:      #16a34a;
+  --green-light:#f0fdf4;
+  --amber:      #d97706;
+  --amber-light:#fffbeb;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(26,86,232,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,86,232,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 48px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.nav-logo-icon {
+  width: 46px; height: 46px; border-radius: 10px;
+  background: var(--blue); display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 18px; font-weight: 700; color: #fff;
+}
+.nav-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+.nav-logo-text span:first-child { font-size: 14px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.nav-logo-text span:last-child  { font-size: 12px; font-weight: 500; font-family: var(--mono); color: var(--muted); }
+.nav-right { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
+.nav-right a { text-decoration: none; }
+
+.btn-outline {
+  background: var(--surface); color: var(--text);
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  padding: 8px 16px; border-radius: 6px;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  display: inline-block;
+}
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+
+/* HERO */
+.hero-wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 48px 24px 0; }
+.hero-kicker { font-family: var(--mono); font-size: 12px; color: var(--blue); font-weight: 600; margin-bottom: 10px; }
+.hero-wrap h1 { font-size: clamp(24px, 3.4vw, 34px); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 12px; max-width: 720px; }
+.hero-wrap p { color: var(--muted); font-size: 14px; max-width: 640px; line-height: 1.6; }
+
+/* CATALOG */
+.catalog-wrap { position: relative; z-index: 1; max-width: 1080px; margin: 32px auto 80px; padding: 0 24px; }
+.catalog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+
+.test-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.test-card-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.test-card-title { font-size: 16px; font-weight: 800; margin-top: 8px; letter-spacing: -0.2px; }
+.test-card-desc { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.test-card-body { padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 8px; }
+
+.badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  padding: 4px 10px; border-radius: 4px;
+  background: var(--blue-light); color: var(--blue);
+  display: inline-block; white-space: nowrap;
+}
+.badge.success { background: var(--green-light); color: var(--green); }
+.badge.warning { background: var(--amber-light); color: var(--amber); }
+.badge.muted   { background: var(--surface2); color: var(--muted); }
+
+.section-link {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
+  text-decoration: none; color: var(--text); font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.section-link:hover { border-color: var(--blue); background: var(--blue-light); }
+.section-link strong { display: block; font-size: 13px; }
+.section-link small { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.section-link span:last-child { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--blue); }
+.section-link.locked { opacity: 0.55; cursor: not-allowed; }
+.section-link.locked:hover { border-color: var(--border); background: none; }
+.section-link.locked span:last-child { color: var(--muted); }
+
+.empty-state { text-align: center; padding: 40px 24px; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 600px) {
+  nav { padding: 14px 16px; }
+}
+</style>
 </head>
 <body>
-  <main class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="/">
-        <span class="logo-mark">SS</span>
-        <span>IELTS Mock SS</span>
-      </a>
-      <nav class="nav-actions">
-        <a class="btn secondary" href="/dashboard">Dashboard</a>
-        <a class="btn ghost" href="/profile">Profil</a>
-        <a class="btn ghost" href="/admin">Admin</a>
-      </nav>
-    </header>
 
-    <section class="hero">
-      <article class="card">
-        <span class="eyebrow">Mock test catalog</span>
-        <h1>Listening, Reading, Writing va Speaking setlari.</h1>
-        <p>Bu sahifa school demo va education center pilot uchun testlarni bitta katalogda ko'rsatadi. Real materiallar qo'shilganda shu catalog kengaytiriladi.</p>
-      </article>
-      <aside class="card">
-        <span class="eyebrow">Demo logic</span>
-        <h2>Har bir mock = 4 bo'lim</h2>
-        <p>Student alohida bo'limni ochadi, natija backendga saqlanadi, dashboard esa progressni jamlaydi.</p>
-      </aside>
-    </section>
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-icon">SD</div>
+    <div class="nav-logo-text">
+      <span>IELTS Mock</span>
+      <span>ielts.sultanov.space</span>
+    </div>
+  </a>
+  <div class="nav-right">
+    <a class="btn-outline" href="/dashboard">Dashboard</a>
+    <a class="btn-outline" href="/profile">👤 Profil</a>
+  </div>
+</nav>
 
-    <section class="grid cols-3" id="testsGrid"></section>
-  </main>
-  <script src="/static/js/test-bank.js"></script>
+<div class="hero-wrap">
+  <div class="hero-kicker">$ ielts --test-bank</div>
+  <h1>Listening, Reading, Writing va Speaking mock testlar katalogi.</h1>
+  <p>Har bir mock 4 bo'limdan iborat. Bo'limni oching, testni topshiring — natijangiz avtomatik ravishda dashboardingizga qo'shiladi.</p>
+</div>
+
+<div class="catalog-wrap">
+  <div class="catalog-grid" id="testsGrid">
+    <div class="empty-state">Testlar yuklanmoqda...</div>
+  </div>
+</div>
+
+<script src="/static/js/test-bank.js"></script>
 </body>
 </html>

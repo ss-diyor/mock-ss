@@ -11,6 +11,7 @@ Install:
 from __future__ import annotations
 
 from collections import defaultdict
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -20,22 +21,27 @@ from db import get_pool
 from mock_catalog import get_test_by_id, public_test_catalog
 from scoring import calculate_overall_band, get_band_score
 
+
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+
 router = APIRouter()
 
 
 @router.get("/dashboard")
 async def dashboard_page():
-    return FileResponse("static/dashboard.html")
+    return FileResponse(STATIC_DIR / "dashboard.html")
 
 
 @router.get("/tests")
 async def test_bank_page():
-    return FileResponse("static/test-bank.html")
+   return FileResponse(STATIC_DIR / "test-bank.html")
 
 
 @router.get("/speaking-demo")
 async def speaking_demo_page():
-    return FileResponse("static/speaking-demo.html")
+    return FileResponse(STATIC_DIR / "speaking-demo.html")
 
 
 @router.get("/api/tests")

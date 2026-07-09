@@ -8,9 +8,7 @@ const sectionLabels = {
 async function loadTests() {
   const container = document.querySelector("#testsGrid");
 
-  container.innerHTML = `
-    <div class="empty-state">Testlar yuklanmoqda...</div>
-  `;
+  container.innerHTML = `<div class="empty-state">Testlar yuklanmoqda...</div>`;
 
   const response = await fetch("/api/tests");
 
@@ -25,11 +23,7 @@ async function loadTests() {
 
 function renderTestCard(test) {
   const statusClass =
-    test.status === "ready"
-      ? "success"
-      : test.status === "planned"
-      ? "warning"
-      : "muted";
+    test.status === "ready" ? "success" : test.status === "planned" ? "warning" : "muted";
 
   const sectionButtons = test.sections
     .map((section) => {
@@ -38,20 +32,14 @@ function renderTestCard(test) {
       const lockedClass = isPlanned ? "locked" : "";
 
       return `
-        <a 
-          class="section-link ${lockedClass}" 
-          href="${href}" 
-          onclick="${
-            isPlanned
-              ? "return false;"
-              : `saveSelectedTest('${test.id}', '${section.key}')`
-          }"
+        <a
+          class="section-link ${lockedClass}"
+          href="${href}"
+          onclick="${isPlanned ? "return false;" : `saveSelectedTest('${test.id}', '${section.key}')`}"
         >
           <span>
             <strong>${sectionLabels[section.key] || section.title}</strong>
-            <small>
-              ${section.duration_minutes} daqiqa · ${section.questions} savol
-            </small>
+            <small>${section.duration_minutes} daqiqa · ${section.questions} savol</small>
           </span>
           <span>${isPlanned ? "Soon" : "Open"}</span>
         </a>
@@ -60,14 +48,13 @@ function renderTestCard(test) {
     .join("");
 
   return `
-    <article class="card test-card">
-      <div>
+    <article class="test-card">
+      <div class="test-card-head">
         <span class="badge ${statusClass}">${test.status}</span>
-        <h3 style="margin-top:12px">${test.title}</h3>
-        <p>${test.description}</p>
+        <div class="test-card-title">${test.title}</div>
+        <div class="test-card-desc">${test.description}</div>
       </div>
-
-      <div class="section-buttons">
+      <div class="test-card-body">
         ${sectionButtons}
       </div>
     </article>
@@ -82,8 +69,6 @@ function saveSelectedTest(testId, section) {
 
 window.addEventListener("DOMContentLoaded", () => {
   loadTests().catch((error) => {
-    document.querySelector("#testsGrid").innerHTML = `
-      <div class="empty-state">${error.message}</div>
-    `;
+    document.querySelector("#testsGrid").innerHTML = `<div class="empty-state">${error.message}</div>`;
   });
 });

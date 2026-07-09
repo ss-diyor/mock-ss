@@ -21,7 +21,7 @@ from fpdf import FPDF
 
 from db import get_pool
 from scoring import get_band_score
-from auth import router as auth_router, ensure_users_table, get_current_user, require_secret_env
+from auth import router as auth_router, ensure_users_table, get_current_user
 
 app = FastAPI(title="IELTS Mock Exam")
 app.include_router(feature_router)
@@ -36,7 +36,8 @@ async def no_cache_api(request, call_next):
         response.headers["Pragma"] = "no-cache"
     return response
 
-ADMIN_SECRET = require_secret_env("ADMIN_SECRET", "admin123")
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET")
+MIN_ADMIN_SECRET_LENGTH = 32
 
 # Email konfiguratsiyasi (Resend)
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
@@ -526,6 +527,11 @@ async def get_results_pdf(email: str, current_user: dict = Depends(get_current_u
 # ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────────────
 
 def check_admin(secret: str):
+    if not ADMIN_SECRET or ADMIN_SECRET == "admin123" or len(ADMIN_SECRET) < MIN_ADMIN_SECRET_LENGTH:
+        raise HTTPException(
+            status_code=503,
+            detail=f"ADMIN_SECRET sozlanmagan yoki {MIN_ADMIN_SECRET_LENGTH} belgidan qisqa"
+        )
     if not hmac.compare_digest(secret, ADMIN_SECRET):
         raise HTTPException(status_code=403, detail="Ruxsat yo'q — noto'g'ri parol")
 

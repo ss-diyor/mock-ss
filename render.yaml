@@ -10,7 +10,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_SECRET
-        sync: false
+        generateValue: true
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from feature_routes import router as feature_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
@@ -22,6 +23,7 @@ from scoring import get_band_score
 from auth import router as auth_router, ensure_users_table
 
 app = FastAPI(title="IELTS Mock Exam")
+app.include_router(feature_router)
 app.include_router(auth_router)
 
 

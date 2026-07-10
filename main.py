@@ -1382,6 +1382,11 @@ async def reading_demo_page():
 async def writing_demo_page():
     return FileResponse("static/writing-demo.html")
 
+@app.get("/register")
+async def register_page():
+    # teacher_invite va group_invite linklar shu URL ga keladi
+    return FileResponse("static/profile.html")
+
 @app.get("/{path:path}")
 async def catch_all(path: str):
     return FileResponse("static/index.html")

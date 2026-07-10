@@ -1,0 +1,279 @@
+import csv
+import io
+import secrets
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from pydantic import BaseModel
+
+from db import get_pool
+from auth import get_current_head_teacher, FRONTEND_BASE_URL
+from groups_db import DEFAULT_MAX_GROUPS_PER_CENTER, DEFAULT_MAX_STUDENTS_PER_CENTER
+from scoring import get_band_score
+
+router = APIRouter(prefix="/api/head-teacher", tags=["head-teacher"])
+
+
+class GroupCreateIn(BaseModel):
+    name: str
+
+
+# ─── Markaz haqida umumiy ma'lumot ─────────────────────────────────────────
+
+@router.get("/center")
+async def get_center(current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        center = await conn.fetchrow(
+            "SELECT id, name, is_active, max_groups, max_students, created_at FROM centers WHERE id=$1",
+            current_user["center_id"]
+        )
+        if not center:
+            raise HTTPException(status_code=404, detail="Markaz topilmadi")
+        groups_count = await conn.fetchval("SELECT COUNT(*) FROM groups WHERE center_id=$1", center["id"])
+        students_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM users WHERE center_id=$1 AND role='student'", center["id"]
+        )
+
+    return {
+        "id": center["id"],
+        "name": center["name"],
+        "is_active": center["is_active"],
+        "created_at": center["created_at"].isoformat(),
+        "groups_count": groups_count,
+        "students_count": students_count,
+        "max_groups": center["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER,
+        "max_students": center["max_students"] or DEFAULT_MAX_STUDENTS_PER_CENTER,
+    }
+
+
+# ─── Guruhlar ───────────────────────────────────────────────────────────────
+
+@router.get("/groups")
+async def list_groups(current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT g.id, g.name, g.invite_code, g.is_active, g.created_at,
+                   g.teacher_id, t.full_name AS teacher_name, t.email AS teacher_email,
+                   COUNT(u.id) FILTER (WHERE u.role = 'student') AS students_count
+            FROM groups g
+            LEFT JOIN users t ON t.id = g.teacher_id
+            LEFT JOIN users u ON u.group_id = g.id
+            WHERE g.center_id = $1
+            GROUP BY g.id, t.full_name, t.email
+            ORDER BY g.created_at DESC
+            """,
+            current_user["center_id"]
+        )
+    return [
+        {
+            "id": r["id"], "name": r["name"], "invite_code": r["invite_code"],
+            "is_active": r["is_active"], "created_at": r["created_at"].isoformat(),
+            "has_teacher": r["teacher_id"] is not None,
+            "teacher_name": r["teacher_name"], "teacher_email": r["teacher_email"],
+            "students_count": r["students_count"],
+        }
+        for r in rows
+    ]
+
+
+@router.post("/groups")
+async def create_group(data: GroupCreateIn, current_user: dict = Depends(get_current_head_teacher)):
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Guruh nomini kiriting")
+
+    db = await get_pool()
+    async with db.acquire() as conn:
+        async with conn.transaction():
+            center = await conn.fetchrow(
+                "SELECT is_active, max_groups FROM centers WHERE id=$1 FOR UPDATE",
+                current_user["center_id"]
+            )
+            if not center or not center["is_active"]:
+                raise HTTPException(status_code=400, detail="Markaz faol emas")
+
+            max_groups = center["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER
+            current_count = await conn.fetchval(
+                "SELECT COUNT(*) FROM groups WHERE center_id=$1", current_user["center_id"]
+            )
+            if current_count >= max_groups:
+                raise HTTPException(status_code=400, detail=f"Guruhlar limiti ({max_groups}) to'lgan")
+
+            invite_code = secrets.token_urlsafe(6)
+            row = await conn.fetchrow(
+                """
+                INSERT INTO groups (name, invite_code, center_id)
+                VALUES ($1, $2, $3)
+                RETURNING id, name, invite_code, is_active, created_at
+                """,
+                name, invite_code, current_user["center_id"]
+            )
+
+    return {
+        "id": row["id"], "name": row["name"], "invite_code": row["invite_code"],
+        "is_active": row["is_active"], "created_at": row["created_at"].isoformat(),
+    }
+
+
+async def _own_group_or_404(conn, group_id: int, center_id: int):
+    group = await conn.fetchrow("SELECT * FROM groups WHERE id=$1", group_id)
+    if not group or group["center_id"] != center_id:
+        raise HTTPException(status_code=404, detail="Guruh topilmadi")
+    return group
+
+
+@router.post("/groups/{group_id}/generate-teacher-invite")
+async def generate_teacher_invite(group_id: int, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group = await _own_group_or_404(conn, group_id, current_user["center_id"])
+        if group["teacher_id"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Bu guruhda allaqachon teacher bor — avval uni olib tashlang"
+            )
+
+        invite_code = secrets.token_urlsafe(24)  # yuqori entropiya — bu rol beruvchi token
+        await conn.execute(
+            "UPDATE groups SET teacher_invite_code=$1 WHERE id=$2", invite_code, group_id
+        )
+
+    return {
+        "teacher_invite_code": invite_code,
+        "invite_link": f"{FRONTEND_BASE_URL}/register?teacher_invite={invite_code}",
+    }
+
+
+@router.post("/groups/{group_id}/remove-teacher")
+async def remove_teacher(group_id: int, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        async with conn.transaction():
+            group = await _own_group_or_404(conn, group_id, current_user["center_id"])
+            if not group["teacher_id"]:
+                raise HTTPException(status_code=400, detail="Bu guruhda teacher yo'q")
+
+            await conn.execute(
+                "UPDATE users SET role='student', center_id=NULL WHERE id=$1", group["teacher_id"]
+            )
+            await conn.execute(
+                "UPDATE groups SET teacher_id=NULL, teacher_invite_code=NULL WHERE id=$1", group_id
+            )
+
+    return {"message": "Teacher guruhdan olib tashlandi, hisobi student sifatida saqlanib qoldi"}
+
+
+@router.post("/groups/{group_id}/deactivate")
+async def deactivate_group(group_id: int, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        await _own_group_or_404(conn, group_id, current_user["center_id"])
+        await conn.execute("UPDATE groups SET is_active=FALSE WHERE id=$1", group_id)
+    return {"message": "Guruh yopildi"}
+
+
+# ─── Bulk CSV import (roster) ───────────────────────────────────────────────
+
+@router.post("/groups/{group_id}/import-students")
+async def import_students(
+    group_id: int,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_head_teacher)
+):
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Faqat .csv fayl qabul qilinadi")
+
+    raw = await file.read()
+    try:
+        content = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        content = raw.decode("cp1251", errors="ignore")
+
+    reader = csv.DictReader(io.StringIO(content))
+    fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
+    if "email" not in fieldnames:
+        raise HTTPException(status_code=400, detail="CSV faylida 'email' ustuni topilmadi")
+
+    db = await get_pool()
+    async with db.acquire() as conn:
+        await _own_group_or_404(conn, group_id, current_user["center_id"])
+
+        added, skipped, invalid = 0, 0, 0
+        async with conn.transaction():
+            for raw_row in reader:
+                norm = {(k or "").strip().lower(): (v or "").strip() for k, v in raw_row.items()}
+                email = norm.get("email", "").lower()
+                full_name = norm.get("full_name") or norm.get("full name") or None
+                if not email or "@" not in email:
+                    invalid += 1
+                    continue
+                result = await conn.execute(
+                    """
+                    INSERT INTO group_roster_emails (group_id, email, full_name)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (group_id, email) DO NOTHING
+                    """,
+                    group_id, email, full_name
+                )
+                if result == "INSERT 0 1":
+                    added += 1
+                else:
+                    skipped += 1
+
+    return {"added": added, "skipped_duplicates": skipped, "invalid_rows": invalid}
+
+
+@router.get("/groups/{group_id}/roster")
+async def get_roster(group_id: int, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        await _own_group_or_404(conn, group_id, current_user["center_id"])
+        rows = await conn.fetch(
+            """
+            SELECT email, full_name, used, created_at
+            FROM group_roster_emails WHERE group_id=$1
+            ORDER BY created_at DESC
+            """,
+            group_id
+        )
+    return [
+        {"email": r["email"], "full_name": r["full_name"], "used": r["used"], "created_at": r["created_at"].isoformat()}
+        for r in rows
+    ]
+
+
+# ─── Statistika ──────────────────────────────────────────────────────────────
+
+@router.get("/stats")
+async def head_teacher_stats(current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT er.section, er.score, er.total, er.writing_band
+            FROM exam_results er
+            JOIN users u ON u.email = er.email
+            WHERE u.center_id = $1 AND u.role = 'student'
+            """,
+            current_user["center_id"]
+        )
+
+    bands_by_section = {}
+    for r in rows:
+        if r["section"] == "writing":
+            band = r["writing_band"]
+        else:
+            band = get_band_score(r["score"], r["total"], r["section"]) if r["score"] is not None and r["total"] else None
+        if band is not None:
+            bands_by_section.setdefault(r["section"], []).append(float(band))
+
+    averages = {section: round(sum(vals) / len(vals), 1) for section, vals in bands_by_section.items()}
+    weakest_section = min(averages, key=averages.get) if averages else None
+
+    return {
+        "average_band_by_section": averages,
+        "weakest_section": weakest_section,
+        "total_attempts": len(rows),
+    }

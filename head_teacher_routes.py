@@ -59,7 +59,8 @@ async def list_groups(current_user: dict = Depends(get_current_head_teacher)):
         rows = await conn.fetch(
             """
             SELECT g.id, g.name, g.invite_code, g.is_active, g.created_at,
-                   g.teacher_id, t.full_name AS teacher_name, t.email AS teacher_email,
+                   g.teacher_id, g.teacher_invite_code, g.teacher_invite_expires_at,
+                   t.full_name AS teacher_name, t.email AS teacher_email,
                    COUNT(u.id) FILTER (WHERE u.role = 'student') AS students_count
             FROM groups g
             LEFT JOIN users t ON t.id = g.teacher_id
@@ -77,6 +78,8 @@ async def list_groups(current_user: dict = Depends(get_current_head_teacher)):
             "has_teacher": r["teacher_id"] is not None,
             "teacher_name": r["teacher_name"], "teacher_email": r["teacher_email"],
             "students_count": r["students_count"],
+            "teacher_invite_code": r["teacher_invite_code"],
+            "teacher_invite_expires_at": r["teacher_invite_expires_at"].isoformat() if r["teacher_invite_expires_at"] else None,
         }
         for r in rows
     ]

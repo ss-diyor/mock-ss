@@ -1086,6 +1086,10 @@ async def profile_page():
 async def head_teacher_page():
     return FileResponse("static/head-teacher.html")
 
+@app.get("/teacher")
+async def teacher_page():
+    return FileResponse("static/teacher.html")
+
 @app.get("/listening-demo")
 async def listening_demo_page():
     return FileResponse("static/Listening-demo.html")

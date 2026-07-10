@@ -223,6 +223,134 @@ async def grade_student_writing(student_id: int, result_id: int, data: GradeWrit
     return {"message": "Baholandi"}
 
 
+class GradeSpeakingTeacher(BaseModel):
+    band: float
+    feedback: Optional[str] = None
+
+
+@router.get("/pending-speaking")
+async def get_pending_speaking(current_user: dict = Depends(get_current_teacher)):
+    """O'qituvchi baholanmagan speaking audiolari ro'yxatini oladi."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group = await _own_active_group_or_error(conn, current_user["id"])
+        rows = await conn.fetch(
+            """
+            SELECT er.id, er.full_name, er.email, er.speaking_telegram_file_id, er.submitted_at, u.id AS student_id
+            FROM exam_results er
+            JOIN users u ON u.email = er.email
+            WHERE u.group_id = $1 AND er.section = 'speaking' AND er.speaking_band IS NULL
+            ORDER BY er.submitted_at ASC
+            """,
+            group["id"]
+        )
+    return [
+        {
+            "id": r["id"],
+            "student_id": r["student_id"],
+            "full_name": r["full_name"],
+            "email": r["email"],
+            "telegram_file_id": r["speaking_telegram_file_id"],
+            "submitted_at": r["submitted_at"].isoformat()
+        }
+        for r in rows
+    ]
+
+
+@router.post("/students/{student_id}/grade-speaking/{result_id}")
+async def grade_student_speaking(
+    student_id: int,
+    result_id: int,
+    data: GradeSpeakingTeacher,
+    current_user: dict = Depends(get_current_teacher)
+):
+    """O'qituvchi speaking ni baholaydi."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group = await _own_active_group_or_error(conn, current_user["id"])
+        student = await conn.fetchrow(
+            "SELECT email, full_name FROM users WHERE id=$1 AND group_id=$2",
+            student_id, group["id"]
+        )
+        if not student:
+            raise HTTPException(status_code=404, detail="Talaba topilmadi")
+
+        row = await conn.fetchrow(
+            """
+            UPDATE exam_results
+            SET speaking_band = $1, speaking_feedback = $2,
+                grader_name = $3, speaking_graded_at = NOW()
+            WHERE id = $4 AND email = $5 AND section = 'speaking'
+            RETURNING id
+            """,
+            data.band, data.feedback, current_user["full_name"],
+            result_id, student["email"]
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Natija topilmadi")
+
+        user_row = await conn.fetchrow(
+            "SELECT telegram_chat_id FROM users WHERE email = $1", student["email"]
+        )
+
+    if user_row and user_row["telegram_chat_id"]:
+        try:
+            from telegram import notify_user_speaking_graded
+            await notify_user_speaking_graded(
+                user_row["telegram_chat_id"], student["full_name"], data.band, data.feedback
+            )
+        except Exception:
+            pass
+
+    return {"message": "Speaking baholandi"}
+
+
+@router.get("/leaderboard")
+async def teacher_leaderboard(current_user: dict = Depends(get_current_teacher)):
+    """O'qituvchi o'z guruhi reyting jadvalini ko'radi."""
+    from scoring import get_band_score, calculate_overall_band
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group = await _own_active_group_or_error(conn, current_user["id"])
+        rows = await conn.fetch(
+            """
+            SELECT
+                u.id, u.full_name, u.email,
+                MAX(CASE WHEN er.section = 'listening' THEN er.score END) AS l_score,
+                MAX(CASE WHEN er.section = 'listening' THEN er.total END) AS l_total,
+                MAX(CASE WHEN er.section = 'reading'   THEN er.score END) AS r_score,
+                MAX(CASE WHEN er.section = 'reading'   THEN er.total END) AS r_total,
+                MAX(CASE WHEN er.section = 'writing'   THEN er.writing_band END) AS w_band,
+                MAX(CASE WHEN er.section = 'speaking'  THEN er.speaking_band END) AS s_band
+            FROM users u
+            LEFT JOIN exam_results er ON er.email = u.email
+            WHERE u.group_id = $1 AND u.role = 'student'
+            GROUP BY u.id, u.full_name, u.email
+            """,
+            group["id"]
+        )
+
+    result = []
+    for row in rows:
+        l_band = get_band_score(row["l_score"], row["l_total"], "listening") if row["l_score"] is not None else None
+        r_band = get_band_score(row["r_score"], row["r_total"], "reading") if row["r_score"] is not None else None
+        w_band = float(row["w_band"]) if row["w_band"] is not None else None
+        s_band = float(row["s_band"]) if row["s_band"] is not None else None
+        all_bands = [b for b in [l_band, r_band, w_band, s_band] if b is not None]
+        overall = calculate_overall_band(all_bands) if all_bands else None
+        result.append({
+            "id": row["id"], "full_name": row["full_name"], "email": row["email"],
+            "listening_band": l_band, "reading_band": r_band,
+            "writing_band": w_band, "speaking_band": s_band,
+            "overall_band": overall
+        })
+
+    result.sort(key=lambda x: x["overall_band"] or 0, reverse=True)
+    for i, item in enumerate(result):
+        item["rank"] = i + 1
+    return {"group_name": group["name"], "leaderboard": result}
+
+
 @router.get("/export/results")
 async def export_teacher_results(format: str = "excel", current_user: dict = Depends(get_current_teacher)):
     db = await get_pool()

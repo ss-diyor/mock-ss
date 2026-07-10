@@ -1,6 +1,7 @@
 import csv
 import io
 import secrets
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
@@ -434,3 +435,62 @@ async def head_teacher_trend(days: int = 30, current_user: dict = Depends(get_cu
         "datasets": list(datasets.values()) + [overall]
     }
 
+
+@router.get("/leaderboard")
+async def head_teacher_leaderboard(
+    group_id: Optional[int] = None,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_head_teacher)
+):
+    """Markaz rahbari markaz yoki guruh bo'yicha reyting jadvalini ko'radi."""
+    from scoring import get_band_score, calculate_overall_band
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if group_id:
+            await _own_group_or_404(conn, group_id, current_user["center_id"])
+            where = "WHERE u.center_id = $1 AND u.group_id = $2 AND u.role = 'student'"
+            args = (current_user["center_id"], group_id)
+        else:
+            where = "WHERE u.center_id = $1 AND u.role = 'student'"
+            args = (current_user["center_id"],)
+
+        rows = await conn.fetch(
+            f"""
+            SELECT
+                u.id, u.full_name, u.email, g.name AS group_name,
+                MAX(CASE WHEN er.section = 'listening' THEN er.score END) AS l_score,
+                MAX(CASE WHEN er.section = 'listening' THEN er.total END) AS l_total,
+                MAX(CASE WHEN er.section = 'reading'   THEN er.score END) AS r_score,
+                MAX(CASE WHEN er.section = 'reading'   THEN er.total END) AS r_total,
+                MAX(CASE WHEN er.section = 'writing'   THEN er.writing_band END) AS w_band,
+                MAX(CASE WHEN er.section = 'speaking'  THEN er.speaking_band END) AS s_band
+            FROM users u
+            LEFT JOIN exam_results er ON er.email = u.email
+            LEFT JOIN groups g ON g.id = u.group_id
+            {where}
+            GROUP BY u.id, u.full_name, u.email, g.name
+            LIMIT {limit}
+            """,
+            *args
+        )
+
+    result = []
+    for row in rows:
+        l_band = get_band_score(row["l_score"], row["l_total"], "listening") if row["l_score"] is not None else None
+        r_band = get_band_score(row["r_score"], row["r_total"], "reading") if row["r_score"] is not None else None
+        w_band = float(row["w_band"]) if row["w_band"] is not None else None
+        s_band = float(row["s_band"]) if row["s_band"] is not None else None
+        all_bands = [b for b in [l_band, r_band, w_band, s_band] if b is not None]
+        overall = calculate_overall_band(all_bands) if all_bands else None
+        result.append({
+            "id": row["id"], "full_name": row["full_name"], "email": row["email"],
+            "group_name": row["group_name"],
+            "listening_band": l_band, "reading_band": r_band,
+            "writing_band": w_band, "speaking_band": s_band,
+            "overall_band": overall
+        })
+
+    result.sort(key=lambda x: x["overall_band"] or 0, reverse=True)
+    for i, item in enumerate(result):
+        item["rank"] = i + 1
+    return {"leaderboard": result, "total": len(result)}

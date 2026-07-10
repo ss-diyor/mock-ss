@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile, File, Form
 from feature_routes import router as feature_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -77,6 +77,11 @@ async def startup():
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_grammar_accuracy NUMERIC")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_graded_at TIMESTAMP")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS grader_name TEXT")
+        # Speaking bo'limi uchun ustunlar
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_telegram_file_id TEXT")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_band NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_feedback TEXT")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_graded_at TIMESTAMP")
 
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS exam_sessions (
@@ -355,6 +360,103 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
         "total": data.total,
         "percentage": percentage,
         "band": band
+    }
+
+
+@app.post("/api/submit-speaking")
+async def submit_speaking(
+    session_id: int = Form(...),
+    audio: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """O'quvchi speaking audiosini yuboradi — Telegram guruhiga saqlanadi."""
+    if not current_user.get("email_verified"):
+        raise HTTPException(status_code=403, detail="Emailni tasdiqlash talab qilinadi")
+
+    # Fayl hajmini tekshirish: max 25MB (Telegram limiti)
+    MAX_SIZE = 25 * 1024 * 1024
+    audio_bytes = await audio.read()
+    if len(audio_bytes) > MAX_SIZE:
+        raise HTTPException(status_code=413, detail="Audio fayli 25MB dan katta bo'lmasin")
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Audio fayli bo'sh")
+
+    user_email = current_user["email"].strip().lower()
+    user_name = current_user["full_name"].strip()
+
+    db = await get_pool()
+    async with db.acquire() as conn:
+        session_row = await conn.fetchrow(
+            "SELECT id FROM exam_sessions WHERE id = $1 AND email = $2",
+            session_id, user_email
+        )
+        if not session_row:
+            raise HTTPException(status_code=403, detail="Bu sessiyaga ruxsat yo'q")
+
+        # Avval DB ga yozib olamiz (file_id keyinroq yangilanadi)
+        result_row = await conn.fetchrow(
+            """
+            INSERT INTO exam_results
+                (full_name, email, section, duration_seconds)
+            VALUES ($1, $2, 'speaking', NULL)
+            RETURNING id
+            """,
+            user_name, user_email
+        )
+        result_id = result_row["id"]
+
+        await conn.execute(
+            """
+            UPDATE exam_sessions
+            SET sections_completed = array_append(sections_completed, 'speaking')
+            WHERE id = $1
+              AND NOT ('speaking' = ANY(sections_completed))
+            """,
+            session_id
+        )
+
+    # Telegram guruhiga audio yuborish
+    from telegram import send_voice_to_telegram, notify_admin_new_speaking, TELEGRAM_SPEAKING_CHAT_ID
+    caption = (
+        f"🎤 <b>Speaking Audio</b>\n\n"
+        f"👤 {user_name}\n"
+        f"📧 {user_email}\n"
+        f"🆔 result_id: {result_id}"
+    )
+    filename = f"speaking_{result_id}_{user_email.split('@')[0]}.ogg"
+    file_id = await send_voice_to_telegram(audio_bytes, filename, caption)
+
+    if file_id:
+        db = await get_pool()
+        async with db.acquire() as conn:
+            await conn.execute(
+                "UPDATE exam_results SET speaking_telegram_file_id = $1 WHERE id = $2",
+                file_id, result_id
+            )
+    else:
+        # file_id olmasa ham natija saqlanadi, log qilamiz
+        print(f"[Speaking] Telegram yuborishda xatolik. result_id={result_id}")
+
+    # Admin ga xabar
+    try:
+        await notify_admin_new_speaking(user_name, user_email, file_id)
+    except Exception:
+        pass
+
+    # Teacher ga xabar
+    if current_user.get("group_id"):
+        try:
+            from notifications import notify_teacher_new_result
+            db2 = await get_pool()
+            async with db2.acquire() as conn2:
+                await notify_teacher_new_result(conn2, current_user["group_id"], user_name, "speaking", None)
+        except Exception:
+            pass
+
+    return {
+        "result_id": result_id,
+        "message": "Speaking audioniz muvaffaqiyatli yuborildi",
+        "telegram_saved": file_id is not None
     }
 
 @app.get("/api/results")
@@ -1078,6 +1180,170 @@ async def export_users(format: str = "csv", _: None = Depends(require_admin)):
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": "attachment; filename=users.xlsx"}
         )
+
+
+# ─── Leaderboard (Reyting) ─────────────────────────────────────────────────────
+
+def _compute_overall(row) -> float | None:
+    """Talabaning barcha bo'limlar bo'yicha overall band ni hisoblash."""
+    from scoring import calculate_overall_band
+    bands = []
+    for section in ["listening", "reading", "writing", "speaking"]:
+        if section in ("writing", "speaking"):
+            key = f"{section}_band"
+            val = row.get(key)
+            if val is not None:
+                bands.append(float(val))
+        else:
+            b = get_band_score(row.get("score"), row.get("total"), section)
+            # Bu yerda row section-specific emas, shuning uchun alohida yo'l bilan
+    return calculate_overall_band(bands) if bands else None
+
+
+async def _build_leaderboard(conn, where_clause: str, args: tuple, limit: int = 50) -> list:
+    """Leaderboard ma'lumotlarini DB dan olib, band hisoblash."""
+    from scoring import get_band_score, calculate_overall_band
+
+    rows = await conn.fetch(
+        f"""
+        SELECT
+            u.id, u.full_name, u.email,
+            g.name AS group_name,
+            c.name AS center_name,
+            BOOL_OR(er.section = 'listening') AS has_listening,
+            MAX(CASE WHEN er.section = 'listening' THEN er.score END) AS l_score,
+            MAX(CASE WHEN er.section = 'listening' THEN er.total END) AS l_total,
+            MAX(CASE WHEN er.section = 'reading' THEN er.score END) AS r_score,
+            MAX(CASE WHEN er.section = 'reading' THEN er.total END) AS r_total,
+            MAX(CASE WHEN er.section = 'writing' THEN er.writing_band END) AS w_band,
+            MAX(CASE WHEN er.section = 'speaking' THEN er.speaking_band END) AS s_band
+        FROM users u
+        LEFT JOIN exam_results er ON er.email = u.email
+        LEFT JOIN groups g ON g.id = u.group_id
+        LEFT JOIN centers c ON c.id = u.center_id
+        {where_clause}
+        GROUP BY u.id, u.full_name, u.email, g.name, c.name
+        HAVING COUNT(er.id) > 0
+        LIMIT {limit}
+        """,
+        *args
+    )
+
+    result = []
+    for row in rows:
+        l_band = get_band_score(row["l_score"], row["l_total"], "listening") if row["l_score"] is not None else None
+        r_band = get_band_score(row["r_score"], row["r_total"], "reading") if row["r_score"] is not None else None
+        w_band = float(row["w_band"]) if row["w_band"] is not None else None
+        s_band = float(row["s_band"]) if row["s_band"] is not None else None
+
+        all_bands = [b for b in [l_band, r_band, w_band, s_band] if b is not None]
+        overall = calculate_overall_band(all_bands) if all_bands else None
+
+        result.append({
+            "id": row["id"],
+            "full_name": row["full_name"],
+            "email": row["email"],
+            "group_name": row["group_name"],
+            "center_name": row["center_name"],
+            "listening_band": l_band,
+            "reading_band": r_band,
+            "writing_band": w_band,
+            "speaking_band": s_band,
+            "overall_band": overall
+        })
+
+    # Overall band bo'yicha tartib
+    result.sort(key=lambda x: x["overall_band"] or 0, reverse=True)
+    for i, item in enumerate(result):
+        item["rank"] = i + 1
+    return result
+
+
+@app.get("/api/student/leaderboard")
+async def student_leaderboard(current_user: dict = Depends(get_current_user)):
+    """O'quvchi o'z guruhidagi reyting jadvalini ko'radi."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group_id = current_user.get("group_id")
+        if not group_id:
+            return {"leaderboard": [], "my_rank": None}
+
+        data = await _build_leaderboard(conn, "WHERE u.group_id = $1 AND u.role = 'student'", (group_id,))
+
+    my_rank = next((item["rank"] for item in data if item["email"] == current_user["email"]), None)
+    return {"leaderboard": data[:20], "my_rank": my_rank, "total": len(data)}
+
+
+@app.get("/api/admin/grade-speaking")
+async def admin_grade_speaking_form(_: None = Depends(require_admin)):
+    """Admin uchun baholanmagan speaking ro'yxati."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT er.id, er.full_name, er.email, er.speaking_telegram_file_id, er.submitted_at,
+                   u.id AS student_id, g.name AS group_name
+            FROM exam_results er
+            LEFT JOIN users u ON u.email = er.email
+            LEFT JOIN groups g ON g.id = u.group_id
+            WHERE er.section = 'speaking' AND er.speaking_band IS NULL
+            ORDER BY er.submitted_at ASC
+            """
+        )
+    return [
+        {
+            "id": r["id"],
+            "student_id": r["student_id"],
+            "full_name": r["full_name"],
+            "email": r["email"],
+            "group_name": r["group_name"],
+            "telegram_file_id": r["speaking_telegram_file_id"],
+            "submitted_at": r["submitted_at"].isoformat()
+        }
+        for r in rows
+    ]
+
+
+class GradeSpeakingAdmin(BaseModel):
+    result_id: int
+    band: float
+    feedback: Optional[str] = None
+    send_notification: bool = True
+
+
+@app.post("/api/admin/grade-speaking")
+async def admin_grade_speaking(data: GradeSpeakingAdmin, _: None = Depends(require_admin)):
+    """Admin speaking ni baholaydi."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE exam_results
+            SET speaking_band = $1, speaking_feedback = $2,
+                grader_name = 'Admin', speaking_graded_at = NOW()
+            WHERE id = $3 AND section = 'speaking'
+            RETURNING full_name, email
+            """,
+            data.band, data.feedback, data.result_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Natija topilmadi")
+
+    if data.send_notification:
+        try:
+            async with db.acquire() as conn2:
+                user_row = await conn2.fetchrow(
+                    "SELECT telegram_chat_id FROM users WHERE email = $1", row["email"].lower()
+                )
+            if user_row and user_row["telegram_chat_id"]:
+                from telegram import notify_user_speaking_graded
+                await notify_user_speaking_graded(
+                    user_row["telegram_chat_id"], row["full_name"], data.band, data.feedback
+                )
+        except Exception:
+            pass
+
+    return {"message": "Speaking baholandi"}
 
 
 # ─── Static Files ──────────────────────────────────────────────────────────────

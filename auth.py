@@ -179,6 +179,8 @@ class RegisterIn(BaseModel):
     password: str
     referral_code: Optional[str] = None
     telegram_data: Optional[TelegramData] = None
+    group_invite_code: Optional[str] = None    # student sifatida guruhga qo'shilish
+    teacher_invite_code: Optional[str] = None  # teacher sifatida guruhga rahbar bo'lish
 
 class TelegramLoginIn(BaseModel):
     id: int
@@ -333,6 +335,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
             """
             SELECT id, username, email, full_name, bio, email_verified, is_suspended,
                    telegram_chat_id, referral_code, referral_count,
+                   role, group_id, center_id,
                    (avatar_mime IS NOT NULL) AS has_avatar
             FROM users WHERE id=$1
             """,
@@ -343,6 +346,20 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
     if row["is_suspended"]:
         raise HTTPException(status_code=403, detail="Hisobingiz vaqtincha bloklangan")
     return dict(row)
+
+
+async def get_current_teacher(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Faqat o'qituvchilar uchun")
+    return current_user
+
+
+async def get_current_head_teacher(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "head_teacher":
+        raise HTTPException(status_code=403, detail="Faqat markaz rahbarlari uchun")
+    if not current_user.get("center_id"):
+        raise HTTPException(status_code=403, detail="Sizga hech qanday markaz biriktirilmagan")
+    return current_user
 
 
 def public_profile(row: dict) -> dict:
@@ -356,7 +373,8 @@ def public_profile(row: dict) -> dict:
         "avatar_url": f"/api/auth/avatar/{row['username']}" if row.get("has_avatar") else None,
         "telegram_chat_id": row.get("telegram_chat_id"),
         "referral_code": row.get("referral_code"),
-        "referral_count": row.get("referral_count", 0)
+        "referral_count": row.get("referral_count", 0),
+        "role": row.get("role", "student")
     }
 
 
@@ -375,45 +393,128 @@ async def register(data: RegisterIn):
     if not data.full_name.strip():
         raise HTTPException(status_code=400, detail="To'liq ismni kiriting")
 
+    if data.group_invite_code and data.teacher_invite_code:
+        raise HTTPException(status_code=400, detail="Faqat bitta taklif kodini kiriting")
+
     code = generate_verification_code()
     now = datetime.utcnow()
     expires = now + timedelta(minutes=VERIFICATION_CODE_TTL_MINUTES)
 
+    role_val = "student"
+    group_id_val = None
+    center_id_val = None
+    teacher_group_id = None   # teacher_invite_code orqali kelsa, keyin groups.teacher_id shu yerga yoziladi
+    roster_row_id = None      # group_invite_code roster orqali kelsa, used=TRUE qilish uchun
+
     db = await get_pool()
     async with db.acquire() as conn:
-        existing = await conn.fetchrow(
-            "SELECT id FROM users WHERE username=$1 OR email=$2",
-            username, data.email.lower()
-        )
-        if existing:
-            raise HTTPException(status_code=409, detail="Bu username yoki email allaqachon ro'yxatdan o'tgan")
+        async with conn.transaction():
+            existing = await conn.fetchrow(
+                "SELECT id FROM users WHERE username=$1 OR email=$2",
+                username, data.email.lower()
+            )
+            if existing:
+                raise HTTPException(status_code=409, detail="Bu username yoki email allaqachon ro'yxatdan o'tgan")
 
-        referral_code_val = secrets.token_urlsafe(8)
-        referred_by_id = None
-        
-        if data.referral_code:
-            ref_user = await conn.fetchrow("SELECT id FROM users WHERE referral_code=$1", data.referral_code)
-            if ref_user:
-                referred_by_id = ref_user["id"]
-                await conn.execute("UPDATE users SET referral_count = referral_count + 1 WHERE id=$1", referred_by_id)
+            # ── Teacher-invite: guruhga rahbar sifatida qo'shilish ──
+            if data.teacher_invite_code:
+                group_row = await conn.fetchrow(
+                    """
+                    UPDATE groups
+                    SET teacher_invite_code = NULL
+                    WHERE teacher_invite_code = $1 AND teacher_id IS NULL
+                    RETURNING id, name, center_id, is_active
+                    """,
+                    data.teacher_invite_code
+                )
+                if not group_row:
+                    raise HTTPException(status_code=400, detail="Taklif kodi noto'g'ri yoki allaqachon ishlatilgan")
+                if not group_row["is_active"]:
+                    raise HTTPException(status_code=400, detail="Bu guruh faol emas")
+                role_val = "teacher"
+                center_id_val = group_row["center_id"]
+                teacher_group_id = group_row["id"]
 
-        telegram_chat_id = None
-        if data.telegram_data:
-            if not verify_telegram_data(data.telegram_data.dict()):
-                raise HTTPException(status_code=400, detail="Telegram ma'lumotlari yaroqsiz")
-            telegram_chat_id = str(data.telegram_data.id)
+            # ── Group-invite: talaba sifatida guruhga qo'shilish ──
+            elif data.group_invite_code:
+                group_row = await conn.fetchrow(
+                    "SELECT id, center_id, is_active FROM groups WHERE invite_code=$1",
+                    data.group_invite_code
+                )
+                if not group_row:
+                    raise HTTPException(status_code=404, detail="Guruh topilmadi")
+                if not group_row["is_active"]:
+                    raise HTTPException(status_code=400, detail="Bu guruh faol emas")
 
-        row = await conn.fetchrow(
-            """
-            INSERT INTO users (username, email, full_name, password_hash,
-                                verification_code, verification_expires, verification_sent_at,
-                                referral_code, referred_by, telegram_chat_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id, username, email, full_name, bio, email_verified, telegram_chat_id, referral_code, referral_count
-            """,
-            username, data.email.lower(), data.full_name.strip(), hash_password(data.password),
-            hash_secret_value(code), expires, now, referral_code_val, referred_by_id, telegram_chat_id
-        )
+                roster_count = await conn.fetchval(
+                    "SELECT COUNT(*) FROM group_roster_emails WHERE group_id=$1", group_row["id"]
+                )
+                if roster_count > 0:
+                    roster_row = await conn.fetchrow(
+                        "SELECT id FROM group_roster_emails WHERE group_id=$1 AND email=$2 AND used=FALSE",
+                        group_row["id"], data.email.lower()
+                    )
+                    if not roster_row:
+                        raise HTTPException(
+                            status_code=403,
+                            detail="Sizning emailingiz bu guruh ro'yxatida topilmadi. Markaz rahbariga murojaat qiling"
+                        )
+                    roster_row_id = roster_row["id"]
+
+                from groups_db import get_center_limits
+                _, max_students = await get_center_limits(conn, group_row["center_id"])
+                student_count = await conn.fetchval(
+                    """
+                    SELECT COUNT(*) FROM users u
+                    JOIN groups g ON u.group_id = g.id
+                    WHERE g.center_id = $1
+                    """,
+                    group_row["center_id"]
+                )
+                if student_count >= max_students:
+                    raise HTTPException(status_code=400, detail="Markazdagi talabalar soni limitiga yetdi")
+
+                group_id_val = group_row["id"]
+                center_id_val = group_row["center_id"]
+
+            referral_code_val = secrets.token_urlsafe(8)
+            referred_by_id = None
+
+            if data.referral_code:
+                ref_user = await conn.fetchrow("SELECT id FROM users WHERE referral_code=$1", data.referral_code)
+                if ref_user:
+                    referred_by_id = ref_user["id"]
+                    await conn.execute("UPDATE users SET referral_count = referral_count + 1 WHERE id=$1", referred_by_id)
+
+            telegram_chat_id = None
+            if data.telegram_data:
+                if not verify_telegram_data(data.telegram_data.dict()):
+                    raise HTTPException(status_code=400, detail="Telegram ma'lumotlari yaroqsiz")
+                telegram_chat_id = str(data.telegram_data.id)
+
+            row = await conn.fetchrow(
+                """
+                INSERT INTO users (username, email, full_name, password_hash,
+                                    verification_code, verification_expires, verification_sent_at,
+                                    referral_code, referred_by, telegram_chat_id,
+                                    role, group_id, center_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                RETURNING id, username, email, full_name, bio, email_verified, telegram_chat_id,
+                          referral_code, referral_count, role, group_id, center_id
+                """,
+                username, data.email.lower(), data.full_name.strip(), hash_password(data.password),
+                hash_secret_value(code), expires, now, referral_code_val, referred_by_id, telegram_chat_id,
+                role_val, group_id_val, center_id_val
+            )
+
+            if teacher_group_id:
+                await conn.execute("UPDATE groups SET teacher_id=$1 WHERE id=$2", row["id"], teacher_group_id)
+
+            if roster_row_id:
+                await conn.execute(
+                    "UPDATE group_roster_emails SET used=TRUE, used_by=$1 WHERE id=$2",
+                    row["id"], roster_row_id
+                )
 
     try:
         await send_email(
@@ -429,6 +530,19 @@ async def register(data: RegisterIn):
         await notify_admin_new_user(row["full_name"], row["email"], row["username"])
     except Exception:
         pass
+
+    if role_val == "teacher" and teacher_group_id:
+        try:
+            from notifications import notify_head_teacher_new_teacher
+            db2 = await get_pool()
+            async with db2.acquire() as conn2:
+                group_info = await conn2.fetchrow("SELECT name FROM groups WHERE id=$1", teacher_group_id)
+                await notify_head_teacher_new_teacher(
+                    conn2, center_id_val, row["full_name"], row["email"],
+                    group_info["name"] if group_info else ""
+                )
+        except Exception:
+            pass
 
     profile = dict(row)
     profile["has_avatar"] = False
@@ -447,7 +561,7 @@ async def telegram_login(data: TelegramLoginIn):
         row = await conn.fetchrow(
             """
             SELECT id, username, email, full_name, bio, password_hash, email_verified, is_suspended,
-                   telegram_chat_id, referral_code, referral_count,
+                   telegram_chat_id, referral_code, referral_count, role, group_id, center_id,
                    (avatar_mime IS NOT NULL) AS has_avatar
             FROM users WHERE telegram_chat_id=$1
             """,
@@ -472,7 +586,7 @@ async def login(data: LoginIn):
         row = await conn.fetchrow(
             """
             SELECT id, username, email, full_name, bio, password_hash, email_verified, is_suspended,
-                   telegram_chat_id, referral_code, referral_count,
+                   telegram_chat_id, referral_code, referral_count, role, group_id, center_id,
                    (avatar_mime IS NOT NULL) AS has_avatar
             FROM users WHERE username=$1 OR email=$1
             """,

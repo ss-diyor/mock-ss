@@ -22,10 +22,15 @@ from fpdf import FPDF
 from db import get_pool
 from scoring import get_band_score
 from auth import router as auth_router, ensure_users_table, get_current_user
+from groups_db import ensure_center_group_tables, DEFAULT_MAX_GROUPS_PER_CENTER, DEFAULT_MAX_STUDENTS_PER_CENTER
+from head_teacher_routes import router as head_teacher_router
+from teacher_routes import router as teacher_router
 
 app = FastAPI(title="IELTS Mock Exam")
 app.include_router(feature_router)
 app.include_router(auth_router)
+app.include_router(head_teacher_router)
+app.include_router(teacher_router)
 
 
 @app.middleware("http")
@@ -78,6 +83,7 @@ async def startup():
         """)
 
     await ensure_users_table()
+    await ensure_center_group_tables()
 
 
 # ─── Models ───────────────────────────────────────────────────────────────────
@@ -276,6 +282,15 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
         await notify_admin_new_result(user_name, user_email, data.section, data.score, data.total, band)
     except Exception:
         pass
+
+    if current_user.get("group_id"):
+        try:
+            from notifications import notify_teacher_new_result
+            db3 = await get_pool()
+            async with db3.acquire() as conn3:
+                await notify_teacher_new_result(conn3, current_user["group_id"], user_name, data.section, band)
+        except Exception:
+            pass
 
     if data.section != "writing":
         try:
@@ -614,6 +629,102 @@ async def admin_users(search: Optional[str] = None, _: None = Depends(require_ad
             for r in rows
         ]
     }
+
+
+class CenterCreateIn(BaseModel):
+    name: str
+    max_groups: Optional[int] = None
+    max_students: Optional[int] = None
+
+
+class AssignHeadTeacherIn(BaseModel):
+    user_id: int
+
+
+@app.post("/api/admin/centers")
+async def admin_create_center(data: CenterCreateIn, _: None = Depends(require_admin)):
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Markaz nomini kiriting")
+
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO centers (name, max_groups, max_students)
+            VALUES ($1, $2, $3)
+            RETURNING id, name, max_groups, max_students, is_active, created_at
+            """,
+            name, data.max_groups, data.max_students
+        )
+    return dict(row) | {"created_at": row["created_at"].isoformat()}
+
+
+@app.get("/api/admin/centers")
+async def admin_list_centers(_: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT c.id, c.name, c.is_active, c.max_groups, c.max_students, c.created_at,
+                   c.owner_id, owner.full_name AS owner_name, owner.email AS owner_email,
+                   COUNT(DISTINCT g.id) AS groups_count,
+                   COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'student') AS students_count
+            FROM centers c
+            LEFT JOIN users owner ON owner.id = c.owner_id
+            LEFT JOIN groups g ON g.center_id = c.id
+            LEFT JOIN users u ON u.center_id = c.id
+            GROUP BY c.id, owner.full_name, owner.email
+            ORDER BY c.created_at DESC
+            """
+        )
+    return [
+        {
+            "id": r["id"], "name": r["name"], "is_active": r["is_active"],
+            "max_groups": r["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER,
+            "max_students": r["max_students"] or DEFAULT_MAX_STUDENTS_PER_CENTER,
+            "created_at": r["created_at"].isoformat(),
+            "owner_id": r["owner_id"], "owner_name": r["owner_name"], "owner_email": r["owner_email"],
+            "groups_count": r["groups_count"], "students_count": r["students_count"],
+        }
+        for r in rows
+    ]
+
+
+@app.post("/api/admin/centers/{center_id}/assign-head-teacher")
+async def admin_assign_head_teacher(center_id: int, data: AssignHeadTeacherIn, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        async with conn.transaction():
+            center = await conn.fetchrow("SELECT id FROM centers WHERE id=$1 FOR UPDATE", center_id)
+            if not center:
+                raise HTTPException(status_code=404, detail="Markaz topilmadi")
+
+            user = await conn.fetchrow("SELECT id, role FROM users WHERE id=$1", data.user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi")
+            if user["role"] != "student":
+                raise HTTPException(
+                    status_code=400,
+                    detail="Faqat oddiy (student) hisob head-teacher qilib tayinlanishi mumkin"
+                )
+
+            await conn.execute(
+                "UPDATE users SET role='head_teacher', center_id=$1 WHERE id=$2", center_id, data.user_id
+            )
+            await conn.execute("UPDATE centers SET owner_id=$1 WHERE id=$2", data.user_id, center_id)
+
+    return {"message": "Head-teacher tayinlandi"}
+
+
+@app.post("/api/admin/centers/{center_id}/deactivate")
+async def admin_deactivate_center(center_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        result = await conn.execute("UPDATE centers SET is_active=FALSE WHERE id=$1", center_id)
+        if result == "UPDATE 0":
+            raise HTTPException(status_code=404, detail="Markaz topilmadi")
+    return {"message": "Markaz yopildi"}
 
 
 @app.post("/api/admin/users/{user_id}/suspend")

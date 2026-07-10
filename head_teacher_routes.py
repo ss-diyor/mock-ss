@@ -166,12 +166,17 @@ async def remove_teacher(group_id: int, current_user: dict = Depends(get_current
 
 
 @router.post("/groups/{group_id}/deactivate")
-async def deactivate_group(group_id: int, current_user: dict = Depends(get_current_head_teacher)):
+async def toggle_group(group_id: int, current_user: dict = Depends(get_current_head_teacher)):
     db = await get_pool()
     async with db.acquire() as conn:
         await _own_group_or_404(conn, group_id, current_user["center_id"])
-        await conn.execute("UPDATE groups SET is_active=FALSE WHERE id=$1", group_id)
-    return {"message": "Guruh yopildi"}
+        row = await conn.fetchrow(
+            "UPDATE groups SET is_active = NOT is_active WHERE id=$1 RETURNING is_active", group_id
+        )
+    return {
+        "message": "Guruh yopildi" if not row["is_active"] else "Guruh qayta ochildi",
+        "is_active": row["is_active"]
+    }
 
 
 # ─── Bulk CSV import (roster) ───────────────────────────────────────────────

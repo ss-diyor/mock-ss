@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Panel — IELTS Mock</title>
+<title>Admin Panel — IELTS Mock SS</title>
 <meta name="robots" content="noindex, nofollow">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -310,8 +310,8 @@ async function loadResults(isLogin=false) {
 
   try {
     const res = await adminFetch('/api/admin/results');
-    if (res.status === 403) throw new Error('Noto\'g\'ri parol');
     const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Natijalarni yuklab bo\'lmadi');
     allResults = data.results;
 
     document.getElementById('view-login').style.display = 'none';
@@ -349,8 +349,8 @@ let charts = {};
 async function loadStats() {
   try {
     const res = await adminFetch('/api/admin/stats');
-    if (res.status === 403) throw new Error('Noto\'g\'ri parol');
     const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Statistika yuklab bo\'lmadi');
     
     document.getElementById('dashboard-stats-row').innerHTML = `
       <div class="stat-card"><div class="stat-num">${data.overview.total_users}</div><div class="stat-label">$ jami foydalanuvchilar</div></div>
@@ -381,6 +381,8 @@ async function loadStats() {
 
   } catch(e) {
     console.error("Stats error", e);
+    const row = document.getElementById('dashboard-stats-row');
+    if (row) row.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
   }
 }
 
@@ -405,9 +407,9 @@ async function loadUsers() {
   try {
     const url = '/api/admin/users' + (search ? `?search=${encodeURIComponent(search)}` : '');
     const res = await adminFetch(url);
-    if (res.status === 403) throw new Error('Noto\'g\'ri parol');
     const data = await res.json();
-    renderUsers(data.users);
+    if (!res.ok) throw new Error(data.detail || 'Foydalanuvchilarni yuklab bo\'lmadi');
+    renderUsers(data.users || []);
   } catch(e) {
     tbody.innerHTML = '';
     emptyEl.textContent = '→ ' + e.message;

@@ -215,6 +215,8 @@ table.students-table tr.clickable:hover { background: var(--bg); }
       <button class="section-tab active" id="tab-students" onclick="switchSection('students')">Talabalar</button>
       <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
       <button class="section-tab" id="tab-writing" onclick="switchSection('writing')">Writing Baholash</button>
+      <button class="section-tab" id="tab-speaking" onclick="switchSection('speaking')">🎤 Speaking Baholash</button>
+      <button class="section-tab" id="tab-leaderboard" onclick="switchSection('leaderboard')">🏆 Reyting</button>
     </div>
 
     <!-- STUDENTS -->
@@ -253,6 +255,24 @@ table.students-table tr.clickable:hover { background: var(--bg); }
       <div class="dash-section">
         <div class="dash-section-head"><span>Kutilayotgan Insholar</span></div>
         <div class="dash-section-body" id="pending-writing-body"></div>
+      </div>
+    </div>
+
+    <!-- SPEAKING -->
+    <div class="section-view" id="section-speaking">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>🎤 Kutilayotgan Speaking Audiolar</span>
+          <span style="font-size:11px; color:var(--muted);">Telegramdan audio eshiting va baho bering</span>
+        </div>
+        <div class="dash-section-body" id="pending-speaking-body"></div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="section-view" id="section-leaderboard">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>🏆 Guruh Reytingi</span></div>
+        <div class="dash-section-body" id="leaderboard-body"></div>
       </div>
     </div>
   </div>
@@ -452,14 +472,14 @@ function closeModal() {
 
 // ─── STATS ────────────────────────────────────────────────
 function switchSection(which) {
-  document.getElementById('tab-students').classList.toggle('active', which === 'students');
-  document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
-  document.getElementById('tab-writing').classList.toggle('active', which === 'writing');
-  document.getElementById('section-students').classList.toggle('active', which === 'students');
-  document.getElementById('section-stats').classList.toggle('active', which === 'stats');
-  document.getElementById('section-writing').classList.toggle('active', which === 'writing');
+  ['students','stats','writing','speaking','leaderboard'].forEach(tab => {
+    document.getElementById('tab-' + tab).classList.toggle('active', tab === which);
+    document.getElementById('section-' + tab).classList.toggle('active', tab === which);
+  });
   if (which === 'stats') loadStats();
   if (which === 'writing') loadPendingWriting();
+  if (which === 'speaking') loadPendingSpeaking();
+  if (which === 'leaderboard') loadLeaderboard();
 }
 
 async function loadStats() {
@@ -592,6 +612,120 @@ async function submitGrade(studentId, resultId) {
     loadPendingWriting();
   } catch(e) {
     alert(e.message);
+  }
+}
+
+// ─── SPEAKING GRADING ─────────────────────────────────────
+async function loadPendingSpeaking() {
+  const body = document.getElementById('pending-speaking-body');
+  body.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
+  try {
+    const data = await apiCall(T_API, '/pending-speaking');
+    if (!data.length) {
+      body.innerHTML = `<div class="empty-state">Tekshirilishi kerak bo'lgan speaking audiolar yo'q ✓</div>`;
+      return;
+    }
+    let html = '';
+    data.forEach(item => {
+      const date = new Date(item.submitted_at).toLocaleString('uz-UZ');
+      const telegramLink = item.telegram_file_id
+        ? `<div style="background:var(--blue-light); padding:10px 14px; border-radius:6px; margin-bottom:12px; font-size:12px; font-family:var(--mono);">
+             🎤 <b>Audio Telegramda saqlangan</b> — Telegram guruhidan toping va eshiting
+           </div>`
+        : `<div style="background:var(--amber-light); padding:10px 14px; border-radius:6px; margin-bottom:12px; font-size:12px; font-family:var(--mono); color:var(--amber);">
+             ⚠ Audio Telegramga yuborilmadi (texnik muammo)
+           </div>`;
+      html += `
+        <div style="border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-family:var(--mono); font-size:12px;">
+            <b>${item.full_name} (${item.email})</b>
+            <span style="color:var(--muted);">${date}</span>
+          </div>
+          ${telegramLink}
+          <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+            <div style="flex:1; min-width:140px;">
+              <label>Speaking Band (0–9)</label>
+              <input type="number" step="0.5" min="0" max="9" id="sp-band-${item.id}" placeholder="Masalan: 6.5">
+            </div>
+            <div style="flex:2; min-width:200px;">
+              <label>Izoh (ixtiyoriy)</label>
+              <input type="text" id="sp-feed-${item.id}" placeholder="Fluency, pronunciation, vocabulary...">
+            </div>
+            <button class="btn-primary btn-sm" onclick="submitSpeakingGrade(${item.student_id}, ${item.id})">Baholash</button>
+          </div>
+        </div>
+      `;
+    });
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
+  }
+}
+
+async function submitSpeakingGrade(studentId, resultId) {
+  const bandVal = parseFloat(document.getElementById(`sp-band-${resultId}`).value);
+  const feedVal = document.getElementById(`sp-feed-${resultId}`).value.trim();
+  if (isNaN(bandVal) || bandVal < 0 || bandVal > 9) {
+    alert("Band 0 dan 9 gacha bo'lishi kerak!");
+    return;
+  }
+  try {
+    await apiCall(T_API, `/students/${studentId}/grade-speaking/${resultId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ band: bandVal, feedback: feedVal || null })
+    });
+    loadPendingSpeaking();
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+// ─── LEADERBOARD ──────────────────────────────────────────
+async function loadLeaderboard() {
+  const body = document.getElementById('leaderboard-body');
+  body.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
+  try {
+    const data = await apiCall(T_API, '/leaderboard');
+    if (!data.leaderboard.length) {
+      body.innerHTML = `<div class="empty-state">Hali natijalar yo'q</div>`;
+      return;
+    }
+    const sectionCols = [
+      { key:'listening_band', label:'L' },
+      { key:'reading_band', label:'R' },
+      { key:'writing_band', label:'W' },
+      { key:'speaking_band', label:'S' },
+    ];
+    let html = `
+      <div style="overflow-x:auto;">
+      <table class="students-table">
+        <thead><tr>
+          <th>#</th><th>Talaba</th>
+          ${sectionCols.map(c => `<th>${c.label}</th>`).join('')}
+          <th>Overall</th>
+        </tr></thead>
+        <tbody>
+    `;
+    data.leaderboard.forEach((s, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : s.rank;
+      const overall = s.overall_band !== null
+        ? `<span class="s-band">${s.overall_band}</span>`
+        : `<span class="badge muted">—</span>`;
+      const bandCell = (b) => b !== null
+        ? `<span style="font-family:var(--mono); font-size:12px; font-weight:600;">${b}</span>`
+        : `<span style="color:var(--muted);">—</span>`;
+      html += `<tr>
+        <td style="font-family:var(--mono); font-weight:700;">${medal}</td>
+        <td><div class="s-name">${s.full_name}</div><div class="s-username">${s.email}</div></td>
+        ${sectionCols.map(c => `<td>${bandCell(s[c.key])}</td>`).join('')}
+        <td>${overall}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
   }
 }
 

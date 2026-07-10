@@ -562,6 +562,16 @@ footer a { color: var(--blue); text-decoration: none; }
         </div>
         <span class="badge" id="badge-writing">→ Boshlash</span>
       </div>
+      <div class="section-option" onclick="startSection('speaking')" id="opt-speaking">
+        <div class="section-option-left">
+          <div class="section-option-icon">🎤</div>
+          <div>
+            <div class="section-option-name">Speaking</div>
+            <div class="section-option-desc">~14 daqiqa · Audio yozib yuborish</div>
+          </div>
+        </div>
+        <span class="badge" id="badge-speaking">→ Boshlash</span>
+      </div>
     </div>
 
     <div style="margin-top:20px; text-align:center;">
@@ -707,6 +717,63 @@ footer a { color: var(--blue); text-decoration: none; }
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════
+     VIEW: SPEAKING
+═══════════════════════════════════════════════════════ -->
+<div class="view" id="view-speaking">
+  <div class="exam-wrap">
+    <div class="exam-header">
+      <div>
+        <p style="font-family:var(--mono); font-size:11px; color:var(--blue);">$ speaking --exam</p>
+        <h2 style="font-size:22px; font-weight:800;">Speaking Bo'limi</h2>
+      </div>
+      <div class="timer-box" id="timer-speaking">⏱ 14:00</div>
+    </div>
+
+    <div class="alert info" style="margin-bottom:20px;">
+      → Quyidagi mavzu bo'yicha gapiring. Tayyor bo'lgach yozishni boshlang, tugagach audioni yuboring.
+    </div>
+
+    <div class="dash-section" style="margin-bottom:18px;">
+      <div class="dash-section-head"><span>📋 Speaking Mavzu</span></div>
+      <div class="dash-section-body">
+        <p style="font-size:14px; font-weight:700; margin-bottom:8px;">Describe a place you would like to visit.</p>
+        <ul style="padding-left:20px; font-size:13px; color:var(--muted); line-height:2;">
+          <li>Where is it?</li>
+          <li>What would you do there?</li>
+          <li>Why do you want to visit it?</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Recorder -->
+    <div class="dash-section" style="margin-bottom:18px;">
+      <div class="dash-section-head"><span>🎙 Audio Yozish</span></div>
+      <div class="dash-section-body">
+        <div id="speaking-status" style="font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:12px;">
+          Mikrofonga ruxsat berish uchun "Yozishni boshlash" tugmasini bosing.
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+          <button class="btn-primary" id="btn-record-start" onclick="startRecording()">● Yozishni boshlash</button>
+          <button class="btn-outline" id="btn-record-stop" onclick="stopRecording()" disabled>■ To'xtatish</button>
+        </div>
+        <audio id="speaking-preview" controls style="width:100%; display:none; margin-bottom:12px;"></audio>
+        <div id="speaking-upload-area" style="display:none;">
+          <p style="font-size:13px; color:var(--muted); margin-bottom:10px;">Yoki audio faylni qo'lda yuklang:</p>
+          <input type="file" id="speaking-file-input" accept="audio/*" onchange="onAudioFileSelected(this)">
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:8px;">
+      <button class="btn-primary" id="btn-submit-speaking" onclick="submitSpeakingAudio()" style="font-size:14px; padding:14px 32px;" disabled>
+        ✓ Audioni yuborish
+      </button>
+      <p style="font-size:12px; color:var(--muted); margin-top:10px;">Audio yuborilgandan so'ng o'qituvchingiz baholaydi</p>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <footer>
   <span>IELTS Mock · ielts.sultanov.space · 2026</span>
@@ -841,6 +908,11 @@ function startSection(section) {
     window.location.href = '/reading-demo';
   } else if (section === 'writing') {
     window.location.href = '/writing-demo';
+  } else if (section === 'speaking') {
+    showView('view-speaking');
+    startTimer('timer-speaking', 14, null, () => {
+      document.getElementById('speaking-status').textContent = 'Vaqt tugadi! Yozishni to\'xtating va audioni yuboring.';
+    });
   }
 }
 
@@ -848,17 +920,17 @@ function startSection(section) {
 function startTimer(elId, minutes, progId, onExpire) {
   let total = minutes * 60;
   const el = document.getElementById(elId);
-  const prog = document.getElementById(progId);
+  const prog = progId ? document.getElementById(progId) : null;
 
   function tick() {
     const m = Math.floor(total / 60).toString().padStart(2,'0');
     const s = (total % 60).toString().padStart(2,'0');
     el.textContent = `⏱ ${m}:${s}`;
-    prog.style.width = (100 - (total / (minutes*60)) * 100) + '%';
+    if (prog) prog.style.width = (100 - (total / (minutes*60)) * 100) + '%';
     el.className = 'timer-box';
     if (total <= 300) el.classList.add('warning');
     if (total <= 60)  el.classList.add('danger');
-    if (total <= 0) { clearInterval(timerInterval); onExpire(); return; }
+    if (total <= 0) { clearInterval(timerInterval); if (onExpire) onExpire(); return; }
     total--;
   }
   tick();
@@ -1022,13 +1094,122 @@ function nextSection() {
 }
 
 function updateSectionBadges() {
-  ['listening','reading','writing'].forEach(s => {
+  ['listening','reading','writing','speaking'].forEach(s => {
+    const badge = document.getElementById(`badge-${s}`);
+    const opt = document.getElementById(`opt-${s}`);
+    if (!badge || !opt) return;
     if (state.completed.includes(s)) {
-      document.getElementById(`badge-${s}`).textContent = '✓ Topshirildi';
-      document.getElementById(`badge-${s}`).className = 'badge green';
-      document.getElementById(`opt-${s}`).classList.add('done');
+      badge.textContent = '✓ Topshirildi';
+      badge.className = 'badge green';
+      opt.classList.add('done');
     }
   });
+}
+
+// ─── SPEAKING ─────────────────────────────────────────────────────────────────
+let mediaRecorder = null;
+let recordedChunks = [];
+let speakingBlob = null;
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    speakingBlob = null;
+    document.getElementById('speaking-preview').style.display = 'none';
+    document.getElementById('btn-submit-speaking').disabled = true;
+
+    const mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+      ? 'audio/ogg;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      speakingBlob = new Blob(recordedChunks, { type: mimeType });
+      const url = URL.createObjectURL(speakingBlob);
+      const preview = document.getElementById('speaking-preview');
+      preview.src = url;
+      preview.style.display = 'block';
+      document.getElementById('btn-submit-speaking').disabled = false;
+      document.getElementById('speaking-status').textContent = `✓ Audio tayyor — ${Math.round(speakingBlob.size / 1024)} KB`;
+      stream.getTracks().forEach(t => t.stop());
+    };
+
+    mediaRecorder.start(1000);
+    document.getElementById('btn-record-start').disabled = true;
+    document.getElementById('btn-record-stop').disabled = false;
+    document.getElementById('speaking-status').innerHTML = `<span style="color:var(--red);">● Yozilmoqda...</span>`;
+  } catch (e) {
+    document.getElementById('speaking-status').textContent = `Mikrofonga ruxsat berilmadi: ${e.message}`;
+    document.getElementById('speaking-upload-area').style.display = 'block';
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  document.getElementById('btn-record-start').disabled = false;
+  document.getElementById('btn-record-stop').disabled = true;
+}
+
+function onAudioFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  speakingBlob = file;
+  const url = URL.createObjectURL(file);
+  const preview = document.getElementById('speaking-preview');
+  preview.src = url;
+  preview.style.display = 'block';
+  document.getElementById('btn-submit-speaking').disabled = false;
+  document.getElementById('speaking-status').textContent = `✓ Fayl tanlandi: ${file.name} (${Math.round(file.size/1024)} KB)`;
+}
+
+async function submitSpeakingAudio() {
+  if (!speakingBlob) { alert("Avval audio yozing yoki fayl tanlang!"); return; }
+  if (!state.sessionId) { alert("Sessiya topilmadi. Qayta boshlang."); return; }
+
+  const btn = document.getElementById('btn-submit-speaking');
+  btn.disabled = true;
+  btn.textContent = '⏳ Yuborilmoqda...';
+
+  try {
+    const formData = new FormData();
+    formData.append('session_id', state.sessionId);
+    const ext = speakingBlob.type.includes('ogg') ? 'ogg' : 'webm';
+    formData.append('audio', speakingBlob, `speaking.${ext}`);
+
+    const token = localStorage.getItem('ielts_token');
+    const res = await fetch('/api/submit-speaking', {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
+
+    state.completed.push('speaking');
+    state.lastSection = 'speaking';
+    state.lastResult = data;
+    updateSectionBadges();
+
+    // Natija ko'rinishini yangilash
+    document.getElementById('result-band').textContent = '🎤';
+    document.getElementById('result-detail').textContent = 'O\'qituvchi baholashini kuting';
+    document.getElementById('result-sections').innerHTML = `
+      <div style="padding:16px 24px; font-size:13px; color:var(--muted);">
+        <p>Speaking audioniz muvaffaqiyatli yuborildi.</p>
+        <p style="margin-top:8px;">O'qituvchingiz tez orada baholaydi va natija Telegram orqali bildiriladi.</p>
+      </div>`;
+    showView('view-result');
+  } catch (e) {
+    alert('Xatolik: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '✓ Audioni yuborish';
+  }
 }
 
 // ─── WORD COUNT ───────────────────────────────────────────────────────────────

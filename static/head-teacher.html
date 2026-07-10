@@ -417,11 +417,12 @@ function renderGroupExpandPanel(g) {
 
     <div id="invite-box-${g.id}">
       ${g.has_teacher ? '' : (g.teacher_invite_code ? `
-        <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ joriy invite-code</div>
+        <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ joriy teacher-invite link</div>
         <div class="code-box" style="margin-bottom:8px;">
-          <span>${window.location.origin}/teacher-invite?code=${g.teacher_invite_code}</span>
-          <div style="display:flex; gap:8px;">
-            <button class="btn-outline btn-sm" onclick="copyText('${window.location.origin}/teacher-invite?code=${g.teacher_invite_code}', this)">📋 Nusxa</button>
+          <span id="invite-link-text-${g.id}" style="word-break:break-all; font-size:11px;">${window.location.origin}/register?teacher_invite=${g.teacher_invite_code}</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+            <button class="btn-outline btn-sm" onclick="copyInviteLink(${g.id}, this)">📋 Nusxa</button>
+            <button class="btn-outline btn-sm" onclick="shareInviteLink(${g.id})">↗ Ulashish</button>
             <button class="btn-outline btn-sm danger" onclick="revokeInvite(${g.id}, this)">Bekor qilish</button>
           </div>
         </div>
@@ -538,6 +539,60 @@ function copyText(text, btnEl) {
     btnEl.innerHTML = '✓ Nusxalandi';
     setTimeout(() => { btnEl.innerHTML = original; }, 1500);
   }).catch(() => alert('Nusxalab bo\'lmadi, qo\'lda ko\'chiring'));
+}
+
+function copyInviteLink(groupId, btnEl) {
+  const el = document.getElementById(`invite-link-text-${groupId}`);
+  const text = el ? el.textContent.trim() : '';
+  if (!text) return;
+
+  // navigator.clipboard — HTTPS da ishlaydi
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      btnEl.innerHTML = '✓ Nusxalandi';
+      setTimeout(() => { btnEl.innerHTML = '📋 Nusxa'; }, 2000);
+    }).catch(() => fallbackCopy(text, btnEl));
+  } else {
+    fallbackCopy(text, btnEl);
+  }
+}
+
+function fallbackCopy(text, btnEl) {
+  // Eski brauzer / HTTP uchun textarea usuli
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
+    if (btnEl) { btnEl.innerHTML = '✓ Nusxalandi'; setTimeout(() => { btnEl.innerHTML = '📋 Nusxa'; }, 2000); }
+  } catch (e) {
+    // Oxirgi chora: prompt orqali ko'rsatish
+    window.prompt('Linkni qo\'lda nusxalang (Ctrl+C / uzun bosish):', text);
+  }
+  document.body.removeChild(ta);
+}
+
+function shareInviteLink(groupId) {
+  const el = document.getElementById(`invite-link-text-${groupId}`);
+  const text = el ? el.textContent.trim() : '';
+  if (!text) return;
+
+  // Web Share API — mobil uchun ideal (Telegram, WhatsApp ga ulashish)
+  if (navigator.share) {
+    navigator.share({
+      title: 'Teacher Invite — IELTS Mock',
+      text: 'Teacher sifatida ro\'yxatdan o\'tish uchun link:',
+      url: text
+    }).catch(() => {});
+  } else {
+    // Desktop da clipboard ga nusxa
+    fallbackCopy(text, null);
+    alert('Link clipboard ga nusxalandi!');
+  }
 }
 
 async function importCSV(groupId, btnEl) {

@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markaz Paneli — IELTS Mock SS</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:       #1a56e8;
+  --blue-hover: #1441c0;
+  --blue-light: #eef3ff;
+  --blue-mid:   #c9d8ff;
+  --text:       #0b1733;
+  --muted:      #4a5978;
+  --border:     #c9d8ff;
+  --bg:         #f5f8ff;
+  --surface:    #ffffff;
+  --surface2:   #eef3ff;
+  --shadow:     rgba(26, 86, 232, 0.08);
+  --red:        #e53e3e;
+  --red-light:  #fff5f5;
+  --green:      #16a34a;
+  --green-light:#f0fdf4;
+  --amber:      #d97706;
+  --amber-light:#fffbeb;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+nav { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 48px; border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.nav-logo-icon { width: 46px; height: 46px; border-radius: 10px; background: var(--blue);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 18px; font-weight: 700; color: #fff; }
+.nav-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+.nav-logo-text span:first-child { font-size: 14px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.nav-logo-text span:last-child  { font-size: 12px; font-weight: 500; font-family: var(--mono); color: var(--muted); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+
+.view { display: none; }
+.view.active { display: block; }
+
+.auth-wrap { max-width: 420px; margin: 80px auto; padding: 0 24px; }
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.form-card-head { padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface2);
+  font-size: 13px; font-weight: 700; font-family: var(--mono); }
+.form-card-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+label { display: block; font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+input, textarea { width: 100%; font-family: var(--sans); font-size: 14px; color: var(--text);
+  background: var(--bg); border: 1.5px solid var(--border); border-radius: 7px; padding: 10px 12px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s; }
+input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,232,0.1); }
+
+.btn-primary { background: var(--blue); color: #fff; font-family: var(--mono); font-size: 13px; font-weight: 600;
+  padding: 11px 20px; border-radius: 6px; border: none; cursor: pointer; transition: background .2s, transform .2s; }
+.btn-primary:hover { background: var(--blue-hover); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: .5; pointer-events: none; }
+.btn-primary.full { width: 100%; text-align: center; }
+.btn-outline { background: var(--surface); color: var(--text); font-family: var(--mono); font-size: 12px;
+  font-weight: 500; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer;
+  transition: border-color .2s, color .2s; }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-outline.danger:hover { border-color: var(--red); color: var(--red); }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+
+.alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; font-family: var(--mono); border: 1px solid; margin-bottom: 16px; }
+.alert.danger { background: var(--red-light); color: var(--red); border-color: #fecaca; }
+.alert.success { background: var(--green-light); color: var(--green); border-color: #bbf7d0; }
+.alert.info { background: var(--blue-light); color: var(--blue); border-color: var(--blue-mid); }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--blue);
+  border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.badge { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px;
+  background: var(--blue-light); color: var(--blue); display: inline-block; white-space: nowrap; }
+.badge.success { background: var(--green-light); color: var(--green); }
+.badge.warning { background: var(--amber-light); color: var(--amber); }
+.badge.danger  { background: var(--red-light); color: var(--red); }
+.badge.muted   { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+.wrap { max-width: 900px; margin: 32px auto 80px; padding: 0 24px; }
+
+.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.dash-stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
+.dash-stat-num { font-size: 26px; font-weight: 900; font-family: var(--mono); color: var(--blue); }
+.dash-stat-label { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+
+.section-tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface2); padding: 4px;
+  border-radius: 9px; max-width: 420px; }
+.section-tab { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 6px;
+  font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .15s; }
+.section-tab.active { background: var(--surface); color: var(--blue); box-shadow: 0 1px 3px var(--shadow); }
+.section-view { display: none; }
+.section-view.active { display: block; }
+
+.dash-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+.dash-section-head { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface2);
+  font-size: 13px; font-weight: 700; font-family: var(--mono); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.dash-section-body { padding: 20px; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-family: var(--mono); font-size: 13px; }
+
+/* GROUP CARD */
+.group-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.group-head { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface2);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.group-name { font-size: 15px; font-weight: 700; }
+.group-meta { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+.group-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.group-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.group-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.code-box { font-family: var(--mono); font-size: 12px; background: var(--bg); border: 1px dashed var(--border);
+  border-radius: 6px; padding: 8px 12px; word-break: break-all; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.code-box button { flex-shrink: 0; }
+.expand-panel { display: none; border-top: 1px solid var(--border); padding: 16px 20px; background: var(--bg); flex-direction: column; gap: 14px; }
+.expand-panel.active { display: flex; }
+.roster-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 12px; font-family: var(--mono); border-bottom: 1px solid var(--border); }
+.roster-row:last-child { border-bottom: none; }
+
+@media (max-width: 700px) {
+  nav { padding: 14px 16px; }
+  .wrap { padding: 0 16px; }
+  .group-row { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-icon">M</div>
+    <div class="nav-logo-text">
+      <span>Markaz Panel</span>
+      <span>ielts.sultanov.space</span>
+    </div>
+  </a>
+  <div class="nav-right" id="nav-right"></div>
+</nav>
+
+<!-- LOGIN -->
+<div class="view active" id="view-auth">
+  <div class="auth-wrap">
+    <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px;">$ markaz --login</p>
+    <h2 style="font-size:22px; font-weight:800; margin-bottom:20px;">Markaz rahbari kirishi</h2>
+    <div class="form-card">
+      <div class="form-card-head">$ auth --login</div>
+      <div class="form-card-body">
+        <div>
+          <label>Username yoki email</label>
+          <input type="text" id="login-id" placeholder="username">
+        </div>
+        <div>
+          <label>Parol</label>
+          <input type="password" id="login-pass" placeholder="••••••••">
+        </div>
+        <div id="login-error" class="alert danger" style="display:none;"></div>
+        <button class="btn-primary full" onclick="doLogin()" id="login-btn">→ Kirish</button>
+        <p style="font-size:12px; color:var(--muted); text-align:center;">Hisobingiz yo'qmi? <a href="/profile" style="color:var(--blue);">Avval oddiy ro'yxatdan o'ting</a>, keyin super-admin sizni markaz rahbari qilib tayinlaydi.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ACCESS DENIED -->
+<div class="view" id="view-denied">
+  <div class="auth-wrap">
+    <div class="alert danger">→ Bu sahifa faqat markaz rahbarlari uchun mo'ljallangan. Sizning hisobingiz bunday huquqqa ega emas.</div>
+    <a href="/profile" class="btn-outline" style="display:block; text-align:center;">← Profilga qaytish</a>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="view" id="view-dashboard">
+  <div class="wrap">
+    <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px;">$ markaz --dashboard</p>
+    <h2 id="center-title" style="font-size:22px; font-weight:800; margin-bottom:20px;"></h2>
+
+    <div class="dash-stats" id="overview-stats"></div>
+
+    <div class="section-tabs">
+      <button class="section-tab active" id="tab-groups" onclick="switchSection('groups')">Guruhlar</button>
+      <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
+    </div>
+
+    <!-- GROUPS -->
+    <div class="section-view active" id="section-groups">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ guruh --create</span></div>
+        <div class="dash-section-body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+          <div style="flex:1; min-width:200px;">
+            <label>Guruh nomi</label>
+            <input type="text" id="group-name-input" placeholder="Masalan: IELTS-2026-Yoz">
+          </div>
+          <button class="btn-primary" onclick="createGroup()" id="create-group-btn">+ Yaratish</button>
+        </div>
+      </div>
+
+      <div id="groups-list"></div>
+      <div id="groups-empty" class="empty-state" style="display:none;">Hali guruhlar yo'q — yuqoridagi formadan birinchisini yarating</div>
+    </div>
+
+    <!-- STATS -->
+    <div class="section-view" id="section-stats">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ markaz --stats</span></div>
+        <div class="dash-section-body">
+          <div id="stats-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const AUTH_API = '/api/auth';
+const HT_API = '/api/head-teacher';
+let token = localStorage.getItem('ielts_token');
+let currentUser = null;
+let allGroups = [];
+let expandedGroupId = null;
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+async function apiCall(base, path, options = {}) {
+  const headers = options.headers || {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(base + path, { ...options, headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
+  return data;
+}
+
+function logout() {
+  localStorage.removeItem('ielts_token');
+  token = null;
+  currentUser = null;
+  document.getElementById('nav-right').innerHTML = '';
+  showView('view-auth');
+}
+
+async function doLogin() {
+  const login = document.getElementById('login-id').value.trim().replace(/^@/, '');
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if (!login || !pass) { errEl.textContent = "→ Barcha maydonlarni to'ldiring"; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Tekshirilmoqda...';
+
+  try {
+    const data = await apiCall(AUTH_API, '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, password: pass })
+    });
+    token = data.token;
+    localStorage.setItem('ielts_token', token);
+    currentUser = data.user;
+    afterAuthResolved();
+  } catch (e) {
+    errEl.textContent = '→ ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '→ Kirish';
+  }
+}
+
+function afterAuthResolved() {
+  if (!currentUser || currentUser.role !== 'head_teacher') {
+    showView('view-denied');
+    return;
+  }
+  document.getElementById('nav-right').innerHTML = `
+    <span class="badge muted">@${currentUser.username}</span>
+    <button class="btn-outline btn-sm" onclick="logout()">Chiqish</button>
+  `;
+  showView('view-dashboard');
+  loadCenter();
+  loadGroups();
+}
+
+// ─── CENTER OVERVIEW ──────────────────────────────────────
+async function loadCenter() {
+  try {
+    const c = await apiCall(HT_API, '/center');
+    document.getElementById('center-title').textContent = c.name;
+    const statusBadge = c.is_active
+      ? `<span class="badge success">● Faol</span>`
+      : `<span class="badge danger">⛔ Yopiq</span>`;
+    document.getElementById('overview-stats').innerHTML = `
+      <div class="dash-stat-card"><div class="dash-stat-num">${statusBadge}</div><div class="dash-stat-label">$ holat</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-num">${c.groups_count}/${c.max_groups}</div><div class="dash-stat-label">$ guruhlar</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-num">${c.students_count}/${c.max_students}</div><div class="dash-stat-label">$ talabalar</div></div>
+    `;
+  } catch (e) {
+    document.getElementById('overview-stats').innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
+  }
+}
+
+// ─── GROUPS ───────────────────────────────────────────────
+async function loadGroups() {
+  const listEl = document.getElementById('groups-list');
+  const emptyEl = document.getElementById('groups-empty');
+  listEl.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
+  emptyEl.style.display = 'none';
+
+  try {
+    allGroups = await apiCall(HT_API, '/groups');
+    renderGroups();
+  } catch (e) {
+    listEl.innerHTML = '';
+    emptyEl.textContent = '→ ' + e.message;
+    emptyEl.style.display = 'block';
+  }
+}
+
+function renderGroups() {
+  const listEl = document.getElementById('groups-list');
+  const emptyEl = document.getElementById('groups-empty');
+
+  if (!allGroups.length) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  listEl.innerHTML = allGroups.map(g => {
+    const statusBadge = g.is_active
+      ? `<span class="badge success">● Faol</span>`
+      : `<span class="badge danger">⛔ Yopiq</span>`;
+    const teacherInfo = g.has_teacher
+      ? `<span class="badge muted">👨‍🏫 ${g.teacher_name} (${g.teacher_email})</span>`
+      : `<span class="badge warning">⚠ Teacher tayinlanmagan</span>`;
+    const isExpanded = expandedGroupId === g.id;
+
+    return `
+    <div class="group-card">
+      <div class="group-head">
+        <div>
+          <div class="group-name">${g.name}</div>
+          <div class="group-meta">talaba invite: ${g.invite_code}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">${statusBadge}</div>
+      </div>
+      <div class="group-body">
+        <div class="group-row">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="badge muted">🎓 ${g.students_count} talaba</span>
+            ${teacherInfo}
+          </div>
+          <div class="group-actions">
+            <button class="btn-outline btn-sm" onclick="toggleExpand(${g.id})">${isExpanded ? '▲ Yopish' : '▼ Boshqarish'}</button>
+          </div>
+        </div>
+      </div>
+      <div class="expand-panel ${isExpanded ? 'active' : ''}" id="expand-${g.id}">
+        ${renderGroupExpandPanel(g)}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Agar expand panel ochiq bo'lsa va roster/invite ma'lumot kerak bo'lsa — qayta yuklaymiz
+  if (expandedGroupId) {
+    const g = allGroups.find(x => x.id === expandedGroupId);
+    if (g) attachExpandHandlers(g);
+  }
+}
+
+function renderGroupExpandPanel(g) {
+  return `
+    <div>
+      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ amallar</div>
+      <div class="group-actions">
+        <button class="btn-outline btn-sm" onclick="toggleGroupActive(${g.id}, this)">${g.is_active ? '⛔ Guruhni yopish' : '✓ Qayta ochish'}</button>
+        ${g.has_teacher
+          ? `<button class="btn-outline btn-sm danger" onclick="removeTeacher(${g.id}, this)">🗑 Teacherni olib tashlash</button>`
+          : `<button class="btn-outline btn-sm" onclick="generateInvite(${g.id}, this)">🔗 Teacher-invite yaratish</button>`
+        }
+        <button class="btn-outline btn-sm" onclick="viewRoster(${g.id})">📋 Ro'yxat (roster)</button>
+      </div>
+    </div>
+
+    <div id="invite-box-${g.id}"></div>
+
+    <div>
+      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ csv --import (talabalar ro'yxati, 'email' ustuni majburiy)</div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="file" accept=".csv" id="csv-input-${g.id}" style="flex:1; min-width:180px;">
+        <button class="btn-outline btn-sm" onclick="importCSV(${g.id}, this)">⬆ Yuklash</button>
+      </div>
+      <div id="csv-result-${g.id}" style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:6px;"></div>
+    </div>
+
+    <div id="roster-box-${g.id}"></div>
+  `;
+}
+
+function attachExpandHandlers(g) {
+  // hozircha alohida handler kerak emas — inline onclick ishlatilgan
+}
+
+function toggleExpand(groupId) {
+  expandedGroupId = expandedGroupId === groupId ? null : groupId;
+  renderGroups();
+}
+
+async function createGroup() {
+  const input = document.getElementById('group-name-input');
+  const name = input.value.trim();
+  if (!name) { alert('Guruh nomini kiriting'); return; }
+
+  const btn = document.getElementById('create-group-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    await apiCall(HT_API, '/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    input.value = '';
+    await loadGroups();
+    await loadCenter();
+  } catch (e) {
+    alert('Xatolik: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '+ Yaratish';
+  }
+}
+
+async function toggleGroupActive(groupId, btnEl) {
+  btnEl.disabled = true;
+  try {
+    await apiCall(HT_API, `/groups/${groupId}/deactivate`, { method: 'POST' });
+    await loadGroups();
+  } catch (e) {
+    alert('Xatolik: ' + e.message);
+    btnEl.disabled = false;
+  }
+}
+
+async function removeTeacher(groupId, btnEl) {
+  if (!confirm("Teacherni bu guruhdan olib tashlamoqchimisiz? Uning hisobi student sifatida saqlanib qoladi.")) return;
+  btnEl.disabled = true;
+  try {
+    await apiCall(HT_API, `/groups/${groupId}/remove-teacher`, { method: 'POST' });
+    await loadGroups();
+  } catch (e) {
+    alert('Xatolik: ' + e.message);
+    btnEl.disabled = false;
+  }
+}
+
+async function generateInvite(groupId, btnEl) {
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<span class="spinner"></span>';
+  try {
+    const data = await apiCall(HT_API, `/groups/${groupId}/generate-teacher-invite`, { method: 'POST' });
+    document.getElementById(`invite-box-${groupId}`).innerHTML = `
+      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ teacher --invite-link (bir martalik, faqat shu guruh uchun)</div>
+      <div class="code-box">
+        <span>${data.invite_link}</span>
+        <button class="btn-outline btn-sm" onclick="copyText('${data.invite_link}', this)">📋 Nusxa</button>
+      </div>
+    `;
+  } catch (e) {
+    alert('Xatolik: ' + e.message);
+  } finally {
+    btnEl.disabled = false;
+    btnEl.innerHTML = '🔗 Teacher-invite yaratish';
+  }
+}
+
+function copyText(text, btnEl) {
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btnEl.innerHTML;
+    btnEl.innerHTML = '✓ Nusxalandi';
+    setTimeout(() => { btnEl.innerHTML = original; }, 1500);
+  }).catch(() => alert('Nusxalab bo\'lmadi, qo\'lda ko\'chiring'));
+}
+
+async function importCSV(groupId, btnEl) {
+  const fileInput = document.getElementById(`csv-input-${groupId}`);
+  const resultEl = document.getElementById(`csv-result-${groupId}`);
+  if (!fileInput.files.length) { alert('CSV fayl tanlang'); return; }
+
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<span class="spinner"></span>';
+  resultEl.textContent = '';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const res = await fetch(`${HT_API}/groups/${groupId}/import-students`, {
+      method: 'POST', headers, body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik');
+    resultEl.textContent = `→ Qo'shildi: ${data.added}, takror: ${data.skipped_duplicates}, noto'g'ri qator: ${data.invalid_rows}`;
+    fileInput.value = '';
+  } catch (e) {
+    resultEl.textContent = '→ Xatolik: ' + e.message;
+  } finally {
+    btnEl.disabled = false;
+    btnEl.innerHTML = '⬆ Yuklash';
+  }
+}
+
+async function viewRoster(groupId) {
+  const box = document.getElementById(`roster-box-${groupId}`);
+  box.innerHTML = `<div style="font-family:var(--mono); font-size:11px; color:var(--muted);"><span class="spinner"></span> Yuklanmoqda...</div>`;
+  try {
+    const rows = await apiCall(HT_API, `/groups/${groupId}/roster`);
+    if (!rows.length) {
+      box.innerHTML = `<div style="font-family:var(--mono); font-size:11px; color:var(--muted);">Roster bo'sh — hali CSV import qilinmagan (guruh ochiq invite-code bilan ishlaydi)</div>`;
+      return;
+    }
+    box.innerHTML = `
+      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ roster (${rows.length})</div>
+      ${rows.map(r => `
+        <div class="roster-row">
+          <span>${r.email}${r.full_name ? ' — ' + r.full_name : ''}</span>
+          <span class="badge ${r.used ? 'success' : 'muted'}">${r.used ? "✓ ro'yxatdan o'tgan" : 'kutilmoqda'}</span>
+        </div>
+      `).join('')}
+    `;
+  } catch (e) {
+    box.innerHTML = `<div style="color:var(--red); font-size:11px;">→ ${e.message}</div>`;
+  }
+}
+
+// ─── STATS ────────────────────────────────────────────────
+function switchSection(which) {
+  document.getElementById('tab-groups').classList.toggle('active', which === 'groups');
+  document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
+  document.getElementById('section-groups').classList.toggle('active', which === 'groups');
+  document.getElementById('section-stats').classList.toggle('active', which === 'stats');
+  if (which === 'stats') loadStats();
+}
+
+async function loadStats() {
+  const body = document.getElementById('stats-body');
+  body.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
+  try {
+    const data = await apiCall(HT_API, '/stats');
+    const sectionNames = { listening: 'Listening', reading: 'Reading', writing: 'Writing', speaking: 'Speaking' };
+    const entries = Object.entries(data.average_band_by_section || {});
+    if (!entries.length) {
+      body.innerHTML = `<div class="empty-state">Hali natijalar yo'q</div>`;
+      return;
+    }
+    body.innerHTML = `
+      <div class="dash-stats" style="margin-bottom:16px;">
+        ${entries.map(([section, band]) => `
+          <div class="dash-stat-card">
+            <div class="dash-stat-num">${band}</div>
+            <div class="dash-stat-label">$ ${sectionNames[section] || section}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="font-family:var(--mono); font-size:12px; color:var(--muted);">
+        Jami urinishlar: <b style="color:var(--text);">${data.total_attempts}</b>
+        ${data.weakest_section ? ` · Eng past ko'rsatkich: <span class="badge warning">${sectionNames[data.weakest_section] || data.weakest_section}</span>` : ''}
+      </div>
+    `;
+  } catch (e) {
+    body.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+(async function init() {
+  if (!token) { showView('view-auth'); return; }
+  try {
+    const data = await apiCall(AUTH_API, '/me');
+    currentUser = data.user;
+    afterAuthResolved();
+  } catch (e) {
+    logout();
+  }
+})();
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('view-auth').classList.contains('active')) doLogin();
+});
+</script>
+</body>
+</html>

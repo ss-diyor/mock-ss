@@ -449,6 +449,11 @@ const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.has('ref')) {
   localStorage.setItem('referral_code', urlParams.get('ref'));
 }
+// Teacher invite link orqali kelganda saqlab qo'yamiz
+const teacherInviteCode = urlParams.get('teacher_invite') || null;
+if (teacherInviteCode) {
+  localStorage.setItem('teacher_invite_code', teacherInviteCode);
+}
 
 function handlePostAuthRedirect() {
   if (redirectTarget !== 'exam' || !currentUser) return;
@@ -600,6 +605,8 @@ async function doRegister() {
     const refCode = localStorage.getItem('referral_code');
     if (refCode) payload.referral_code = refCode;
     if (telegramDataCache) payload.telegram_data = telegramDataCache;
+    const savedTeacherInvite = localStorage.getItem('teacher_invite_code');
+    if (savedTeacherInvite) payload.teacher_invite_code = savedTeacherInvite;
     
     const data = await apiCall('/register', {
       method: 'POST',
@@ -608,6 +615,7 @@ async function doRegister() {
     });
     token = data.token;
     localStorage.setItem('ielts_token', token);
+    localStorage.removeItem('teacher_invite_code');
     currentUser = data.user;
     renderDashboard();
     loadDashboardStats();
@@ -942,6 +950,15 @@ function logout() {
       hint.style.marginBottom = '16px';
       hint.textContent = "→ Imtihonni boshlash uchun avval ro'yxatdan o'ting yoki hisobingizga kiring";
       document.querySelector('.auth-wrap').prepend(hint);
+    }
+    if (teacherInviteCode) {
+      switchTab('register');
+      const hint = document.createElement('div');
+      hint.className = 'alert info';
+      hint.style.marginBottom = '16px';
+      hint.textContent = "→ Teacher sifatida ro'yxatdan o'tish uchun ma'lumotlaringizni to'ldiring";
+      const authWrap = document.querySelector('.auth-wrap');
+      if (authWrap) authWrap.prepend(hint);
     }
     return;
   }

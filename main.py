@@ -26,7 +26,7 @@ from groups_db import ensure_center_group_tables, DEFAULT_MAX_GROUPS_PER_CENTER,
 from head_teacher_routes import router as head_teacher_router
 from teacher_routes import router as teacher_router
 
-app = FastAPI(title="IELTS Mock Exam")
+app = FastAPI(title="IELTS Mock SS")
 app.include_router(feature_router)
 app.include_router(auth_router)
 app.include_router(head_teacher_router)
@@ -718,13 +718,19 @@ async def admin_assign_head_teacher(center_id: int, data: AssignHeadTeacherIn, _
 
 
 @app.post("/api/admin/centers/{center_id}/deactivate")
-async def admin_deactivate_center(center_id: int, _: None = Depends(require_admin)):
+async def admin_toggle_center(center_id: int, _: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
-        result = await conn.execute("UPDATE centers SET is_active=FALSE WHERE id=$1", center_id)
-        if result == "UPDATE 0":
+        row = await conn.fetchrow(
+            "UPDATE centers SET is_active = NOT is_active WHERE id=$1 RETURNING id, is_active",
+            center_id
+        )
+        if not row:
             raise HTTPException(status_code=404, detail="Markaz topilmadi")
-    return {"message": "Markaz yopildi"}
+    return {
+        "message": "Markaz yopildi" if not row["is_active"] else "Markaz qayta ochildi",
+        "is_active": row["is_active"]
+    }
 
 
 @app.post("/api/admin/users/{user_id}/suspend")

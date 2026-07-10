@@ -108,7 +108,7 @@ input:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26
 
 /* SECTION TABS */
 .section-tabs{display:flex;gap:4px;margin-bottom:24px;background:var(--surface2);padding:4px;
-  border-radius:9px;max-width:420px;}
+  border-radius:9px;max-width:560px;}
 .section-tab{flex:1;padding:10px;border:none;background:transparent;border-radius:6px;
   font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;}
 .section-tab.active{background:var(--surface);color:var(--blue);box-shadow:0 1px 3px var(--shadow);}
@@ -138,6 +138,22 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;font-weight:700;
   color:var(--blue);flex-shrink:0;overflow:hidden;}
 .u-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+
+/* CENTERS TAB */
+.center-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;margin-bottom:14px;}
+.center-head{padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface2);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.center-name{font-size:15px;font-weight:700;}
+.center-meta{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+.center-body{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:14px;}
+.center-stats{display:flex;gap:16px;flex-wrap:wrap;}
+.center-stat{font-family:var(--mono);font-size:12px;color:var(--muted);}
+.center-stat b{color:var(--text);font-size:14px;}
+.center-owner-form{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--border);
+  background:var(--bg);flex-wrap:wrap;align-items:center;}
+.center-owner-form input{max-width:260px;}
 
 @media (max-width:768px){
   nav{padding:14px 16px;}
@@ -186,6 +202,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
     <button class="section-tab active" id="tab-results" onclick="switchSection('results')">Natijalar</button>
     <button class="section-tab" id="tab-users" onclick="switchSection('users')">Foydalanuvchilar</button>
+    <button class="section-tab" id="tab-centers" onclick="switchSection('centers')">Markazlar</button>
   </div>
 
   <!-- STATS SECTION -->
@@ -256,6 +273,36 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
       </table>
     </div>
     <div id="users-empty" class="empty-state" style="display:none;">Foydalanuvchilar topilmadi</div>
+  </div>
+
+  <!-- CENTERS SECTION -->
+  <div class="section-view" id="section-centers">
+    <div class="form-card" style="margin-bottom:24px;">
+      <div class="form-card-head">$ centers --create</div>
+      <div class="form-card-body" style="flex-direction:row;flex-wrap:wrap;align-items:flex-end;">
+        <div style="flex:2;min-width:180px;">
+          <label>Markaz nomi</label>
+          <input type="text" id="center-name-input" placeholder="Masalan: Bo'stonliq IELTS Markazi">
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <label>Max guruhlar (ixtiyoriy)</label>
+          <input type="number" id="center-max-groups-input" placeholder="10">
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <label>Max talabalar (ixtiyoriy)</label>
+          <input type="number" id="center-max-students-input" placeholder="500">
+        </div>
+        <button class="btn-primary" onclick="createCenter()" id="create-center-btn">+ Yaratish</button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--muted);">$ ro'yxat</span>
+      <button class="btn-outline btn-sm" onclick="loadCenters()">↻ Yangilash</button>
+    </div>
+
+    <div id="centers-list"></div>
+    <div id="centers-empty" class="empty-state" style="display:none;">Hali markazlar yo'q</div>
   </div>
 </div>
 
@@ -336,13 +383,16 @@ function switchSection(which) {
   if (document.getElementById('tab-stats')) document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
   if (document.getElementById('tab-results')) document.getElementById('tab-results').classList.toggle('active', which === 'results');
   if (document.getElementById('tab-users')) document.getElementById('tab-users').classList.toggle('active', which === 'users');
-  
+  if (document.getElementById('tab-centers')) document.getElementById('tab-centers').classList.toggle('active', which === 'centers');
+
   if (document.getElementById('section-stats')) document.getElementById('section-stats').classList.toggle('active', which === 'stats');
   if (document.getElementById('section-results')) document.getElementById('section-results').classList.toggle('active', which === 'results');
   if (document.getElementById('section-users')) document.getElementById('section-users').classList.toggle('active', which === 'users');
-  
+  if (document.getElementById('section-centers')) document.getElementById('section-centers').classList.toggle('active', which === 'centers');
+
   if (which === 'users') loadUsers();
   if (which === 'stats') loadStats();
+  if (which === 'centers') loadCenters();
 }
 
 let charts = {};
@@ -622,6 +672,158 @@ async function notify(id, btnEl) {
     alert('Xatolik: ' + e.message);
     btnEl.disabled = false;
     btnEl.innerHTML = '✉ Email yuborish';
+  }
+}
+
+// ─── CENTERS ────────────────────────────────────────────────
+let allCenters = [];
+
+async function loadCenters() {
+  const listEl = document.getElementById('centers-list');
+  const emptyEl = document.getElementById('centers-empty');
+  listEl.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
+  emptyEl.style.display = 'none';
+
+  try {
+    const res = await adminFetch('/api/admin/centers');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Markazlarni yuklab bo\'lmadi');
+    allCenters = data;
+    renderCenters();
+  } catch(e) {
+    listEl.innerHTML = '';
+    emptyEl.textContent = '→ ' + e.message;
+    emptyEl.style.display = 'block';
+  }
+}
+
+function renderCenters() {
+  const listEl = document.getElementById('centers-list');
+  const emptyEl = document.getElementById('centers-empty');
+
+  if (!allCenters.length) {
+    listEl.innerHTML = '';
+    emptyEl.textContent = 'Hali markazlar yo\'q — yuqoridagi formadan birinchisini yarating';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  listEl.innerHTML = allCenters.map(c => {
+    const statusBadge = c.is_active
+      ? `<span class="badge green">● Faol</span>`
+      : `<span class="badge" style="background:var(--red-light);color:var(--red);">⛔ Yopiq</span>`;
+    const ownerHtml = c.owner_name
+      ? `<span class="center-stat">👤 Head-teacher: <b>${c.owner_name}</b> <span style="color:var(--muted);">(${c.owner_email})</span></span>`
+      : `<span class="center-stat" style="color:var(--amber);">⚠ Head-teacher tayinlanmagan</span>`;
+
+    return `
+    <div class="center-card">
+      <div class="center-head">
+        <div>
+          <div class="center-name">${c.name}</div>
+          <div class="center-meta">yaratilgan: ${new Date(c.created_at).toLocaleDateString('uz-UZ')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${statusBadge}
+          <button class="btn-outline btn-sm" onclick="toggleCenter(${c.id}, this)">${c.is_active ? '⛔ Yopish' : '✓ Qayta ochish'}</button>
+        </div>
+      </div>
+      <div class="center-body">
+        <div class="center-stats">
+          <span class="center-stat">📁 Guruhlar: <b>${c.groups_count}</b> / ${c.max_groups}</span>
+          <span class="center-stat">🎓 Talabalar: <b>${c.students_count}</b> / ${c.max_students}</span>
+          ${ownerHtml}
+        </div>
+      </div>
+      ${!c.owner_id ? `
+      <div class="center-owner-form">
+        <input type="text" id="owner-input-${c.id}" placeholder="Head-teacher username yoki email">
+        <button class="btn-primary btn-sm" onclick="assignHeadTeacher(${c.id}, this)">Tayinlash</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function createCenter() {
+  const nameEl = document.getElementById('center-name-input');
+  const maxGroupsEl = document.getElementById('center-max-groups-input');
+  const maxStudentsEl = document.getElementById('center-max-students-input');
+  const name = nameEl.value.trim();
+  if (!name) { alert('Markaz nomini kiriting'); return; }
+
+  const btn = document.getElementById('create-center-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const res = await adminFetch('/api/admin/centers', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name,
+        max_groups: maxGroupsEl.value ? parseInt(maxGroupsEl.value) : null,
+        max_students: maxStudentsEl.value ? parseInt(maxStudentsEl.value) : null
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik');
+    nameEl.value = ''; maxGroupsEl.value = ''; maxStudentsEl.value = '';
+    await loadCenters();
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '+ Yaratish';
+  }
+}
+
+async function toggleCenter(id, btnEl) {
+  btnEl.disabled = true;
+  try {
+    const res = await adminFetch(`/api/admin/centers/${id}/deactivate`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xatolik');
+    await loadCenters();
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+    btnEl.disabled = false;
+  }
+}
+
+async function assignHeadTeacher(centerId, btnEl) {
+  const input = document.getElementById(`owner-input-${centerId}`);
+  const query = input.value.trim();
+  if (!query) { alert('Username yoki email kiriting'); return; }
+
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const searchRes = await adminFetch(`/api/admin/users?search=${encodeURIComponent(query)}`);
+    const searchData = await searchRes.json();
+    if (!searchRes.ok) throw new Error(searchData.detail || 'Qidirishda xatolik');
+
+    const match = (searchData.users || []).find(
+      u => u.username.toLowerCase() === query.toLowerCase() || u.email.toLowerCase() === query.toLowerCase()
+    );
+    if (!match) {
+      throw new Error("Aniq mos foydalanuvchi topilmadi — avval u ro'yxatdan o'tgan bo'lishi kerak");
+    }
+
+    const assignRes = await adminFetch(`/api/admin/centers/${centerId}/assign-head-teacher`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ user_id: match.id })
+    });
+    const assignData = await assignRes.json();
+    if (!assignRes.ok) throw new Error(assignData.detail || 'Tayinlashda xatolik');
+
+    await loadCenters();
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+    btnEl.disabled = false;
+    btnEl.innerHTML = 'Tayinlash';
   }
 }
 </script>

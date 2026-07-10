@@ -1,499 +1,139 @@
+
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teacher Panel — IELTS Mock SS</title>
-<meta name="robots" content="noindex, nofollow">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-:root {
-  --blue:       #1a56e8;
-  --blue-hover: #1441c0;
-  --blue-light: #eef3ff;
-  --blue-mid:   #c9d8ff;
-  --text:       #0b1733;
-  --muted:      #4a5978;
-  --border:     #c9d8ff;
-  --bg:         #f5f8ff;
-  --surface:    #ffffff;
-  --surface2:   #eef3ff;
-  --shadow:     rgba(26, 86, 232, 0.08);
-  --red:        #e53e3e;
-  --red-light:  #fff5f5;
-  --green:      #16a34a;
-  --green-light:#f0fdf4;
-  --amber:      #d97706;
-  --amber-light:#fffbeb;
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'Inter', system-ui, sans-serif;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
-
-nav { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 48px; border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-.nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
-.nav-logo-icon { width: 46px; height: 46px; border-radius: 10px; background: var(--blue);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 18px; font-weight: 700; color: #fff; }
-.nav-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
-.nav-logo-text span:first-child { font-size: 14px; font-weight: 700; font-family: var(--mono); color: var(--text); }
-.nav-logo-text span:last-child  { font-size: 12px; font-weight: 500; font-family: var(--mono); color: var(--muted); }
-.nav-right { display: flex; align-items: center; gap: 10px; }
-
-.view { display: none; }
-.view.active { display: block; }
-
-.auth-wrap { max-width: 420px; margin: 80px auto; padding: 0 24px; }
-.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.form-card-head { padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface2);
-  font-size: 13px; font-weight: 700; font-family: var(--mono); }
-.form-card-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-label { display: block; font-family: var(--mono); font-size: 11px; font-weight: 600;
-  color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
-input { width: 100%; font-family: var(--sans); font-size: 14px; color: var(--text);
-  background: var(--bg); border: 1.5px solid var(--border); border-radius: 7px; padding: 10px 12px; outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s; }
-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,232,0.1); }
-
-.btn-primary { background: var(--blue); color: #fff; font-family: var(--mono); font-size: 13px; font-weight: 600;
-  padding: 11px 20px; border-radius: 6px; border: none; cursor: pointer; transition: background .2s, transform .2s; }
-.btn-primary:hover { background: var(--blue-hover); transform: translateY(-1px); }
-.btn-primary:disabled { opacity: .5; pointer-events: none; }
-.btn-primary.full { width: 100%; text-align: center; }
-.btn-outline { background: var(--surface); color: var(--text); font-family: var(--mono); font-size: 12px;
-  font-weight: 500; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer;
-  transition: border-color .2s, color .2s; }
-.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
-.btn-sm { padding: 6px 12px; font-size: 11px; }
-
-.alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; font-family: var(--mono); border: 1px solid; margin-bottom: 16px; }
-.alert.danger { background: var(--red-light); color: var(--red); border-color: #fecaca; }
-.spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--blue);
-  border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.badge { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px;
-  background: var(--blue-light); color: var(--blue); display: inline-block; white-space: nowrap; }
-.badge.success { background: var(--green-light); color: var(--green); }
-.badge.warning { background: var(--amber-light); color: var(--amber); }
-.badge.muted   { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
-
-.wrap { max-width: 900px; margin: 32px auto 80px; padding: 0 24px; }
-
-.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 24px; }
-.dash-stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
-.dash-stat-num { font-size: 26px; font-weight: 900; font-family: var(--mono); color: var(--blue); }
-.dash-stat-label { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
-
-.section-tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface2); padding: 4px;
-  border-radius: 9px; max-width: 420px; }
-.section-tab { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 6px;
-  font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .15s; }
-.section-tab.active { background: var(--surface); color: var(--blue); box-shadow: 0 1px 3px var(--shadow); }
-.section-view { display: none; }
-.section-view.active { display: block; }
-
-.dash-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
-.dash-section-head { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface2);
-  font-size: 13px; font-weight: 700; font-family: var(--mono); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-.dash-section-body { padding: 20px; }
-
-.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-family: var(--mono); font-size: 13px; }
-
-.code-box { font-family: var(--mono); font-size: 12px; background: var(--bg); border: 1px dashed var(--border);
-  border-radius: 6px; padding: 8px 12px; word-break: break-all; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.code-box button { flex-shrink: 0; }
-
-/* STUDENTS TABLE */
-.students-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-table.students-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-table.students-table th { text-align: left; padding: 12px 16px; background: var(--surface2);
-  font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
-  border-bottom: 1px solid var(--border); }
-table.students-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-table.students-table tr:last-child td { border-bottom: none; }
-table.students-table tr.clickable { cursor: pointer; transition: background .15s; }
-table.students-table tr.clickable:hover { background: var(--bg); }
-.s-name { font-weight: 700; }
-.s-username { font-family: var(--mono); color: var(--blue); font-size: 12px; }
-.s-email { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-.s-band { font-family: var(--mono); font-weight: 800; font-size: 16px; color: var(--blue); }
-
-@media (max-width: 700px) {
-  nav { padding: 14px 16px; }
-  .wrap { padding: 0 16px; }
-  .students-table-wrap { overflow-x: auto; }
-  table.students-table { min-width: 560px; }
-}
-
-/* MODAL */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(11,23,51,0.45);
-  z-index: 100; align-items: center; justify-content: center; padding: 20px; }
-.modal-overlay.active { display: flex; }
-.modal-box { width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; }
-.history-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-.history-row:last-child { border-bottom: none; }
-.history-date { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.history-band { font-family: var(--mono); font-weight: 700; color: var(--blue); }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="IELTS Mock o'qituvchi boshqaruv paneli">
+  <title>O'qituvchi paneli — IELTS Mock SS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{--blue:#1a56e8;--blue-hover:#1441c0;--blue-light:#eef3ff;--blue-mid:#c9d8ff;--text:#0b1733;--muted:#4a5978;--border:#c9d8ff;--bg:#f5f8ff;--surface:#fff;--surface2:#eef3ff;--shadow:rgba(26,86,232,.08);--red:#e53e3e;--red-light:#fff5f5;--green:#16a34a;--green-light:#f0fdf4;--amber:#d97706;--amber-light:#fffbeb;--mono:'JetBrains Mono',monospace;--sans:'Inter',system-ui,sans-serif}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(26,86,232,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(26,86,232,.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit}[hidden]{display:none!important}
+    .app-layer{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 40px;border-bottom:1px solid var(--border);background:rgba(245,248,255,.88);backdrop-filter:blur(12px)}.brand{display:flex;align-items:center;gap:12px;text-decoration:none}.brand-mark{width:46px;height:46px;border:1px solid var(--blue);border-radius:10px;background:var(--surface);display:grid;place-items:center;font:700 14px var(--mono);color:var(--blue)}.brand-copy{display:flex;flex-direction:column;line-height:1.25}.brand-copy strong{font:700 14px var(--mono)}.brand-copy span{font:500 11px var(--mono);color:var(--muted)}.nav-actions{display:flex;align-items:center;gap:10px}.user-chip{display:flex;align-items:center;gap:10px;padding:7px 12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);font:500 11px var(--mono)}.status-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:pulse 2s ease-in-out infinite}
+    .btn-primary,.btn-outline,.btn-danger,.btn-ghost{border-radius:6px;padding:10px 16px;font:600 12px var(--mono);transition:.2s ease}.btn-primary{border:1px solid var(--blue);background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-hover);transform:translateY(-1px)}.btn-outline{border:1px solid var(--border);background:var(--surface);color:var(--text)}.btn-outline:hover{border-color:var(--blue);color:var(--blue);transform:translateY(-1px)}.btn-danger{border:1px solid var(--red);background:transparent;color:var(--red)}.btn-danger:hover{background:var(--red-light)}.btn-ghost{border:0;background:transparent;color:var(--muted)}.btn-ghost:hover{color:var(--blue);background:var(--blue-light)}.btn-small{padding:7px 10px;font-size:10px}
+    .main{width:min(1260px,calc(100% - 32px));margin:0 auto;padding:34px 0 56px;flex:1}.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}.kicker{margin:0 0 8px;font:600 11px var(--mono);color:var(--blue)}h1,h2,h3,p{margin-top:0}h1{font-size:34px;line-height:1.12;letter-spacing:-1px;margin-bottom:8px;font-weight:900}h2{font-size:24px;letter-spacing:-.5px;font-weight:800}h3{font-size:15px;margin:0;font-weight:800}.lead{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+    .grid{display:grid;gap:16px}.stats-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:24px}.content-grid{grid-template-columns:minmax(0,1.75fr) minmax(280px,.75fr);align-items:start}.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 0 var(--shadow)}.card.hover:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:0 8px 24px var(--shadow);transition:.2s ease}.card-head{padding:14px 18px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:space-between;gap:12px}.card-head-title{font-size:13px;font-weight:800}.card-body{padding:18px}.stat-card{padding:18px}.stat-label{font:600 10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.stat-value{font-size:28px;font-weight:900;margin:8px 0 3px;letter-spacing:-1px}.stat-note{font-size:11px;color:var(--muted)}
+    .badge{display:inline-block;white-space:nowrap;padding:3px 8px;border-radius:4px;background:var(--blue-light);color:var(--blue);font:600 10px var(--mono)}.badge.green{background:var(--green-light);color:var(--green);border:1px solid #bbf7d0}.badge.amber{background:var(--amber-light);color:var(--amber);border:1px solid #fde68a}.badge.muted{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+    .toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.search{position:relative;min-width:220px;flex:1}.search input{padding-left:36px}.search span{position:absolute;left:12px;top:50%;transform:translateY(-50%);font:500 12px var(--mono);color:var(--muted)}
+    label{display:block;margin-bottom:6px;font:600 10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);outline:none;font-size:13px}textarea{min-height:120px;resize:vertical;line-height:1.55}input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,86,232,.1)}.form-grid{display:grid;gap:14px}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.criteria-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+    .table-wrap{overflow:auto}.data-table{width:100%;border-collapse:collapse;min-width:760px}.data-table th{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg);font:600 10px var(--mono);color:var(--muted);text-transform:uppercase}.data-table td{padding:13px 14px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}.data-table tbody tr:hover{background:var(--surface2)}.person{display:flex;align-items:center;gap:10px}.avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;background:var(--blue-light);color:var(--blue);font:700 11px var(--mono)}.person strong{display:block;font-size:12px}.person small{display:block;color:var(--muted);margin-top:2px}
+    .side-stack{display:grid;gap:16px}.info-row{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--border);font-size:12px}.info-row:last-child{border-bottom:0}.info-row span:first-child{color:var(--muted)}.code-box{display:flex;gap:8px;padding:10px;border:1px dashed var(--blue);border-radius:7px;background:var(--blue-light);align-items:center}.code-box code{font:600 12px var(--mono);color:var(--blue);word-break:break-all;flex:1}.section-bars{display:grid;gap:12px}.bar-row{display:grid;grid-template-columns:76px 1fr 38px;align-items:center;gap:9px}.bar-label{font:600 10px var(--mono)}.bar-track{height:8px;border-radius:20px;background:var(--bg);border:1px solid var(--border);overflow:hidden}.bar-fill{height:100%;background:var(--blue);border-radius:20px}.bar-value{text-align:right;font:600 11px var(--mono)}
+    .alert{padding:11px 13px;border-radius:7px;font-size:12px;line-height:1.5;margin-bottom:14px}.alert.danger{color:var(--red);background:var(--red-light);border:1px solid #fecaca}.alert.info{color:var(--blue);background:var(--blue-light);border:1px solid var(--border)}.alert.success{color:var(--green);background:var(--green-light);border:1px solid #bbf7d0}.empty{padding:36px 18px;text-align:center;color:var(--muted)}.empty strong{display:block;color:var(--text);margin-bottom:6px}.loading{padding:28px;text-align:center}.spinner{width:22px;height:22px;margin:0 auto;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+    .auth-wrap{min-height:calc(100vh - 76px);display:grid;place-items:center;padding:32px}.auth-card{width:min(470px,100%)}.auth-tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)}.auth-tab{padding:13px;border:0;background:var(--surface2);font:600 11px var(--mono);color:var(--muted)}.auth-tab.active{background:var(--surface);color:var(--blue);box-shadow:inset 0 -2px var(--blue)}
+    .modal-backdrop{position:fixed;inset:0;z-index:100;background:rgba(11,23,51,.32);display:grid;place-items:center;padding:20px}.modal{width:min(900px,100%);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 70px rgba(11,23,51,.2)}.modal.narrow{width:min(700px,100%)}.modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;background:var(--surface2);border-bottom:1px solid var(--border)}.modal-body{padding:18px}.history-list{display:grid;gap:10px}.history-item{padding:14px;border:1px solid var(--border);border-radius:9px}.history-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.history-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.essay{white-space:pre-wrap;line-height:1.65;font-size:13px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;max-height:300px;overflow:auto}.criterion-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.criterion{padding:9px;border:1px solid var(--border);border-radius:7px}.criterion span{display:block;color:var(--muted);font:600 9px var(--mono);margin-bottom:4px}.feedback-box{padding:12px;border-left:3px solid var(--blue);background:var(--blue-light);font-size:12px;line-height:1.6;white-space:pre-wrap}
+    footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:18px 40px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font:500 10px var(--mono);color:var(--muted)}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}@keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:980px){.stats-grid{grid-template-columns:repeat(2,1fr)}.content-grid{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.nav-actions .user-chip{display:none}}@media(max-width:640px){nav{padding:12px 16px}.main{width:min(100% - 24px,1260px);padding-top:24px}.stats-grid{grid-template-columns:1fr}.form-row,.criteria-grid,.criterion-summary{grid-template-columns:1fr}.toolbar{align-items:stretch}.search{min-width:100%}h1{font-size:28px}footer{padding:16px;flex-direction:column}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  </style>
 </head>
 <body>
+<div class="app-layer">
+  <nav>
+    <a class="brand" href="/"><span class="brand-mark">SD</span><span class="brand-copy"><strong>IELTS Mock</strong><span>O'qituvchi paneli</span></span></a>
+    <div class="nav-actions" id="navActions"><a class="btn-outline" href="/profile" style="text-decoration:none">Profil</a></div>
+  </nav>
 
-<nav>
-  <a class="nav-logo" href="/">
-    <div class="nav-logo-icon">T</div>
-    <div class="nav-logo-text">
-      <span>Teacher Panel</span>
-      <span>ielts.sultanov.space</span>
-    </div>
-  </a>
-  <div class="nav-right" id="nav-right"></div>
-</nav>
-
-<!-- LOGIN -->
-<div class="view active" id="view-auth">
-  <div class="auth-wrap">
-    <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px;">$ teacher --login</p>
-    <h2 style="font-size:22px; font-weight:800; margin-bottom:20px;">O'qituvchi kirishi</h2>
-    <div class="form-card">
-      <div class="form-card-head">$ auth --login</div>
-      <div class="form-card-body">
-        <div>
-          <label>Username yoki email</label>
-          <input type="text" id="login-id" placeholder="username">
-        </div>
-        <div>
-          <label>Parol</label>
-          <input type="password" id="login-pass" placeholder="••••••••">
-        </div>
-        <div id="login-error" class="alert danger" style="display:none;"></div>
-        <button class="btn-primary full" onclick="doLogin()" id="login-btn">→ Kirish</button>
-        <p style="font-size:12px; color:var(--muted); text-align:center;">Hisobingiz yo'qmi? Markaz rahbaringizdan teacher-invite link so'rang.</p>
+  <section id="authView" class="auth-wrap" hidden>
+    <div class="card auth-card">
+      <div class="card-head"><div><p class="kicker">$ teacher --auth</p><h2 style="margin:0">O'qituvchi hisobiga kirish</h2></div></div>
+      <div class="auth-tabs"><button class="auth-tab active" id="loginTab" type="button">Kirish</button><button class="auth-tab" id="registerTab" type="button">Taklif orqali ro'yxatdan o'tish</button></div>
+      <div class="card-body">
+        <div id="authAlert"></div>
+        <form id="loginForm" class="form-grid">
+          <div><label for="loginId">Email yoki username</label><input id="loginId" autocomplete="username" required></div>
+          <div><label for="loginPassword">Parol</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+          <div class="form-actions"><button class="btn-primary" type="submit">→ Kirish</button></div>
+        </form>
+        <form id="registerForm" class="form-grid" hidden>
+          <div class="alert info">Taklif havolasi bir martalik va muddati cheklangan. Muddati o'tgan bo'lsa, markaz rahbaridan yangisini oling.</div>
+          <div><label for="regName">To'liq ism</label><input id="regName" autocomplete="name" required></div>
+          <div class="form-row"><div><label for="regUsername">Username</label><input id="regUsername" pattern="[a-z0-9_]{3,20}" required></div><div><label for="regEmail">Email</label><input id="regEmail" type="email" required></div></div>
+          <div><label for="regPassword">Parol</label><input id="regPassword" type="password" minlength="6" required></div>
+          <div><label for="inviteCode">Teacher taklif kodi</label><input id="inviteCode" readonly required></div>
+          <div class="form-actions"><button class="btn-primary" type="submit">→ Hisob yaratish</button></div>
+        </form>
       </div>
     </div>
-  </div>
+  </section>
+
+  <main id="dashboardView" class="main" hidden>
+    <header class="page-head">
+      <div><p class="kicker">$ teacher --dashboard</p><h1>O'qituvchi boshqaruv paneli</h1><p class="lead" id="welcomeText">Guruhingiz natijalari va Writing baholash jarayonini boshqaring.</p></div>
+      <div class="toolbar"><button class="btn-outline" data-export="csv" type="button">CSV yuklash</button><button class="btn-outline" data-export="xlsx" type="button">Excel yuklash</button><button class="btn-outline" id="refreshBtn" type="button">↻ Yangilash</button><button class="btn-danger" id="logoutBtn" type="button">Chiqish</button></div>
+    </header>
+    <div id="pageAlert"></div>
+
+    <section class="grid stats-grid">
+      <article class="card hover stat-card"><div class="stat-label">Studentlar</div><div class="stat-value" id="studentsCount">—</div><div class="stat-note">Guruhdagi faol studentlar</div></article>
+      <article class="card hover stat-card"><div class="stat-label">Test urinishlari</div><div class="stat-value" id="attemptsCount">—</div><div class="stat-note">Barcha bo'limlar</div></article>
+      <article class="card hover stat-card"><div class="stat-label">Writing navbati</div><div class="stat-value" id="pendingCount">—</div><div class="stat-note">Baholanishi kerak</div></article>
+      <article class="card hover stat-card"><div class="stat-label">Zaif bo'lim</div><div class="stat-value" id="weakestSection">—</div><div class="stat-note">O'rtacha band bo'yicha</div></article>
+    </section>
+
+    <section class="grid content-grid">
+      <article class="card">
+        <div class="card-head"><div><p class="kicker">$ students --results</p><div class="card-head-title">Guruh studentlari</div></div><span class="badge" id="groupBadge">0 student</span></div>
+        <div class="card-body"><div class="toolbar"><div class="search"><span>/</span><input id="studentSearch" placeholder="Ism, username yoki email..."></div></div></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Student</th><th>Urinish</th><th>Writing navbati</th><th>Overall</th><th></th></tr></thead><tbody id="studentsBody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+      </article>
+      <aside class="side-stack">
+        <article class="card"><div class="card-head"><div class="card-head-title">Guruh ma'lumoti</div><span class="badge green">Faol</span></div><div class="card-body"><div class="info-row"><span>Nomi</span><strong id="groupName">—</strong></div><div class="info-row"><span>Yaratilgan</span><strong id="groupCreated">—</strong></div><label style="margin-top:14px">Student taklif kodi</label><div class="code-box"><code id="groupCode">—</code><button class="btn-outline btn-small" id="copyGroupCode" type="button">Nusxa</button></div></div></article>
+        <article class="card"><div class="card-head"><div class="card-head-title">Bo'lim o'rtachalari</div></div><div class="card-body"><div class="section-bars" id="sectionBars"></div></div></article>
+      </aside>
+    </section>
+  </main>
+
+  <footer><span>IELTS Mock · Teacher tools</span><span>Writing criteria · Group export · Secure scope</span></footer>
 </div>
 
-<!-- ACCESS DENIED -->
-<div class="view" id="view-denied">
-  <div class="auth-wrap">
-    <div class="alert danger">→ Bu sahifa faqat o'qituvchilar uchun mo'ljallangan. Sizning hisobingiz bunday huquqqa ega emas.</div>
-    <a href="/profile" class="btn-outline" style="display:block; text-align:center;">← Profilga qaytish</a>
-  </div>
-</div>
-
-<!-- GROUP CLOSED -->
-<div class="view" id="view-no-group">
-  <div class="auth-wrap">
-    <div class="alert danger">→ Sizga biriktirilgan guruh topilmadi yoki guruhingiz vaqtincha yopilgan. Markaz rahbaringizga murojaat qiling.</div>
-  </div>
-</div>
-
-<!-- DASHBOARD -->
-<div class="view" id="view-dashboard">
-  <div class="wrap">
-    <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px;">$ teacher --dashboard</p>
-    <h2 id="group-title" style="font-size:22px; font-weight:800; margin-bottom:20px;"></h2>
-
-    <div class="dash-stats" id="overview-stats"></div>
-
-    <div class="dash-section">
-      <div class="dash-section-head"><span>$ talaba --invite-code</span></div>
-      <div class="dash-section-body">
-        <div class="code-box">
-          <span id="invite-code-text"></span>
-          <button class="btn-outline btn-sm" onclick="copyInviteCode()">📋 Nusxa</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-tabs">
-      <button class="section-tab active" id="tab-students" onclick="switchSection('students')">Talabalar</button>
-      <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
-    </div>
-
-    <!-- STUDENTS -->
-    <div class="section-view active" id="section-students">
-      <div class="students-table-wrap">
-        <table class="students-table">
-          <thead>
-            <tr>
-              <th>Talaba</th>
-              <th>Email</th>
-              <th>Urinishlar</th>
-              <th>Overall Band</th>
-            </tr>
-          </thead>
-          <tbody id="students-tbody"></tbody>
-        </table>
-      </div>
-      <div id="students-empty" class="empty-state" style="display:none;">Guruhda hali talabalar yo'q</div>
-    </div>
-
-    <!-- STATS -->
-    <div class="section-view" id="section-stats">
-      <div class="dash-section">
-        <div class="dash-section-head"><span>$ guruh --stats</span></div>
-        <div class="dash-section-body">
-          <div id="stats-body"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- STUDENT DETAIL MODAL -->
-<div class="modal-overlay" id="modal-student">
-  <div class="modal-box form-card">
-    <div class="form-card-head" style="display:flex; justify-content:space-between; align-items:center;">
-      <span id="modal-student-name"></span>
-      <button class="btn-outline btn-sm" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-card-body" id="modal-student-body"></div>
-  </div>
-</div>
+<div id="studentModal" class="modal-backdrop" hidden><section class="modal"><header class="modal-head"><div><p class="kicker">$ student --history</p><h3 id="studentModalTitle">Student natijalari</h3></div><button class="btn-ghost modal-close" type="button">✕</button></header><div class="modal-body" id="studentModalBody"></div></section></div>
+<div id="gradeModal" class="modal-backdrop" hidden><section class="modal narrow"><header class="modal-head"><div><p class="kicker">$ writing --grade</p><h3 id="gradeModalTitle">Writing baholash</h3></div><button class="btn-ghost modal-close" type="button">✕</button></header><div class="modal-body"><div id="gradeAlert"></div><form id="gradeForm" class="form-grid"><div class="alert info">Yakuniy band to'rtta mezon o'rtachasidan serverda hisoblanadi va eng yaqin 0.5 ga yaxlitlanadi.</div><div class="criteria-grid"><div><label for="taskAchievement">Task Achievement / Response</label><select id="taskAchievement" required></select></div><div><label for="coherenceCohesion">Coherence & Cohesion</label><select id="coherenceCohesion" required></select></div><div><label for="lexicalResource">Lexical Resource</label><select id="lexicalResource" required></select></div><div><label for="grammarAccuracy">Grammar Range & Accuracy</label><select id="grammarAccuracy" required></select></div></div><div><label for="writingFeedback">Teacher feedback</label><textarea id="writingFeedback" maxlength="5000" placeholder="Kuchli tomonlar, xatolar va keyingi qadamlar..."></textarea></div><div class="form-actions"><button class="btn-outline modal-close" type="button">Bekor qilish</button><button class="btn-primary" type="submit">Bahoni saqlash</button></div></form></div></section></div>
 
 <script>
-const AUTH_API = '/api/auth';
-const T_API = '/api/teacher';
-let token = localStorage.getItem('ielts_token');
-let currentUser = null;
-let allStudents = [];
+(() => {
+  'use strict';
+  const AUTH_API='/api/auth', API='/api/teacher';
+  let token=localStorage.getItem('ielts_token'), currentUser=null, group=null, students=[], stats=null;
+  let activeStudentId=null, activeWriting=null;
+  const $=id=>document.getElementById(id);
+  const esc=value=>String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const fmtDate=value=>value?new Intl.DateTimeFormat('uz-UZ',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value)):'—';
+  const sectionName=s=>({listening:'Listening',reading:'Reading',writing:'Writing',speaking:'Speaking'}[s]||s||'—');
+  const initials=name=>String(name||'?').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 
-function showView(id) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
+  async function request(base,path,options={}){const headers=new Headers(options.headers||{});if(token)headers.set('Authorization',`Bearer ${token}`);const response=await fetch(base+path,{...options,headers});const data=await response.json().catch(()=>({}));if(!response.ok){if(response.status===401)localStorage.removeItem('ielts_token');throw new Error(data.detail||'Server bilan bog\'lanishda xatolik')}return data}
+  function alertBox(target,message,type='danger'){target.innerHTML=message?`<div class="alert ${type}">${esc(message)}</div>`:''}
+  function openModal(id){$(id).hidden=false}function closeModals(){document.querySelectorAll('.modal-backdrop').forEach(m=>m.hidden=true)}
+  function setAuthMode(mode){const login=mode==='login';$('loginForm').hidden=!login;$('registerForm').hidden=login;$('loginTab').classList.toggle('active',login);$('registerTab').classList.toggle('active',!login)}
+  function showAuth(message=''){ $('dashboardView').hidden=true;$('authView').hidden=false;if(message)alertBox($('authAlert'),message)}
+  function showDashboard(){ $('authView').hidden=true;$('dashboardView').hidden=false;$('navActions').innerHTML=`<div class="user-chip"><span class="status-dot"></span><span>${esc(currentUser.full_name)}</span><span class="badge">teacher</span></div><a class="btn-outline" href="/profile" style="text-decoration:none">Profil</a>`}
 
-async function apiCall(base, path, options = {}) {
-  const headers = options.headers || {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(base + path, { ...options, headers });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
-  return data;
-}
+  async function authenticate(){const invite=new URLSearchParams(location.search).get('teacher_invite');if(invite){$('inviteCode').value=invite;setAuthMode('register')}if(!token)return showAuth();try{const data=await request(AUTH_API,'/me');currentUser=data.user;if(currentUser.role!=='teacher'){const destination=currentUser.role==='head_teacher'?'/head-teacher':currentUser.role==='student'?'/mock/home':'/';showAuth(`Bu hisob teacher emas. Rol: ${currentUser.role}.`);$('authAlert').insertAdjacentHTML('beforeend',`<a class="btn-outline" href="${destination}" style="display:inline-block;text-decoration:none;margin-top:8px">Mos panelga o'tish</a>`);return}showDashboard();await loadDashboard()}catch(error){token=null;showAuth(error.message)}}
 
-function logout() {
-  localStorage.removeItem('ielts_token');
-  token = null;
-  currentUser = null;
-  document.getElementById('nav-right').innerHTML = '';
-  showView('view-auth');
-}
+  async function loadDashboard(){ $('refreshBtn').disabled=true;alertBox($('pageAlert'),'');try{[group,students,stats]=await Promise.all([request(API,'/group'),request(API,'/students'),request(API,'/stats')]);renderSummary();renderStudents(students);renderBars(stats.average_band_by_section||{})}catch(error){alertBox($('pageAlert'),error.message);$('studentsBody').innerHTML=`<tr><td colspan="5"><div class="empty"><strong>Ma'lumot yuklanmadi</strong>${esc(error.message)}</div></td></tr>`}finally{$('refreshBtn').disabled=false}}
+  function renderSummary(){ $('welcomeText').textContent=`${currentUser.full_name}, ${group.name} guruhidagi natijalarni boshqaring.`;$('studentsCount').textContent=group.students_count;$('attemptsCount').textContent=stats.total_attempts;$('pendingCount').textContent=stats.pending_writings;$('weakestSection').textContent=stats.weakest_section?sectionName(stats.weakest_section):'—';$('groupBadge').textContent=`${students.length} student`;$('groupName').textContent=group.name;$('groupCreated').textContent=fmtDate(group.created_at);$('groupCode').textContent=group.invite_code}
+  function renderStudents(rows){if(!rows.length){$('studentsBody').innerHTML='<tr><td colspan="5"><div class="empty"><strong>Studentlar yo\'q</strong>Studentlar guruh taklif kodi orqali qo\'shiladi.</div></td></tr>';return}$('studentsBody').innerHTML=rows.map(s=>`<tr><td><div class="person"><span class="avatar">${esc(initials(s.full_name))}</span><div><strong>${esc(s.full_name)}</strong><small>@${esc(s.username)} · ${esc(s.email)}</small></div></div></td><td>${Number(s.total_attempts||0)}</td><td><span class="badge ${Number(s.pending_writings||0)>0?'amber':'green'}">${Number(s.pending_writings||0)}</span></td><td>${s.overall_band==null?'—':`<span class="badge">${Number(s.overall_band).toFixed(1)}</span>`}</td><td><button class="btn-outline btn-small view-student" data-id="${s.id}" type="button">Ko'rish / baholash</button></td></tr>`).join('');document.querySelectorAll('.view-student').forEach(btn=>btn.addEventListener('click',()=>openStudent(Number(btn.dataset.id))))}
+  function renderBars(averages){const entries=Object.entries(averages);if(!entries.length){$('sectionBars').innerHTML='<div class="empty" style="padding:12px"><strong>Natijalar yo\'q</strong>Bo\'lim o\'rtachalari keyin ko\'rinadi.</div>';return}$('sectionBars').innerHTML=entries.map(([section,band])=>`<div class="bar-row"><span class="bar-label">${esc(sectionName(section))}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.max(0,Math.min(100,Number(band)/9*100))}%"></span></span><span class="bar-value">${Number(band).toFixed(1)}</span></div>`).join('')}
 
-async function doLogin() {
-  const login = document.getElementById('login-id').value.trim().replace(/^@/, '');
-  const pass = document.getElementById('login-pass').value;
-  const errEl = document.getElementById('login-error');
-  errEl.style.display = 'none';
-  if (!login || !pass) { errEl.textContent = "→ Barcha maydonlarni to'ldiring"; errEl.style.display = 'block'; return; }
+  function writingCard(h){const criteria=[['TA/TR',h.writing_task_achievement],['CC',h.writing_coherence_cohesion],['LR',h.writing_lexical_resource],['GRA',h.writing_grammar_accuracy]];return `<div class="history-item"><div class="history-top"><div><strong>Writing</strong><div style="color:var(--muted);font-size:11px;margin-top:4px">${esc(fmtDate(h.submitted_at))}</div></div><div class="history-meta"><span class="badge ${h.writing_band==null?'amber':'green'}">${h.writing_band==null?'Baholanmagan':`Band ${Number(h.writing_band).toFixed(1)}`}</span><button class="btn-primary btn-small grade-writing" data-result="${h.id}" type="button">${h.writing_band==null?'Baholash':'Qayta baholash'}</button></div></div><details style="margin-top:12px"><summary style="cursor:pointer;font:600 11px var(--mono);color:var(--blue)">Task 1 javobini ochish</summary><div class="essay" style="margin-top:8px">${esc(h.writing_task1||'Javob yo\'q')}</div></details><details style="margin-top:8px"><summary style="cursor:pointer;font:600 11px var(--mono);color:var(--blue)">Task 2 javobini ochish</summary><div class="essay" style="margin-top:8px">${esc(h.writing_task2||'Javob yo\'q')}</div></details>${h.writing_band!=null?`<div class="criterion-summary">${criteria.map(([name,value])=>`<div class="criterion"><span>${name}</span><strong>${value==null?'—':Number(value).toFixed(1)}</strong></div>`).join('')}</div><div class="feedback-box">${esc(h.writing_feedback||'Feedback kiritilmagan')}</div><div style="margin-top:8px;color:var(--muted);font-size:10px">Baholagan: ${esc(h.grader_name||'—')} · ${esc(fmtDate(h.writing_graded_at))}</div>`:''}</div>`}
+  function normalCard(h){const band=h.score==null?'—':`${h.score} / ${h.total}`;return `<div class="history-item"><div class="history-top"><div><strong>${esc(sectionName(h.section))}</strong><div style="color:var(--muted);font-size:11px;margin-top:4px">${esc(fmtDate(h.submitted_at))}</div></div><span class="badge">${esc(band)}</span></div></div>`}
+  async function openStudent(id){activeStudentId=id;$('studentModalBody').innerHTML='<div class="loading"><div class="spinner"></div></div>';openModal('studentModal');try{const data=await request(API,`/students/${id}`);$('studentModalTitle').textContent=data.student.full_name;const history=data.history||[];$('studentModalBody').innerHTML=`<div class="info-row"><span>Email</span><strong>${esc(data.student.email)}</strong></div><div class="info-row"><span>Username</span><strong>@${esc(data.student.username)}</strong></div><h3 style="margin:20px 0 10px">Topshirishlar tarixi</h3><div class="history-list">${history.length?history.map(h=>h.section==='writing'?writingCard(h):normalCard(h)).join(''):'<div class="empty"><strong>Natijalar yo\'q</strong>Student hali test topshirmagan.</div>'}</div>`;document.querySelectorAll('.grade-writing').forEach(btn=>btn.addEventListener('click',()=>{const item=history.find(h=>h.id===Number(btn.dataset.result));openGrade(item,data.student)}))}catch(error){$('studentModalBody').innerHTML=`<div class="alert danger">${esc(error.message)}</div>`}}
 
-  const btn = document.getElementById('login-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Tekshirilmoqda...';
+  function scoreOptions(selected){let html='<option value="">Tanlang</option>';for(let i=0;i<=18;i++){const value=(i/2).toFixed(1);html+=`<option value="${value}" ${selected!=null&&Number(selected)===Number(value)?'selected':''}>${value}</option>`}return html}
+  function openGrade(item,student){activeWriting=item;$('gradeModalTitle').textContent=`${student.full_name} — Writing #${item.id}`;$('taskAchievement').innerHTML=scoreOptions(item.writing_task_achievement);$('coherenceCohesion').innerHTML=scoreOptions(item.writing_coherence_cohesion);$('lexicalResource').innerHTML=scoreOptions(item.writing_lexical_resource);$('grammarAccuracy').innerHTML=scoreOptions(item.writing_grammar_accuracy);$('writingFeedback').value=item.writing_feedback||'';alertBox($('gradeAlert'),'');openModal('gradeModal')}
 
-  try {
-    const data = await apiCall(AUTH_API, '/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password: pass })
-    });
-    token = data.token;
-    localStorage.setItem('ielts_token', token);
-    currentUser = data.user;
-    afterAuthResolved();
-  } catch (e) {
-    errEl.textContent = '→ ' + e.message;
-    errEl.style.display = 'block';
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '→ Kirish';
-  }
-}
+  async function downloadExport(format){try{const response=await fetch(`${API}/export?format=${encodeURIComponent(format)}`,{headers:{Authorization:`Bearer ${token}`}});if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.detail||'Export yuklanmadi')}const blob=await response.blob();const disposition=response.headers.get('Content-Disposition')||'';const match=disposition.match(/filename="?([^";]+)"?/i);const name=match?match[1]:`teacher-results.${format}`;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}catch(error){alertBox($('pageAlert'),error.message)}}
 
-function afterAuthResolved() {
-  if (!currentUser || currentUser.role !== 'teacher') {
-    showView('view-denied');
-    return;
-  }
-  document.getElementById('nav-right').innerHTML = `
-    <span class="badge muted">@${currentUser.username}</span>
-    <button class="btn-outline btn-sm" onclick="logout()">Chiqish</button>
-  `;
-  loadGroup();
-}
-
-// ─── GROUP OVERVIEW ───────────────────────────────────────
-async function loadGroup() {
-  try {
-    const g = await apiCall(T_API, '/group');
-    document.getElementById('group-title').textContent = g.name;
-    document.getElementById('overview-stats').innerHTML = `
-      <div class="dash-stat-card"><div class="dash-stat-num">${g.students_count}</div><div class="dash-stat-label">$ talabalar</div></div>
-    `;
-    document.getElementById('invite-code-text').textContent = g.invite_code;
-    showView('view-dashboard');
-    loadStudents();
-  } catch (e) {
-    showView('view-no-group');
-  }
-}
-
-function copyInviteCode() {
-  const text = document.getElementById('invite-code-text').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    event.target.innerHTML = '✓ Nusxalandi';
-    setTimeout(() => { event.target.innerHTML = '📋 Nusxa'; }, 1500);
-  }).catch(() => alert("Nusxalab bo'lmadi, qo'lda ko'chiring"));
-}
-
-// ─── STUDENTS ─────────────────────────────────────────────
-async function loadStudents() {
-  const tbody = document.getElementById('students-tbody');
-  const emptyEl = document.getElementById('students-empty');
-  tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--muted);"><span class="spinner"></span> Yuklanmoqda...</td></tr>`;
-  emptyEl.style.display = 'none';
-
-  try {
-    allStudents = await apiCall(T_API, '/students');
-    renderStudents();
-  } catch (e) {
-    tbody.innerHTML = '';
-    emptyEl.textContent = '→ ' + e.message;
-    emptyEl.style.display = 'block';
-  }
-}
-
-function renderStudents() {
-  const tbody = document.getElementById('students-tbody');
-  const emptyEl = document.getElementById('students-empty');
-
-  if (!allStudents.length) {
-    tbody.innerHTML = '';
-    emptyEl.style.display = 'block';
-    return;
-  }
-  emptyEl.style.display = 'none';
-
-  tbody.innerHTML = allStudents.map(s => {
-    const verifiedBadge = s.email_verified
-      ? `<span class="badge success">✓</span>`
-      : `<span class="badge warning">✗</span>`;
-    const bandHtml = s.overall_band !== null
-      ? `<span class="s-band">${s.overall_band}</span>`
-      : `<span class="badge muted">yo'q</span>`;
-
-    return `
-    <tr class="clickable" onclick="openStudent(${s.id})">
-      <td>
-        <div class="s-name">${s.full_name} ${verifiedBadge}</div>
-        <div class="s-username">@${s.username}</div>
-      </td>
-      <td class="s-email">${s.email}</td>
-      <td>${s.total_attempts}</td>
-      <td>${bandHtml}</td>
-    </tr>`;
-  }).join('');
-}
-
-async function openStudent(id) {
-  const modal = document.getElementById('modal-student');
-  const nameEl = document.getElementById('modal-student-name');
-  const bodyEl = document.getElementById('modal-student-body');
-  const s = allStudents.find(x => x.id === id);
-  nameEl.textContent = s ? s.full_name : 'Talaba';
-  bodyEl.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
-  modal.classList.add('active');
-
-  try {
-    const data = await apiCall(T_API, `/students/${id}`);
-    const sectionNames = { listening: 'Listening', reading: 'Reading', writing: 'Writing', speaking: 'Speaking' };
-    if (!data.history.length) {
-      bodyEl.innerHTML = `<div class="empty-state">Hali natijalar yo'q</div>`;
-      return;
-    }
-    bodyEl.innerHTML = data.history.map(h => {
-      const date = new Date(h.submitted_at).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      const bandVal = h.section === 'writing' ? h.writing_band : (h.score !== null && h.total !== null ? `${h.score}/${h.total}` : '—');
-      return `
-      <div class="history-row">
-        <div>
-          <div>${sectionNames[h.section] || h.section}</div>
-          <div class="history-date">${date}</div>
-        </div>
-        <div class="history-band">${bandVal ?? '—'}</div>
-      </div>`;
-    }).join('');
-  } catch (e) {
-    bodyEl.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
-  }
-}
-
-function closeModal() {
-  document.getElementById('modal-student').classList.remove('active');
-}
-
-// ─── STATS ────────────────────────────────────────────────
-function switchSection(which) {
-  document.getElementById('tab-students').classList.toggle('active', which === 'students');
-  document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
-  document.getElementById('section-students').classList.toggle('active', which === 'students');
-  document.getElementById('section-stats').classList.toggle('active', which === 'stats');
-  if (which === 'stats') loadStats();
-}
-
-async function loadStats() {
-  const body = document.getElementById('stats-body');
-  body.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
-  try {
-    const data = await apiCall(T_API, '/stats');
-    const sectionNames = { listening: 'Listening', reading: 'Reading', writing: 'Writing', speaking: 'Speaking' };
-    const entries = Object.entries(data.average_band_by_section || {});
-    if (!entries.length) {
-      body.innerHTML = `<div class="empty-state">Hali natijalar yo'q</div>`;
-      return;
-    }
-    body.innerHTML = `
-      <div class="dash-stats" style="margin-bottom:16px;">
-        ${entries.map(([section, band]) => `
-          <div class="dash-stat-card">
-            <div class="dash-stat-num">${band}</div>
-            <div class="dash-stat-label">$ ${sectionNames[section] || section}</div>
-          </div>
-        `).join('')}
-      </div>
-      <div style="font-family:var(--mono); font-size:12px; color:var(--muted);">
-        Jami urinishlar: <b style="color:var(--text);">${data.total_attempts}</b>
-        ${data.weakest_section ? ` · Eng past ko'rsatkich: <span class="badge warning">${sectionNames[data.weakest_section] || data.weakest_section}</span>` : ''}
-      </div>
-    `;
-  } catch (e) {
-    body.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
-  }
-}
-
-// ─── INIT ─────────────────────────────────────────────────
-(async function init() {
-  if (!token) { showView('view-auth'); return; }
-  try {
-    const data = await apiCall(AUTH_API, '/me');
-    currentUser = data.user;
-    afterAuthResolved();
-  } catch (e) {
-    logout();
-  }
+  $('loginTab').addEventListener('click',()=>setAuthMode('login'));$('registerTab').addEventListener('click',()=>setAuthMode('register'));
+  $('loginForm').addEventListener('submit',async event=>{event.preventDefault();alertBox($('authAlert'),'');const button=event.submitter;button.disabled=true;try{const data=await request(AUTH_API,'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:$('loginId').value.trim().replace(/^@/,''),password:$('loginPassword').value})});if(data.user.role!=='teacher')throw new Error(`Bu hisob teacher emas. Rol: ${data.user.role}`);token=data.token;currentUser=data.user;localStorage.setItem('ielts_token',token);showDashboard();await loadDashboard()}catch(error){alertBox($('authAlert'),error.message)}finally{button.disabled=false}});
+  $('registerForm').addEventListener('submit',async event=>{event.preventDefault();alertBox($('authAlert'),'');const invite=$('inviteCode').value.trim();if(!invite)return alertBox($('authAlert'),'Teacher taklif kodi topilmadi.');const button=event.submitter;button.disabled=true;try{const payload={full_name:$('regName').value.trim(),username:$('regUsername').value.trim().toLowerCase(),email:$('regEmail').value.trim().toLowerCase(),password:$('regPassword').value,teacher_invite_code:invite};const data=await request(AUTH_API,'/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});token=data.token;currentUser=data.user;localStorage.setItem('ielts_token',token);history.replaceState({},'', '/teacher');showDashboard();await loadDashboard()}catch(error){alertBox($('authAlert'),error.message)}finally{button.disabled=false}});
+  $('gradeForm').addEventListener('submit',async event=>{event.preventDefault();const button=event.submitter;button.disabled=true;alertBox($('gradeAlert'),'');try{const payload={result_id:activeWriting.id,task_achievement:Number($('taskAchievement').value),coherence_cohesion:Number($('coherenceCohesion').value),lexical_resource:Number($('lexicalResource').value),grammar_accuracy:Number($('grammarAccuracy').value),feedback:$('writingFeedback').value.trim()||null};const data=await request(API,`/students/${activeStudentId}/grade-writing`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});alertBox($('gradeAlert'),`Saqlandi: Band ${Number(data.band).toFixed(1)}`,'success');await loadDashboard();setTimeout(async()=>{closeModals();await openStudent(activeStudentId)},450)}catch(error){alertBox($('gradeAlert'),error.message)}finally{button.disabled=false}});
+  $('studentSearch').addEventListener('input',event=>{const q=event.target.value.trim().toLowerCase();renderStudents(students.filter(s=>[s.full_name,s.username,s.email].some(v=>String(v||'').toLowerCase().includes(q))))});
+  $('refreshBtn').addEventListener('click',loadDashboard);$('copyGroupCode').addEventListener('click',async()=>{if(!group?.invite_code)return;await navigator.clipboard.writeText(group.invite_code).catch(()=>{});$('copyGroupCode').textContent='Saqlandi';setTimeout(()=>$('copyGroupCode').textContent='Nusxa',1300)});document.querySelectorAll('[data-export]').forEach(btn=>btn.addEventListener('click',()=>downloadExport(btn.dataset.export)));$('logoutBtn').addEventListener('click',()=>{localStorage.removeItem('ielts_token');location.href='/teacher'});document.querySelectorAll('.modal-close').forEach(btn=>btn.addEventListener('click',closeModals));document.querySelectorAll('.modal-backdrop').forEach(modal=>modal.addEventListener('click',event=>{if(event.target===modal)modal.hidden=true}));document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModals()});
+  authenticate();
 })();
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
-  if (e.key !== 'Enter') return;
-  if (document.getElementById('view-auth').classList.contains('active')) doLogin();
-});
 </script>
 </body>
 </html>

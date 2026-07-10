@@ -419,18 +419,20 @@ async def register(data: RegisterIn):
             # ── Teacher-invite: guruhga rahbar sifatida qo'shilish ──
             if data.teacher_invite_code:
                 group_row = await conn.fetchrow(
-                    """
-                    UPDATE groups
-                    SET teacher_invite_code = NULL
-                    WHERE teacher_invite_code = $1 AND teacher_id IS NULL
-                    RETURNING id, name, center_id, is_active
-                    """,
+                    "SELECT id, name, center_id, is_active, teacher_id, teacher_invite_expires_at FROM groups WHERE teacher_invite_code = $1",
                     data.teacher_invite_code
                 )
                 if not group_row:
                     raise HTTPException(status_code=400, detail="Taklif kodi noto'g'ri yoki allaqachon ishlatilgan")
+                if group_row["teacher_id"] is not None:
+                    raise HTTPException(status_code=400, detail="Bu guruhda allaqachon teacher bor")
+                if group_row["teacher_invite_expires_at"] and group_row["teacher_invite_expires_at"].replace(tzinfo=None) < datetime.utcnow():
+                    raise HTTPException(status_code=400, detail="Taklif kodi muddati tugagan")
                 if not group_row["is_active"]:
                     raise HTTPException(status_code=400, detail="Bu guruh faol emas")
+                
+                await conn.execute("UPDATE groups SET teacher_invite_code = NULL WHERE id = $1", group_row["id"])
+                
                 role_val = "teacher"
                 center_id_val = group_row["center_id"]
                 teacher_group_id = group_row["id"]

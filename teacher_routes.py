@@ -144,3 +144,104 @@ async def teacher_stats(current_user: dict = Depends(get_current_teacher)):
         "weakest_section": weakest_section,
         "total_attempts": len(rows),
     }
+
+
+from pydantic import BaseModel
+from typing import Optional
+
+class GradeWritingTeacher(BaseModel):
+    band: float
+    feedback: Optional[str] = None
+    task_achievement: Optional[float] = None
+    coherence_cohesion: Optional[float] = None
+    lexical_resource: Optional[float] = None
+    grammar_accuracy: Optional[float] = None
+
+@router.get("/pending-writing")
+async def get_pending_writing(current_user: dict = Depends(get_current_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group = await _own_active_group_or_error(conn, current_user["id"])
+        rows = await conn.fetch(
+            """
+            SELECT er.id, er.full_name, er.email, er.writing_task1, er.writing_task2, er.submitted_at, u.id AS student_id
+            FROM exam_results er
+            JOIN users u ON u.email = er.email
+            WHERE u.group_id = $1 AND er.section = 'writing' AND er.writing_band IS NULL
+            ORDER BY er.submitted_at ASC
+            """,
+            group["id"]
+        )
+    return [
+        {
+            "id": r["id"],
+            "student_id": r["student_id"],
+            "full_name": r["full_name"],
+            "email": r["email"],
+            "writing_task1": r["writing_task1"],
+            "writing_task2": r["writing_task2"],
+            "submitted_at": r["submitted_at"].isoformat()
+        }
+        for r in rows
+    ]
+
+
+@router.post("/students/{student_id}/grade-writing/{result_id}")
+async def grade_student_writing(student_id: int, result_id: int, data: GradeWritingTeacher, current_user: dict = Depends(get_current_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group = await _own_active_group_or_error(conn, current_user["id"])
+        
+        student = await conn.fetchrow("SELECT email, full_name FROM users WHERE id=$1 AND group_id=$2", student_id, group["id"])
+        if not student:
+            raise HTTPException(status_code=404, detail="Talaba topilmadi")
+
+        row = await conn.fetchrow(
+            """
+            UPDATE exam_results
+            SET writing_band = $1, writing_feedback = $2,
+                writing_task_achievement = $4, writing_coherence_cohesion = $5,
+                writing_lexical_resource = $6, writing_grammar_accuracy = $7,
+                grader_name = $8, writing_graded_at = NOW()
+            WHERE id = $3 AND email = $9 AND section = 'writing'
+            RETURNING id
+            """,
+            data.band, data.feedback, result_id,
+            data.task_achievement, data.coherence_cohesion, data.lexical_resource, data.grammar_accuracy,
+            current_user["full_name"], student["email"]
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Natija topilmadi")
+
+    try:
+        from main import build_result_email, send_email
+        html = build_result_email(student["full_name"], "writing", None, None, data.band, data.feedback)
+        await send_email(student["email"], student["full_name"], "IELTS Mock — Writing natijangiz baholandi", html)
+    except Exception:
+        pass
+
+    return {"message": "Baholandi"}
+
+
+@router.get("/export/results")
+async def export_teacher_results(format: str = "excel", current_user: dict = Depends(get_current_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group = await _own_active_group_or_error(conn, current_user["id"])
+        rows = await conn.fetch(
+            """
+            SELECT er.id, u.full_name, u.email, er.section, er.score, er.total, er.writing_band,
+                   er.writing_task_achievement, er.writing_coherence_cohesion, er.writing_lexical_resource, er.writing_grammar_accuracy,
+                   er.grader_name, er.writing_graded_at, er.writing_feedback, er.submitted_at,
+                   $1::text AS group_name
+            FROM exam_results er
+            JOIN users u ON u.email = er.email
+            WHERE u.group_id = $2
+            ORDER BY er.submitted_at DESC
+            """,
+            group["name"], group["id"]
+        )
+    from result_export import build_results_export
+    return build_results_export(rows, format, f"guruh-natijalari")
+
+

@@ -593,15 +593,19 @@ function renderResults() {
         scoreHtml = `<span class="badge amber">Baholanmagan</span>`;
         gradeForm = `
         <div class="grade-form">
-          <div>
-            <label>Band (0-9)</label>
-            <input type="number" step="0.5" min="0" max="9" id="band-${r.id}" placeholder="6.5">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; margin-bottom:12px;">
+            <div><label>Task Achievement</label><input type="number" step="0.5" id="grade-ta-${r.id}" placeholder="0-9"></div>
+            <div><label>Coherence & Cohesion</label><input type="number" step="0.5" id="grade-cc-${r.id}" placeholder="0-9"></div>
+            <div><label>Lexical Resource</label><input type="number" step="0.5" id="grade-lr-${r.id}" placeholder="0-9"></div>
+            <div><label>Grammar & Accuracy</label><input type="number" step="0.5" id="grade-ga-${r.id}" placeholder="0-9"></div>
           </div>
-          <div style="flex:2;">
+          <div style="width:100%; margin-bottom:12px;">
             <label>Izoh (ixtiyoriy)</label>
-            <textarea id="feedback-${r.id}" placeholder="Grammatika yaxshi, lekin so'z boyligini oshirish kerak..."></textarea>
+            <textarea id="feedback-${r.id}" placeholder="Grammatika yaxshi..."></textarea>
           </div>
-          <button class="btn-primary btn-sm" onclick="gradeWriting(${r.id})" id="grade-btn-${r.id}">✓ Saqlash va yuborish</button>
+          <div style="width:100%; display:flex; justify-content:flex-end;">
+            <button class="btn-primary btn-sm" onclick="gradeWriting(${r.id})" id="grade-btn-${r.id}">✓ Saqlash va yuborish</button>
+          </div>
         </div>`;
       }
     } else {
@@ -636,9 +640,19 @@ function renderResults() {
 }
 
 async function gradeWriting(id) {
-  const band = document.getElementById(`band-${id}`).value;
+  const ta = parseFloat(document.getElementById(`grade-ta-${id}`).value);
+  const cc = parseFloat(document.getElementById(`grade-cc-${id}`).value);
+  const lr = parseFloat(document.getElementById(`grade-lr-${id}`).value);
+  const ga = parseFloat(document.getElementById(`grade-ga-${id}`).value);
   const feedback = document.getElementById(`feedback-${id}`).value.trim();
-  if (!band) { alert('Band score kiriting'); return; }
+  
+  if (isNaN(ta) || isNaN(cc) || isNaN(lr) || isNaN(ga)) {
+    alert("Barcha mezonlarni baholang!");
+    return;
+  }
+  
+  const total = (ta + cc + lr + ga) / 4;
+  let band = Math.round(total * 2) / 2; // round to nearest 0.5
 
   const btn = document.getElementById(`grade-btn-${id}`);
   btn.disabled = true;
@@ -648,7 +662,16 @@ async function gradeWriting(id) {
     const res = await adminFetch('/api/admin/grade-writing', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ result_id: id, band: parseFloat(band), feedback, send_email: true })
+      body: JSON.stringify({ 
+        result_id: id, 
+        band: band, 
+        feedback: feedback, 
+        send_email: true,
+        task_achievement: ta,
+        coherence_cohesion: cc,
+        lexical_resource: lr,
+        grammar_accuracy: ga
+      })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Xatolik');

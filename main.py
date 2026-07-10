@@ -71,6 +71,12 @@ async def startup():
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_band NUMERIC")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_feedback TEXT")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS notified BOOLEAN DEFAULT FALSE")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_task_achievement NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_coherence_cohesion NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_lexical_resource NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_grammar_accuracy NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS writing_graded_at TIMESTAMP")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS grader_name TEXT")
 
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS exam_sessions (
@@ -111,6 +117,10 @@ class GradeWriting(BaseModel):
     band: float
     feedback: Optional[str] = None
     send_email: bool = True
+    task_achievement: Optional[float] = None
+    coherence_cohesion: Optional[float] = None
+    lexical_resource: Optional[float] = None
+    grammar_accuracy: Optional[float] = None
 
 
 # ─── Email yuborish (Resend API) ───────────────────────────────────────────────
@@ -768,11 +778,15 @@ async def grade_writing(data: GradeWriting, _: None = Depends(require_admin)):
         row = await conn.fetchrow(
             """
             UPDATE exam_results
-            SET writing_band = $1, writing_feedback = $2
+            SET writing_band = $1, writing_feedback = $2,
+                writing_task_achievement = $4, writing_coherence_cohesion = $5,
+                writing_lexical_resource = $6, writing_grammar_accuracy = $7,
+                grader_name = $8, writing_graded_at = NOW()
             WHERE id = $3
             RETURNING full_name, email, section
             """,
-            data.band, data.feedback, data.result_id
+            data.band, data.feedback, data.result_id,
+            data.task_achievement, data.coherence_cohesion, data.lexical_resource, data.grammar_accuracy, "Admin"
         )
         if not row:
             raise HTTPException(status_code=404, detail="Natija topilmadi")

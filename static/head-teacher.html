@@ -6,6 +6,7 @@
 <title>Markaz Paneli — IELTS Mock SS</title>
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root {
   --blue:       #1a56e8;
@@ -181,7 +182,10 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
 <div class="view" id="view-dashboard">
   <div class="wrap">
     <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px;">$ markaz --dashboard</p>
-    <h2 id="center-title" style="font-size:22px; font-weight:800; margin-bottom:20px;"></h2>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+      <h2 id="center-title" style="font-size:22px; font-weight:800; margin:0;"></h2>
+      <button class="btn-outline btn-sm" onclick="exportCenterResults()">Umumiy natijalarni yuklash (Excel)</button>
+    </div>
 
     <div class="dash-stats" id="overview-stats"></div>
 
@@ -213,6 +217,13 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
         <div class="dash-section-head"><span>$ markaz --stats</span></div>
         <div class="dash-section-body">
           <div id="stats-body"></div>
+        </div>
+      </div>
+      
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ markaz --trend</span></div>
+        <div class="dash-section-body">
+          <canvas id="trendChart" width="400" height="200"></canvas>
         </div>
       </div>
     </div>
@@ -389,13 +400,33 @@ function renderGroupExpandPanel(g) {
         <button class="btn-outline btn-sm" onclick="toggleGroupActive(${g.id}, this)">${g.is_active ? '⛔ Guruhni yopish' : '✓ Qayta ochish'}</button>
         ${g.has_teacher
           ? `<button class="btn-outline btn-sm danger" onclick="removeTeacher(${g.id}, this)">🗑 Teacherni olib tashlash</button>`
-          : `<button class="btn-outline btn-sm" onclick="generateInvite(${g.id}, this)">🔗 Teacher-invite yaratish</button>`
+          : `<div style="display:flex; gap:8px;">
+               <select id="invite-expire-${g.id}" class="btn-outline btn-sm" style="padding:6px; height:auto;">
+                 <option value="2">2 soat</option>
+                 <option value="10">10 soat</option>
+                 <option value="24" selected>1 kun</option>
+                 <option value="48">2 kun</option>
+               </select>
+               <button class="btn-outline btn-sm" onclick="generateInvite(${g.id}, this)">🔗 Teacher-invite yaratish</button>
+             </div>`
         }
+        <button class="btn-outline btn-sm" onclick="exportGroupResults(${g.id})">Yuklab olish (Excel)</button>
         <button class="btn-outline btn-sm" onclick="viewRoster(${g.id})">📋 Ro'yxat (roster)</button>
       </div>
     </div>
 
-    <div id="invite-box-${g.id}"></div>
+    <div id="invite-box-${g.id}">
+      ${g.has_teacher ? '' : (g.teacher_invite_code ? `
+        <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ joriy invite-code</div>
+        <div class="code-box" style="margin-bottom:8px;">
+          <span>${window.location.origin}/teacher-invite?code=${g.teacher_invite_code}</span>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-outline btn-sm" onclick="copyText('${window.location.origin}/teacher-invite?code=${g.teacher_invite_code}', this)">📋 Nusxa</button>
+            <button class="btn-outline btn-sm danger" onclick="revokeInvite(${g.id}, this)">Bekor qilish</button>
+          </div>
+        </div>
+      ` : '')}
+    </div>
 
     <div>
       <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ csv --import (talabalar ro'yxati, 'email' ustuni majburiy)</div>
@@ -469,22 +500,35 @@ async function removeTeacher(groupId, btnEl) {
 }
 
 async function generateInvite(groupId, btnEl) {
+  const expireSelect = document.getElementById(`invite-expire-${groupId}`);
+  const hours = expireSelect ? parseInt(expireSelect.value) : 24;
+
   btnEl.disabled = true;
   btnEl.innerHTML = '<span class="spinner"></span>';
   try {
-    const data = await apiCall(HT_API, `/groups/${groupId}/generate-teacher-invite`, { method: 'POST' });
-    document.getElementById(`invite-box-${groupId}`).innerHTML = `
-      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ teacher --invite-link (bir martalik, faqat shu guruh uchun)</div>
-      <div class="code-box">
-        <span>${data.invite_link}</span>
-        <button class="btn-outline btn-sm" onclick="copyText('${data.invite_link}', this)">📋 Nusxa</button>
-      </div>
-    `;
+    const data = await apiCall(HT_API, `/groups/${groupId}/generate-teacher-invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expire_in_hours: hours })
+    });
+    await loadGroups();
   } catch (e) {
     alert('Xatolik: ' + e.message);
   } finally {
     btnEl.disabled = false;
     btnEl.innerHTML = '🔗 Teacher-invite yaratish';
+  }
+}
+
+async function revokeInvite(groupId, btnEl) {
+  if(!confirm("Kodni haqiqatan bekor qilmoqchimisiz?")) return;
+  btnEl.disabled = true;
+  try {
+    await apiCall(HT_API, `/groups/${groupId}/revoke-teacher-invite`, { method: 'POST' });
+    await loadGroups();
+  } catch(e) {
+    alert('Xatolik: ' + e.message);
+    btnEl.disabled = false;
   }
 }
 
@@ -553,7 +597,91 @@ function switchSection(which) {
   document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
   document.getElementById('section-groups').classList.toggle('active', which === 'groups');
   document.getElementById('section-stats').classList.toggle('active', which === 'stats');
-  if (which === 'stats') loadStats();
+  if (which === 'stats') {
+    loadStats();
+    loadTrend();
+  }
+}
+
+let trendChartInst = null;
+async function loadTrend() {
+  try {
+    const data = await apiCall(HT_API, '/trend?days=30');
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    
+    const datasets = data.datasets.map((ds, i) => {
+      const isOverall = ds.group_id === 'overall';
+      const color = isOverall ? '#1a56e8' : `hsl(${(i*40)%360}, 70%, 50%)`;
+      return {
+        label: ds.group_name,
+        data: ds.avg_bands,
+        borderColor: color,
+        backgroundColor: color,
+        borderWidth: isOverall ? 3 : 1.5,
+        borderDash: isOverall ? [] : [5, 5],
+        tension: 0.3
+      };
+    });
+
+    if(trendChartInst) trendChartInst.destroy();
+    
+    trendChartInst = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.labels,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' }
+        },
+        scales: {
+          y: { min: 0, max: 9, title: { display: true, text: 'Overall Band' } }
+        }
+      }
+    });
+  } catch(e) {
+    console.error("Trend error", e);
+  }
+}
+
+async function exportGroupResults(groupId) {
+  try {
+    const res = await fetch(HT_API + '/export/results?format=excel&group_id=' + groupId, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Yuklab olishda xatolik');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Guruh_Natijalari.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function exportCenterResults() {
+  try {
+    const res = await fetch(HT_API + '/export/results?format=excel', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Yuklab olishda xatolik');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Markaz_Natijalari.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (e) {
+    alert(e.message);
+  }
 }
 
 async function loadStats() {

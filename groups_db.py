@@ -33,12 +33,15 @@ async def ensure_center_group_tables():
                 name TEXT NOT NULL,
                 invite_code TEXT UNIQUE NOT NULL,
                 teacher_invite_code TEXT UNIQUE,
+                teacher_invite_expires_at TIMESTAMP,
                 teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                 center_id INTEGER REFERENCES centers(id) ON DELETE CASCADE,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
+        await conn.execute("ALTER TABLE groups ADD COLUMN IF NOT EXISTS teacher_invite_expires_at TIMESTAMP")
+
 
         # PostgreSQL "ADD CONSTRAINT IF NOT EXISTS"ni qo'llab-quvvatlamaydi,
         # shuning uchun pg_constraint katalogini o'zimiz tekshiramiz.

@@ -214,10 +214,14 @@ table.students-table tr.clickable:hover { background: var(--bg); }
     <div class="section-tabs">
       <button class="section-tab active" id="tab-students" onclick="switchSection('students')">Talabalar</button>
       <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
+      <button class="section-tab" id="tab-writing" onclick="switchSection('writing')">Writing Baholash</button>
     </div>
 
     <!-- STUDENTS -->
     <div class="section-view active" id="section-students">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+        <button class="btn-outline btn-sm" onclick="exportResults()">Yuklab olish (Excel)</button>
+      </div>
       <div class="students-table-wrap">
         <table class="students-table">
           <thead>
@@ -241,6 +245,14 @@ table.students-table tr.clickable:hover { background: var(--bg); }
         <div class="dash-section-body">
           <div id="stats-body"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- WRITING -->
+    <div class="section-view" id="section-writing">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>Kutilayotgan Insholar</span></div>
+        <div class="dash-section-body" id="pending-writing-body"></div>
       </div>
     </div>
   </div>
@@ -442,9 +454,12 @@ function closeModal() {
 function switchSection(which) {
   document.getElementById('tab-students').classList.toggle('active', which === 'students');
   document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
+  document.getElementById('tab-writing').classList.toggle('active', which === 'writing');
   document.getElementById('section-students').classList.toggle('active', which === 'students');
   document.getElementById('section-stats').classList.toggle('active', which === 'stats');
+  document.getElementById('section-writing').classList.toggle('active', which === 'writing');
   if (which === 'stats') loadStats();
+  if (which === 'writing') loadPendingWriting();
 }
 
 async function loadStats() {
@@ -474,6 +489,109 @@ async function loadStats() {
     `;
   } catch (e) {
     body.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
+  }
+}
+
+async function exportResults() {
+  if (!token) return;
+  window.location.href = T_API + '/export/results?format=excel&token=' + token; // Ideally handle token in query param or fetch as blob
+}
+
+// Custom export func
+async function exportResults() {
+  try {
+    const res = await fetch(T_API + '/export/results?format=excel', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Yuklab olishda xatolik');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Guruh_Natijalari.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// ─── WRITING GRADING ──────────────────────────────────────
+async function loadPendingWriting() {
+  const body = document.getElementById('pending-writing-body');
+  body.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
+  try {
+    const data = await apiCall(T_API, '/pending-writing');
+    if (!data.length) {
+      body.innerHTML = `<div class="empty-state">Tekshirilishi kerak bo'lgan insholar yo'q</div>`;
+      return;
+    }
+    
+    let html = '';
+    data.forEach(item => {
+      const date = new Date(item.submitted_at).toLocaleString('uz-UZ');
+      html += `
+        <div style="border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-family:var(--mono); font-size:12px;">
+            <b>${item.full_name} (${item.email})</b>
+            <span style="color:var(--muted);">${date}</span>
+          </div>
+          <div style="background:var(--bg); padding:12px; border-radius:6px; margin-bottom:12px; font-size:13px; max-height:150px; overflow-y:auto; white-space:pre-wrap;"><b>Task 1:</b>\n${item.writing_task1 || 'Yozilmagan'}</div>
+          <div style="background:var(--bg); padding:12px; border-radius:6px; margin-bottom:12px; font-size:13px; max-height:150px; overflow-y:auto; white-space:pre-wrap;"><b>Task 2:</b>\n${item.writing_task2 || 'Yozilmagan'}</div>
+          
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div><label>Task Achievement</label><input type="number" step="0.5" id="grade-ta-${item.id}" placeholder="0-9"></div>
+            <div><label>Coherence & Cohesion</label><input type="number" step="0.5" id="grade-cc-${item.id}" placeholder="0-9"></div>
+            <div><label>Lexical Resource</label><input type="number" step="0.5" id="grade-lr-${item.id}" placeholder="0-9"></div>
+            <div><label>Grammar & Accuracy</label><input type="number" step="0.5" id="grade-ga-${item.id}" placeholder="0-9"></div>
+          </div>
+          
+          <div><label>Feedback</label><input type="text" id="grade-feed-${item.id}" placeholder="Xatolar va maslahatlar"></div>
+          
+          <div style="margin-top:12px; display:flex; justify-content:flex-end;">
+            <button class="btn-primary btn-sm" onclick="submitGrade(${item.student_id}, ${item.id})">Baholash</button>
+          </div>
+        </div>
+      `;
+    });
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
+  }
+}
+
+async function submitGrade(studentId, resultId) {
+  const ta = parseFloat(document.getElementById(`grade-ta-${resultId}`).value);
+  const cc = parseFloat(document.getElementById(`grade-cc-${resultId}`).value);
+  const lr = parseFloat(document.getElementById(`grade-lr-${resultId}`).value);
+  const ga = parseFloat(document.getElementById(`grade-ga-${resultId}`).value);
+  const feed = document.getElementById(`grade-feed-${resultId}`).value.trim();
+  
+  if(isNaN(ta) || isNaN(cc) || isNaN(lr) || isNaN(ga)) {
+    alert("Barcha mezonlarni baholang!");
+    return;
+  }
+  
+  const total = (ta + cc + lr + ga) / 4;
+  let band = Math.round(total * 2) / 2; // round to nearest 0.5
+  
+  try {
+    await apiCall(T_API, \`/students/\${studentId}/grade-writing/\${resultId}\`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        band: band,
+        feedback: feed || null,
+        task_achievement: ta,
+        coherence_cohesion: cc,
+        lexical_resource: lr,
+        grammar_accuracy: ga
+      })
+    });
+    loadPendingWriting();
+  } catch(e) {
+    alert(e.message);
   }
 }
 

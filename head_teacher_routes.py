@@ -16,6 +16,9 @@ router = APIRouter(prefix="/api/head-teacher", tags=["head-teacher"])
 class GroupCreateIn(BaseModel):
     name: str
 
+class GenerateTeacherInviteIn(BaseModel):
+    expires_in_hours: int = 168  # default 7 days
+
 
 # ─── Markaz haqida umumiy ma'lumot ─────────────────────────────────────────
 
@@ -125,7 +128,7 @@ async def _own_group_or_404(conn, group_id: int, center_id: int):
 
 
 @router.post("/groups/{group_id}/generate-teacher-invite")
-async def generate_teacher_invite(group_id: int, current_user: dict = Depends(get_current_head_teacher)):
+async def generate_teacher_invite(group_id: int, data: GenerateTeacherInviteIn, current_user: dict = Depends(get_current_head_teacher)):
     db = await get_pool()
     async with db.acquire() as conn:
         group = await _own_group_or_404(conn, group_id, current_user["center_id"])
@@ -137,13 +140,23 @@ async def generate_teacher_invite(group_id: int, current_user: dict = Depends(ge
 
         invite_code = secrets.token_urlsafe(24)  # yuqori entropiya — bu rol beruvchi token
         await conn.execute(
-            "UPDATE groups SET teacher_invite_code=$1 WHERE id=$2", invite_code, group_id
+            "UPDATE groups SET teacher_invite_code=$1, teacher_invite_expires_at=NOW() + ($2 || ' hours')::interval WHERE id=$3",
+            invite_code, str(data.expires_in_hours), group_id
         )
 
     return {
         "teacher_invite_code": invite_code,
         "invite_link": f"{FRONTEND_BASE_URL}/register?teacher_invite={invite_code}",
     }
+
+
+@router.post("/groups/{group_id}/revoke-teacher-invite")
+async def revoke_teacher_invite(group_id: int, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        await _own_group_or_404(conn, group_id, current_user["center_id"])
+        await conn.execute("UPDATE groups SET teacher_invite_code = NULL, teacher_invite_expires_at = NULL WHERE id = $1", group_id)
+    return {"message": "Teacher taklif kodi bekor qilindi"}
 
 
 @router.post("/groups/{group_id}/remove-teacher")
@@ -282,3 +295,142 @@ async def head_teacher_stats(current_user: dict = Depends(get_current_head_teach
         "weakest_section": weakest_section,
         "total_attempts": len(rows),
     }
+
+
+@router.get("/export/results")
+async def export_center_results(format: str = "excel", group_id: Optional[int] = None, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if group_id:
+            await _own_group_or_404(conn, group_id, current_user["center_id"])
+            group_filter = "AND u.group_id = $2"
+            args = (current_user["center_id"], group_id)
+        else:
+            group_filter = ""
+            args = (current_user["center_id"],)
+
+        rows = await conn.fetch(
+            f"""
+            SELECT er.id, u.full_name, u.email, er.section, er.score, er.total, er.writing_band,
+                   er.writing_task_achievement, er.writing_coherence_cohesion, er.writing_lexical_resource, er.writing_grammar_accuracy,
+                   er.grader_name, er.writing_graded_at, er.writing_feedback, er.submitted_at,
+                   g.name AS group_name
+            FROM exam_results er
+            JOIN users u ON u.email = er.email
+            LEFT JOIN groups g ON g.id = u.group_id
+            WHERE u.center_id = $1 {group_filter}
+            ORDER BY er.submitted_at DESC
+            """,
+            *args
+        )
+    from result_export import build_results_export
+    return build_results_export(rows, format, "markaz-natijalari")
+
+
+@router.get("/trend")
+async def head_teacher_trend(days: int = 30, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT DATE(er.submitted_at) AS date, g.name AS group_name, g.id AS group_id,
+                   COUNT(er.id) AS submissions,
+                   AVG(
+                       COALESCE(
+                           er.writing_band,
+                           CASE 
+                               WHEN er.section = 'listening' THEN (SELECT band FROM (VALUES (0,1), (40,9)) AS b(score, band) LIMIT 1) -- sodda o'rniga, DB dan emas python da hisoblash yaxshiroq
+                               ELSE NULL
+                           END
+                       )
+                   ) AS avg_band_raw
+            FROM exam_results er
+            JOIN users u ON u.email = er.email
+            JOIN groups g ON g.id = u.group_id
+            WHERE u.center_id = $1 AND er.submitted_at >= NOW() - ($2 || ' days')::interval
+            GROUP BY DATE(er.submitted_at), g.name, g.id
+            ORDER BY date ASC
+            """,
+            current_user["center_id"], str(days)
+        )
+        
+        # SQL da barcha bandlarni hisoblash qiyin bo'lgani uchun, soddaroq yo'l:
+        # Barcha qatorlarni olib pythonda guruhlaymiz
+        raw_results = await conn.fetch(
+            """
+            SELECT DATE(er.submitted_at) AS date, g.name AS group_name, g.id AS group_id,
+                   er.section, er.score, er.total, er.writing_band
+            FROM exam_results er
+            JOIN users u ON u.email = er.email
+            JOIN groups g ON g.id = u.group_id
+            WHERE u.center_id = $1 AND er.submitted_at >= NOW() - ($2 || ' days')::interval
+            """,
+            current_user["center_id"], str(days)
+        )
+
+    # Pythonda trendni hisoblash
+    from collections import defaultdict
+    import datetime
+    
+    # Kuni -> Guruh ID -> { count, total_band, band_count }
+    trends = defaultdict(lambda: defaultdict(lambda: {"count": 0, "total_band": 0, "band_count": 0, "group_name": ""}))
+    group_names = {}
+    
+    for r in raw_results:
+        d = r["date"].isoformat()
+        gid = r["group_id"]
+        group_names[gid] = r["group_name"]
+        
+        trends[d][gid]["count"] += 1
+        trends[d][gid]["group_name"] = r["group_name"]
+        
+        if r["section"] == "writing":
+            band = r["writing_band"]
+        else:
+            band = get_band_score(r["score"], r["total"], r["section"]) if r["score"] is not None and r["total"] else None
+            
+        if band is not None:
+            trends[d][gid]["total_band"] += float(band)
+            trends[d][gid]["band_count"] += 1
+
+    # Formatlash
+    dates = sorted(list(trends.keys()))
+    datasets = {}
+    
+    for gid, gname in group_names.items():
+        datasets[gid] = {
+            "group_name": gname,
+            "group_id": gid,
+            "submissions": [],
+            "avg_bands": []
+        }
+        
+    for d in dates:
+        for gid in group_names.keys():
+            stats = trends[d][gid]
+            datasets[gid]["submissions"].append(stats["count"])
+            if stats["band_count"] > 0:
+                datasets[gid]["avg_bands"].append(round(stats["total_band"] / stats["band_count"], 1))
+            else:
+                datasets[gid]["avg_bands"].append(0)
+
+    # Overall center trend
+    overall = {
+        "group_name": "Umumiy Markaz",
+        "group_id": "overall",
+        "submissions": [],
+        "avg_bands": []
+    }
+    for d in dates:
+        day_subs = sum(trends[d][gid]["count"] for gid in group_names.keys())
+        day_total_band = sum(trends[d][gid]["total_band"] for gid in group_names.keys())
+        day_band_count = sum(trends[d][gid]["band_count"] for gid in group_names.keys())
+        
+        overall["submissions"].append(day_subs)
+        overall["avg_bands"].append(round(day_total_band / day_band_count, 1) if day_band_count > 0 else 0)
+
+    return {
+        "labels": dates,
+        "datasets": list(datasets.values()) + [overall]
+    }
+

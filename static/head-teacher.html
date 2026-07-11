@@ -196,6 +196,7 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
       <button class="section-tab" id="tab-classes" onclick="switchSection('classes')" style="display:none;">Sinflar</button>
       <button class="section-tab" id="tab-subjects" onclick="switchSection('subjects')" style="display:none;">Fanlar</button>
       <button class="section-tab" id="tab-branding" onclick="switchSection('branding')">Brending</button>
+      <button class="section-tab" id="tab-subscription" onclick="switchSection('subscription')" style="display:none;">Obuna</button>
     </div>
 
     <!-- GROUPS -->
@@ -329,6 +330,26 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
         </div>
       </div>
     </div>
+
+    <div class="section-view" id="section-subscription">
+      <div id="subscription-status-box"></div>
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ subscription --payment</span></div>
+        <div class="dash-section-body">
+          <div id="manual-payment-details" class="code-box" style="margin-bottom:14px;"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+            <div><label>Tarif</label><select id="billing-plan" class="btn-outline" style="width:100%;padding:10px;"></select></div>
+            <div><label>Davr</label><select id="billing-cycle" class="btn-outline" style="width:100%;padding:10px;"><option value="monthly">Oylik</option><option value="yearly">Yillik</option></select></div>
+            <div><label>To'lovchi ismi</label><input id="billing-payer" placeholder="Ism familiya"></div>
+            <div><label>Tranzaksiya raqami</label><input id="billing-transaction" placeholder="Payme/Click tranzaksiya ID"></div>
+            <div><label>To'lov tasdiqlovi</label><input id="billing-receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"></div>
+          </div>
+          <div id="billing-error" class="alert danger" style="display:none;margin-top:12px;"></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:14px;"><button class="btn-primary" id="submit-payment-btn" onclick="submitSubscriptionPayment()">Tasdiqlashga yuborish</button></div>
+        </div>
+      </div>
+      <div class="dash-section"><div class="dash-section-head"><span>$ payments --history</span></div><div class="dash-section-body" id="billing-history"></div></div>
+    </div>
   </div>
 </div>
 
@@ -410,6 +431,7 @@ function afterAuthResolved() {
   showView('view-dashboard');
   loadCenter();
   loadGroups();
+  loadBillingStatus();
 }
 
 // ─── CENTER OVERVIEW ──────────────────────────────────────
@@ -770,12 +792,14 @@ function switchSection(which) {
   document.getElementById('tab-classes').classList.toggle('active', which === 'classes');
   document.getElementById('tab-subjects').classList.toggle('active', which === 'subjects');
   document.getElementById('tab-branding').classList.toggle('active', which === 'branding');
+  document.getElementById('tab-subscription').classList.toggle('active', which === 'subscription');
   document.getElementById('section-groups').classList.toggle('active', which === 'groups');
   document.getElementById('section-stats').classList.toggle('active', which === 'stats');
   document.getElementById('section-staff').classList.toggle('active', which === 'staff');
   document.getElementById('section-classes').classList.toggle('active', which === 'classes');
   document.getElementById('section-subjects').classList.toggle('active', which === 'subjects');
   document.getElementById('section-branding').classList.toggle('active', which === 'branding');
+  document.getElementById('section-subscription').classList.toggle('active', which === 'subscription');
   if (which === 'stats') {
     loadStats();
     loadTrend();
@@ -1004,6 +1028,30 @@ async function saveBranding() {
   } catch (e) {
     err.textContent = '→ ' + e.message; err.style.display = 'block';
   } finally { btn.disabled = false; if (!btn.textContent.includes('Saqlandi')) btn.textContent = 'Saqlash'; }
+}
+
+async function loadBillingStatus() {
+  try {
+    const data=await apiCall('/api/billing','/status');
+    document.getElementById('tab-subscription').style.display=data.subscription_required?'':'none';
+    if(!data.subscription_required){if(document.getElementById('section-subscription').classList.contains('active'))switchSection('groups');return;}
+    const sub=data.subscription;
+    const end=sub?.current_period_end||sub?.trial_ends_at;
+    document.getElementById('subscription-status-box').innerHTML=`<div class="dash-section"><div class="dash-section-head">$ subscription --status</div><div class="dash-section-body"><span class="badge ${sub?.status==='active'?'success':'warning'}">${escapeHtml(sub?.status||'inactive')}</span> ${sub?.plan_name?`<span class="badge muted">${escapeHtml(sub.plan_name)}</span>`:''}${end?`<div class="group-meta" style="margin-top:8px;">Amal qilish muddati: ${new Date(end).toLocaleString('uz-UZ')}</div>`:''}</div></div>`;
+    const details=data.payment_details||{};
+    document.getElementById('manual-payment-details').innerHTML=details.card_number?`<div><b>Karta:</b> ${escapeHtml(details.card_number)}<br><b>Egasi:</b> ${escapeHtml(details.card_holder||'—')}<br>${escapeHtml(details.instructions||'')}</div>`:`<div>To'lov rekvizitlari hali super-admin tomonidan sozlanmagan.</div>`;
+    document.getElementById('billing-plan').innerHTML=data.plans.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} · ${Number(p.price_monthly).toLocaleString('uz-UZ')} so'm/oy · ${Number(p.price_yearly).toLocaleString('uz-UZ')} so'm/yil</option>`).join('');
+    document.getElementById('billing-history').innerHTML=data.payments.length?data.payments.map(p=>`<div class="roster-row"><span><b>${escapeHtml(p.order_code)}</b> · ${escapeHtml(p.plan_name)} · ${Number(p.amount).toLocaleString('uz-UZ')} so'm<div class="group-meta">${new Date(p.created_at).toLocaleString('uz-UZ')}${p.review_note?' · '+escapeHtml(p.review_note):''}</div></span><span class="badge ${p.status==='approved'?'success':p.status==='rejected'?'danger':'warning'}">${escapeHtml(p.status)}</span></div>`).join(''):'<div class="empty-state">To\'lovlar hali yo\'q</div>';
+  } catch(e) { document.getElementById('tab-subscription').style.display='none'; }
+}
+
+async function submitSubscriptionPayment() {
+  const err=document.getElementById('billing-error'),file=document.getElementById('billing-receipt').files[0],btn=document.getElementById('submit-payment-btn');
+  err.style.display='none';if(!file){err.textContent="→ To'lov tasdiqlovini tanlang";err.style.display='block';return;}
+  const form=new FormData();form.append('plan_id',document.getElementById('billing-plan').value);form.append('billing_cycle',document.getElementById('billing-cycle').value);form.append('payer_name',document.getElementById('billing-payer').value);form.append('transaction_reference',document.getElementById('billing-transaction').value);form.append('receipt',file);
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Yuborilmoqda...';
+  try{await apiCall('/api/billing','/payments',{method:'POST',body:form});document.getElementById('billing-payer').value='';document.getElementById('billing-transaction').value='';document.getElementById('billing-receipt').value='';await loadBillingStatus();}
+  catch(e){err.textContent='→ '+e.message;err.style.display='block';}finally{btn.disabled=false;btn.textContent='Tasdiqlashga yuborish';}
 }
 
 let trendChartInst = null;

@@ -203,6 +203,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <button class="section-tab active" id="tab-results" onclick="switchSection('results')">Natijalar</button>
     <button class="section-tab" id="tab-users" onclick="switchSection('users')">Foydalanuvchilar</button>
     <button class="section-tab" id="tab-centers" onclick="switchSection('centers')">Tashkilotlar</button>
+    <button class="section-tab" id="tab-subscriptions" onclick="switchSection('subscriptions')">Obuna to'lovlari</button>
   </div>
 
   <!-- STATS SECTION -->
@@ -311,6 +312,15 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <div id="centers-list"></div>
     <div id="centers-empty" class="empty-state" style="display:none;">Hali tashkilotlar yo'q</div>
   </div>
+
+  <div class="section-view" id="section-subscriptions">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--muted);">$ payments --review</span>
+      <button class="btn-outline btn-sm" onclick="loadSubscriptionPayments()">↻ Yangilash</button>
+    </div>
+    <div id="subscription-payments-list"></div>
+    <div id="subscription-payments-empty" class="empty-state" style="display:none;">To'lovlar yo'q</div>
+  </div>
 </div>
 
 <script>
@@ -391,15 +401,18 @@ function switchSection(which) {
   if (document.getElementById('tab-results')) document.getElementById('tab-results').classList.toggle('active', which === 'results');
   if (document.getElementById('tab-users')) document.getElementById('tab-users').classList.toggle('active', which === 'users');
   if (document.getElementById('tab-centers')) document.getElementById('tab-centers').classList.toggle('active', which === 'centers');
+  if (document.getElementById('tab-subscriptions')) document.getElementById('tab-subscriptions').classList.toggle('active', which === 'subscriptions');
 
   if (document.getElementById('section-stats')) document.getElementById('section-stats').classList.toggle('active', which === 'stats');
   if (document.getElementById('section-results')) document.getElementById('section-results').classList.toggle('active', which === 'results');
   if (document.getElementById('section-users')) document.getElementById('section-users').classList.toggle('active', which === 'users');
   if (document.getElementById('section-centers')) document.getElementById('section-centers').classList.toggle('active', which === 'centers');
+  if (document.getElementById('section-subscriptions')) document.getElementById('section-subscriptions').classList.toggle('active', which === 'subscriptions');
 
   if (which === 'users') loadUsers();
   if (which === 'stats') loadStats();
   if (which === 'centers') loadCenters();
+  if (which === 'subscriptions') loadSubscriptionPayments();
 }
 
 let charts = {};
@@ -746,6 +759,9 @@ function renderCenters() {
     const isSchool = c.organization_type === 'school';
     const typeLabel = isSchool ? 'Maktab' : "O'quv markazi";
     const leaderLabel = isSchool ? 'Direktor' : 'Head-teacher';
+    const subscriptionBadge = c.subscription_required
+      ? `<span class="badge" style="background:var(--amber-light);color:var(--amber);">Obuna: ${c.subscription_status || 'trial'}</span>`
+      : `<span class="badge green">Obunasiz</span>`;
     const ownerHtml = c.owner_name
       ? `<span class="center-stat">👤 ${leaderLabel}: <b>${c.owner_name}</b> <span style="color:var(--muted);">(${c.owner_email})</span></span>`
       : `<span class="center-stat" style="color:var(--amber);">⚠ ${leaderLabel} tayinlanmagan</span>`;
@@ -759,6 +775,7 @@ function renderCenters() {
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           ${statusBadge}
+          ${subscriptionBadge}
           <button class="btn-outline btn-sm" onclick="toggleCenter(${c.id}, this)">${c.is_active ? '⛔ Yopish' : '✓ Qayta ochish'}</button>
         </div>
       </div>
@@ -767,6 +784,7 @@ function renderCenters() {
           <span class="center-stat">📁 Guruhlar: <b>${c.groups_count}</b> / ${c.max_groups}</span>
           <span class="center-stat">🎓 Talabalar: <b>${c.students_count}</b> / ${c.max_students}</span>
           ${ownerHtml}
+          <button class="btn-outline btn-sm" onclick="toggleCenterSubscription(${c.id}, this)">${c.subscription_required ? "Obuna talabini o'chirish" : 'Obuna talabini yoqish'}</button>
         </div>
       </div>
       ${!c.owner_id ? `
@@ -824,6 +842,43 @@ async function toggleCenter(id, btnEl) {
     alert('Xatolik: ' + e.message);
     btnEl.disabled = false;
   }
+}
+
+async function toggleCenterSubscription(id, btnEl) {
+  btnEl.disabled = true;
+  try {
+    const res = await adminFetch(`/api/admin/centers/${id}/toggle-subscription`, {method:'POST'});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail || 'Xatolik');
+    await loadCenters();
+  } catch(e) { alert('Xatolik: ' + e.message); btnEl.disabled=false; }
+}
+
+function adminEsc(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+
+async function loadSubscriptionPayments() {
+  const list=document.getElementById('subscription-payments-list'),empty=document.getElementById('subscription-payments-empty');
+  list.innerHTML='<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>';empty.style.display='none';
+  try {
+    const res=await adminFetch('/api/admin/subscription-payments'),rows=await res.json();
+    if(!res.ok)throw new Error(rows.detail||'Xatolik');
+    if(!rows.length){list.innerHTML='';empty.style.display='block';return;}
+    list.innerHTML=rows.map(p=>`<div class="center-card"><div class="center-head"><div><div class="center-name">${adminEsc(p.center_name)} · ${adminEsc(p.plan_name)}</div><div class="center-meta">${adminEsc(p.order_code)} · ${new Date(p.created_at).toLocaleString('uz-UZ')}</div></div><span class="badge ${p.status==='approved'?'green':''}">${adminEsc(p.status)}</span></div><div class="center-body"><div class="center-stats"><span class="center-stat">Summa: <b>${Number(p.amount).toLocaleString('uz-UZ')} so'm</b></span><span class="center-stat">Davr: ${p.billing_cycle==='yearly'?'Yillik':'Oylik'}</span><span class="center-stat">To'lovchi: ${adminEsc(p.payer_name)}</span><span class="center-stat">Tranzaksiya: ${adminEsc(p.transaction_reference)}</span></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="btn-outline btn-sm" onclick="viewSubscriptionReceipt(${p.id},'${adminEsc(p.receipt_mime)}')">Tasdiqlovni ko'rish</button>${p.status==='pending'?`<button class="btn-primary btn-sm" onclick="reviewSubscriptionPayment(${p.id},'approve')">Tasdiqlash</button><button class="btn-outline btn-sm" onclick="reviewSubscriptionPayment(${p.id},'reject')">Rad etish</button>`:''}</div>${p.review_note?`<div class="center-meta" style="margin-top:8px;">Izoh: ${adminEsc(p.review_note)}</div>`:''}</div></div>`).join('');
+  } catch(e){list.innerHTML=`<div class="alert danger">→ ${adminEsc(e.message)}</div>`;}
+}
+
+async function viewSubscriptionReceipt(id,mime) {
+  try { const res=await adminFetch(`/api/admin/subscription-payments/${id}/receipt`);if(!res.ok)throw new Error('Fayl ochilmadi');const blob=await res.blob(),url=URL.createObjectURL(blob);window.open(url,'_blank');setTimeout(()=>URL.revokeObjectURL(url),60000); }
+  catch(e){alert(e.message);}
+}
+
+async function reviewSubscriptionPayment(id,action) {
+  const label=action==='approve'?'tasdiqlash':'rad etish';if(!confirm(`To'lovni ${label}?`))return;
+  const note=prompt('Izoh (ixtiyoriy):')||null;
+  try { const res=await adminFetch(`/api/admin/subscription-payments/${id}/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,note})});const data=await res.json();if(!res.ok)throw new Error(data.detail||'Xatolik');await loadSubscriptionPayments(); }
+  catch(e){alert('Xatolik: '+e.message);}
 }
 
 async function assignHeadTeacher(centerId, btnEl) {

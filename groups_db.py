@@ -46,6 +46,7 @@ async def ensure_center_group_tables():
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_contact_email TEXT")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_contact_phone TEXT")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS show_powered_by BOOLEAN DEFAULT TRUE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS subscription_required BOOLEAN NOT NULL DEFAULT FALSE")
         await conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS centers_slug_unique ON centers (LOWER(slug)) WHERE slug IS NOT NULL")
 
         await conn.execute("""
@@ -172,6 +173,59 @@ async def ensure_center_group_tables():
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS school_assignments_staff_idx ON school_teacher_assignments(staff_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS school_assignments_class_idx ON school_teacher_assignments(class_id)")
+
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS subscription_plans (
+                id SERIAL PRIMARY KEY,
+                code TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                price_monthly BIGINT NOT NULL,
+                price_yearly BIGINT NOT NULL,
+                duration_months INTEGER NOT NULL DEFAULT 1,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS organization_subscriptions (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER UNIQUE NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
+                plan_id INTEGER REFERENCES subscription_plans(id) ON DELETE SET NULL,
+                status TEXT NOT NULL DEFAULT 'inactive',
+                trial_ends_at TIMESTAMP,
+                current_period_start TIMESTAMP,
+                current_period_end TIMESTAMP,
+                grace_ends_at TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS subscription_payments (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
+                plan_id INTEGER NOT NULL REFERENCES subscription_plans(id),
+                billing_cycle TEXT NOT NULL,
+                amount BIGINT NOT NULL,
+                order_code TEXT UNIQUE NOT NULL,
+                payer_name TEXT NOT NULL,
+                transaction_reference TEXT UNIQUE,
+                receipt_data BYTEA NOT NULL,
+                receipt_mime TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                review_note TEXT,
+                reviewed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS subscription_payments_status_idx ON subscription_payments(status, created_at)")
+        await conn.execute("""
+            INSERT INTO subscription_plans(code, name, price_monthly, price_yearly, duration_months)
+            VALUES
+              ('start', 'Start', 299000, 2990000, 1),
+              ('growth', 'Growth', 699000, 6990000, 1),
+              ('pro', 'Pro', 1490000, 14900000, 1)
+            ON CONFLICT(code) DO NOTHING
+        """)
 
 
 async def get_center_limits(conn, center_id: int):

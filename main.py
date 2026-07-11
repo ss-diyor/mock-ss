@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile, File, Form
 from feature_routes import router as feature_router
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -16,7 +16,7 @@ try:
     import openpyxl
 except ImportError:
     openpyxl = None
-from datetime import datetime
+from datetime import datetime, timedelta
 from fpdf import FPDF
 
 from db import get_pool
@@ -27,6 +27,7 @@ from head_teacher_routes import router as head_teacher_router
 from teacher_routes import router as teacher_router
 from school_routes import router as school_router
 from school_staff_routes import router as school_staff_router
+from billing_routes import router as billing_router
 from branding import ORGANIZATION_TYPES, branding_payload
 
 app = FastAPI(title="IELTS Mock SS")
@@ -36,6 +37,7 @@ app.include_router(head_teacher_router)
 app.include_router(teacher_router)
 app.include_router(school_router)
 app.include_router(school_staff_router)
+app.include_router(billing_router)
 
 
 @app.middleware("http")
@@ -759,6 +761,11 @@ class AssignHeadTeacherIn(BaseModel):
     user_id: int
 
 
+class AdminPaymentReviewIn(BaseModel):
+    action: str
+    note: Optional[str] = None
+
+
 @app.post("/api/admin/centers")
 async def admin_create_center(data: CenterCreateIn, _: None = Depends(require_admin)):
     name = data.name.strip()
@@ -786,17 +793,19 @@ async def admin_list_centers(_: None = Depends(require_admin)):
     async with db.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name,
+            SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name, c.subscription_required,
                    c.brand_primary_color, c.brand_logo_url,
                    c.is_active, c.max_groups, c.max_students, c.created_at,
                    c.owner_id, owner.full_name AS owner_name, owner.email AS owner_email,
+                   sub.status AS subscription_status, sub.current_period_end,
                    COUNT(DISTINCT g.id) AS groups_count,
                    COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'student') AS students_count
             FROM centers c
             LEFT JOIN users owner ON owner.id = c.owner_id
+            LEFT JOIN organization_subscriptions sub ON sub.center_id = c.id
             LEFT JOIN groups g ON g.center_id = c.id
             LEFT JOIN users u ON u.center_id = c.id
-            GROUP BY c.id, owner.full_name, owner.email
+            GROUP BY c.id, owner.full_name, owner.email, sub.status, sub.current_period_end
             ORDER BY c.created_at DESC
             """
         )
@@ -804,6 +813,9 @@ async def admin_list_centers(_: None = Depends(require_admin)):
         {
             "id": r["id"], "name": r["name"], "organization_type": r["organization_type"],
             "slug": r["slug"], "brand_name": r["brand_name"],
+            "subscription_required": r["subscription_required"],
+            "subscription_status": r["subscription_status"],
+            "subscription_period_end": r["current_period_end"].isoformat() if r["current_period_end"] else None,
             "primary_color": r["brand_primary_color"], "logo_url": r["brand_logo_url"],
             "is_active": r["is_active"],
             "max_groups": r["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER,
@@ -814,6 +826,116 @@ async def admin_list_centers(_: None = Depends(require_admin)):
         }
         for r in rows
     ]
+
+
+@app.post("/api/admin/centers/{center_id}/toggle-subscription")
+async def admin_toggle_subscription(center_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        async with conn.transaction():
+            center = await conn.fetchrow(
+                """
+                UPDATE centers SET subscription_required=NOT subscription_required
+                WHERE id=$1 RETURNING id, subscription_required
+                """,
+                center_id
+            )
+            if not center:
+                raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+            if center["subscription_required"]:
+                await conn.execute(
+                    """
+                    INSERT INTO organization_subscriptions(center_id, status, trial_ends_at, updated_at)
+                    VALUES ($1, 'trial', NOW() + INTERVAL '14 days', NOW())
+                    ON CONFLICT(center_id) DO NOTHING
+                    """,
+                    center_id
+                )
+    return {
+        "subscription_required": center["subscription_required"],
+        "message": "Obuna talabi yoqildi" if center["subscription_required"] else "Obuna talabi o'chirildi",
+    }
+
+
+@app.get("/api/admin/subscription-payments")
+async def admin_subscription_payments(status: Optional[str] = None, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT pay.id, pay.order_code, pay.billing_cycle, pay.amount, pay.payer_name,
+                   pay.transaction_reference, pay.status, pay.review_note, pay.created_at,
+                   pay.receipt_mime, c.id AS center_id, c.name AS center_name, p.name AS plan_name
+            FROM subscription_payments pay
+            JOIN centers c ON c.id=pay.center_id
+            JOIN subscription_plans p ON p.id=pay.plan_id
+            WHERE ($1::text IS NULL OR pay.status=$1)
+            ORDER BY CASE WHEN pay.status='pending' THEN 0 ELSE 1 END, pay.created_at DESC
+            LIMIT 500
+            """,
+            status
+        )
+    return [dict(row) | {"created_at": row["created_at"].isoformat()} for row in rows]
+
+
+@app.get("/api/admin/subscription-payments/{payment_id}/receipt")
+async def admin_subscription_receipt(payment_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT receipt_data, receipt_mime FROM subscription_payments WHERE id=$1", payment_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="To'lov topilmadi")
+    return Response(content=bytes(row["receipt_data"]), media_type=row["receipt_mime"])
+
+
+@app.post("/api/admin/subscription-payments/{payment_id}/review")
+async def admin_review_subscription_payment(
+    payment_id: int,
+    data: AdminPaymentReviewIn,
+    _: None = Depends(require_admin)
+):
+    if data.action not in {"approve", "reject"}:
+        raise HTTPException(status_code=400, detail="Amal noto'g'ri")
+    note = data.note.strip()[:500] if data.note else None
+    db = await get_pool()
+    async with db.acquire() as conn:
+        async with conn.transaction():
+            payment = await conn.fetchrow(
+                "SELECT * FROM subscription_payments WHERE id=$1 FOR UPDATE", payment_id
+            )
+            if not payment:
+                raise HTTPException(status_code=404, detail="To'lov topilmadi")
+            if payment["status"] != "pending":
+                raise HTTPException(status_code=409, detail="To'lov oldin ko'rib chiqilgan")
+            new_status = "approved" if data.action == "approve" else "rejected"
+            await conn.execute(
+                """
+                UPDATE subscription_payments
+                SET status=$1, review_note=$2, reviewed_at=NOW() WHERE id=$3
+                """,
+                new_status, note, payment_id
+            )
+            if data.action == "approve":
+                current_end = await conn.fetchval(
+                    "SELECT current_period_end FROM organization_subscriptions WHERE center_id=$1 FOR UPDATE",
+                    payment["center_id"]
+                )
+                start = current_end if current_end and current_end > datetime.utcnow() else datetime.utcnow()
+                period_end = start + (timedelta(days=365) if payment["billing_cycle"] == "yearly" else timedelta(days=30))
+                await conn.execute(
+                    """
+                    INSERT INTO organization_subscriptions(
+                        center_id, plan_id, status, current_period_start, current_period_end, grace_ends_at, updated_at
+                    ) VALUES ($1,$2,'active',$3,$4,$4 + INTERVAL '7 days',NOW())
+                    ON CONFLICT(center_id) DO UPDATE SET
+                        plan_id=EXCLUDED.plan_id, status='active', current_period_start=EXCLUDED.current_period_start,
+                        current_period_end=EXCLUDED.current_period_end, grace_ends_at=EXCLUDED.grace_ends_at, updated_at=NOW()
+                    """,
+                    payment["center_id"], payment["plan_id"], start, period_end
+                )
+    return {"message": "To'lov tasdiqlandi" if data.action == "approve" else "To'lov rad etildi"}
 
 
 @app.get("/api/branding/{slug}")

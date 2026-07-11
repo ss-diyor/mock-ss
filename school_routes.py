@@ -1,10 +1,15 @@
 import json
+import csv
+import io
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from email_validator import EmailNotValidError, validate_email
+import openpyxl
 
-from auth import get_current_head_teacher
+from auth import USERNAME_RE, get_current_head_teacher, hash_password
 from db import get_pool
 
 
@@ -42,6 +47,50 @@ class ClassCreateIn(BaseModel):
 
 class ClassStudentIn(BaseModel):
     login: str
+
+
+class SubjectCreateIn(BaseModel):
+    name: str
+    code: Optional[str] = None
+
+
+class TeacherAssignmentIn(BaseModel):
+    class_id: int
+    subject_id: int
+    staff_id: int
+
+
+IMPORT_HEADERS = ("full_name", "email", "username", "password")
+MAX_IMPORT_ROWS = 1000
+MAX_IMPORT_BYTES = 5 * 1024 * 1024
+
+
+def _read_student_rows(filename: str, content: bytes) -> list[dict]:
+    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    if suffix == "csv":
+        try:
+            text = content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="CSV UTF-8 formatida bo'lishi kerak")
+        reader = csv.DictReader(io.StringIO(text))
+        headers = [str(h or "").strip().lower() for h in (reader.fieldnames or [])]
+        if headers != list(IMPORT_HEADERS):
+            raise HTTPException(status_code=400, detail=f"CSV ustunlari aynan: {', '.join(IMPORT_HEADERS)}")
+        return [dict(row) for row in reader]
+    if suffix == "xlsx":
+        try:
+            workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+            sheet = workbook["Oquvchilar"] if "Oquvchilar" in workbook.sheetnames else workbook.active
+            values = sheet.iter_rows(values_only=True)
+            headers = [str(value or "").strip().lower() for value in next(values, [])]
+            if headers != list(IMPORT_HEADERS):
+                raise HTTPException(status_code=400, detail=f"Excel ustunlari aynan: {', '.join(IMPORT_HEADERS)}")
+            return [dict(zip(IMPORT_HEADERS, row)) for row in values]
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=400, detail="Excel faylini o'qib bo'lmadi")
+    raise HTTPException(status_code=400, detail="Faqat .xlsx yoki .csv fayl qabul qilinadi")
 
 
 async def _school_or_404(conn, current_user: dict, for_update: bool = False):
@@ -275,6 +324,189 @@ async def list_class_students(class_id: int, current_user: dict = Depends(get_cu
             class_id
         )
     return [dict(r) | {"joined_at": r["joined_at"].isoformat()} for r in rows]
+
+
+@router.get("/students/import-template")
+async def student_import_template(current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        await _school_or_404(conn, current_user)
+    return FileResponse(
+        "static/templates/school-students-import.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename="school-students-import.xlsx",
+    )
+
+
+@router.post("/classes/{class_id}/import-students")
+async def import_class_students(
+    class_id: int,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_head_teacher)
+):
+    content = await file.read(MAX_IMPORT_BYTES + 1)
+    if len(content) > MAX_IMPORT_BYTES:
+        raise HTTPException(status_code=413, detail="Fayl hajmi 5 MB dan oshmasligi kerak")
+    raw_rows = _read_student_rows(file.filename or "", content)
+    rows = [row for row in raw_rows if any(str(value or "").strip() for value in row.values())]
+    if not rows:
+        raise HTTPException(status_code=400, detail="Import faylida o'quvchilar yo'q")
+    if len(rows) > MAX_IMPORT_ROWS:
+        raise HTTPException(status_code=400, detail=f"Bir importda ko'pi bilan {MAX_IMPORT_ROWS} o'quvchi")
+
+    db = await get_pool()
+    report = []
+    seen_emails, seen_usernames = set(), set()
+    async with db.acquire() as conn:
+        school = await _school_or_404(conn, current_user)
+        await _own_class_or_404(conn, class_id, school["id"])
+        for index, raw in enumerate(rows, start=2):
+            full_name = str(raw.get("full_name") or "").strip()
+            email = str(raw.get("email") or "").strip().lower()
+            username = str(raw.get("username") or "").strip().lower().lstrip("@")
+            password = str(raw.get("password") or "").strip()
+            errors = []
+            if len(full_name) < 3:
+                errors.append("To'liq ism kamida 3 belgi")
+            try:
+                email = validate_email(email, check_deliverability=False).normalized.lower()
+            except EmailNotValidError:
+                errors.append("Email noto'g'ri")
+            if not USERNAME_RE.fullmatch(username):
+                errors.append("Username 3-20 belgi: kichik harf, raqam yoki _")
+            if len(password) < 6:
+                errors.append("Parol kamida 6 belgi")
+            if email in seen_emails:
+                errors.append("Email fayl ichida takrorlangan")
+            if username in seen_usernames:
+                errors.append("Username fayl ichida takrorlangan")
+            seen_emails.add(email)
+            seen_usernames.add(username)
+
+            if not errors:
+                existing_email = await conn.fetchval("SELECT 1 FROM users WHERE email=$1", email)
+                existing_username = await conn.fetchval("SELECT 1 FROM users WHERE username=$1", username)
+                if existing_email:
+                    errors.append("Email tizimda mavjud")
+                if existing_username:
+                    errors.append("Username tizimda mavjud")
+            if errors:
+                report.append({"row": index, "status": "error", "email": email, "username": username, "message": "; ".join(errors)})
+                continue
+
+            try:
+                async with conn.transaction():
+                    user_id = await conn.fetchval(
+                        """
+                        INSERT INTO users(username, email, full_name, password_hash, email_verified, role, center_id)
+                        VALUES ($1, $2, $3, $4, TRUE, 'student', $5) RETURNING id
+                        """,
+                        username, email, full_name, hash_password(password), school["id"]
+                    )
+                    await conn.execute(
+                        "INSERT INTO school_class_students(class_id, student_id) VALUES ($1, $2)",
+                        class_id, user_id
+                    )
+                report.append({"row": index, "status": "imported", "email": email, "username": username, "message": "Import qilindi"})
+            except Exception:
+                report.append({"row": index, "status": "error", "email": email, "username": username, "message": "Bazaga saqlashda konflikt"})
+
+    imported = sum(1 for item in report if item["status"] == "imported")
+    return {"total": len(report), "imported": imported, "failed": len(report) - imported, "rows": report}
+
+
+@router.get("/subjects")
+async def list_subjects(current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        school = await _school_or_404(conn, current_user)
+        rows = await conn.fetch(
+            "SELECT id, name, code, is_active, created_at FROM school_subjects WHERE center_id=$1 ORDER BY is_active DESC, name",
+            school["id"]
+        )
+    return [dict(row) | {"created_at": row["created_at"].isoformat()} for row in rows]
+
+
+@router.post("/subjects")
+async def create_subject(data: SubjectCreateIn, current_user: dict = Depends(get_current_head_teacher)):
+    name = data.name.strip()
+    code = data.code.strip().upper()[:20] if data.code else None
+    if not name or len(name) > 80:
+        raise HTTPException(status_code=400, detail="Fan nomi 1-80 belgi bo'lishi kerak")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        school = await _school_or_404(conn, current_user)
+        duplicate = await conn.fetchval(
+            "SELECT 1 FROM school_subjects WHERE center_id=$1 AND LOWER(name)=LOWER($2)", school["id"], name
+        )
+        if duplicate:
+            raise HTTPException(status_code=409, detail="Bu fan mavjud")
+        row = await conn.fetchrow(
+            "INSERT INTO school_subjects(center_id, name, code) VALUES ($1, $2, $3) RETURNING id, name, code, is_active",
+            school["id"], name, code
+        )
+    return dict(row)
+
+
+@router.get("/teacher-assignments")
+async def list_teacher_assignments(current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        school = await _school_or_404(conn, current_user)
+        rows = await conn.fetch(
+            """
+            SELECT a.id, a.class_id, c.name AS class_name, a.subject_id, sub.name AS subject_name,
+                   a.staff_id, u.full_name AS teacher_name, u.email AS teacher_email, a.created_at
+            FROM school_teacher_assignments a
+            JOIN school_classes c ON c.id=a.class_id
+            JOIN school_subjects sub ON sub.id=a.subject_id
+            JOIN school_staff s ON s.id=a.staff_id
+            JOIN users u ON u.id=s.user_id
+            WHERE a.center_id=$1 ORDER BY c.name, sub.name, u.full_name
+            """,
+            school["id"]
+        )
+    return [dict(row) | {"created_at": row["created_at"].isoformat()} for row in rows]
+
+
+@router.post("/teacher-assignments")
+async def create_teacher_assignment(data: TeacherAssignmentIn, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        school = await _school_or_404(conn, current_user)
+        own_class = await conn.fetchval("SELECT 1 FROM school_classes WHERE id=$1 AND center_id=$2 AND is_active=TRUE", data.class_id, school["id"])
+        own_subject = await conn.fetchval("SELECT 1 FROM school_subjects WHERE id=$1 AND center_id=$2 AND is_active=TRUE", data.subject_id, school["id"])
+        own_staff = await conn.fetchval("SELECT 1 FROM school_staff WHERE id=$1 AND center_id=$2 AND is_active=TRUE", data.staff_id, school["id"])
+        if not own_class or not own_subject or not own_staff:
+            raise HTTPException(status_code=404, detail="Sinf, fan yoki o'qituvchi topilmadi")
+        duplicate = await conn.fetchval(
+            "SELECT 1 FROM school_teacher_assignments WHERE class_id=$1 AND subject_id=$2 AND staff_id=$3",
+            data.class_id, data.subject_id, data.staff_id
+        )
+        if duplicate:
+            raise HTTPException(status_code=409, detail="Bu biriktirish mavjud")
+        assignment_id = await conn.fetchval(
+            """
+            INSERT INTO school_teacher_assignments(center_id, class_id, subject_id, staff_id)
+            VALUES ($1, $2, $3, $4) RETURNING id
+            """,
+            school["id"], data.class_id, data.subject_id, data.staff_id
+        )
+    return {"message": "O'qituvchi biriktirildi", "id": assignment_id}
+
+
+@router.delete("/teacher-assignments/{assignment_id}")
+async def delete_teacher_assignment(assignment_id: int, current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        school = await _school_or_404(conn, current_user)
+        row = await conn.fetchrow(
+            "DELETE FROM school_teacher_assignments WHERE id=$1 AND center_id=$2 RETURNING id",
+            assignment_id, school["id"]
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Biriktirish topilmadi")
+    return {"message": "Biriktirish olib tashlandi"}
 
 
 @router.post("/classes/{class_id}/students")

@@ -194,6 +194,7 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
       <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
       <button class="section-tab" id="tab-staff" onclick="switchSection('staff')" style="display:none;">Xodimlar</button>
       <button class="section-tab" id="tab-classes" onclick="switchSection('classes')" style="display:none;">Sinflar</button>
+      <button class="section-tab" id="tab-subjects" onclick="switchSection('subjects')" style="display:none;">Fanlar</button>
       <button class="section-tab" id="tab-branding" onclick="switchSection('branding')">Brending</button>
     </div>
 
@@ -265,6 +266,7 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
 
     <!-- SCHOOL CLASSES -->
     <div class="section-view" id="section-classes">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn-outline btn-sm" onclick="downloadStudentTemplate()">Import Excel shablonini yuklash</button></div>
       <div class="dash-section">
         <div class="dash-section-head"><span>$ sinf --create</span></div>
         <div class="dash-section-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
@@ -277,6 +279,29 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
       </div>
       <div id="classes-list"></div>
       <div id="classes-empty" class="empty-state" style="display:none;">Hali sinflar yo'q</div>
+    </div>
+
+    <!-- SCHOOL SUBJECTS -->
+    <div class="section-view" id="section-subjects">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ fan --create</span></div>
+        <div class="dash-section-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:2;min-width:200px;"><label>Fan nomi</label><input id="subject-name" placeholder="Masalan: Ingliz tili"></div>
+          <div style="flex:1;min-width:120px;"><label>Fan kodi</label><input id="subject-code" placeholder="ENG"></div>
+          <button class="btn-primary" id="create-subject-btn" onclick="createSubject()">+ Fan</button>
+        </div>
+      </div>
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ teacher --assign</span></div>
+        <div class="dash-section-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:1;min-width:160px;"><label>Sinf</label><select id="assignment-class" class="btn-outline" style="width:100%;padding:10px;"></select></div>
+          <div style="flex:1;min-width:160px;"><label>Fan</label><select id="assignment-subject" class="btn-outline" style="width:100%;padding:10px;"></select></div>
+          <div style="flex:2;min-width:190px;"><label>O'qituvchi</label><select id="assignment-staff" class="btn-outline" style="width:100%;padding:10px;"></select></div>
+          <button class="btn-primary" id="create-assignment-btn" onclick="createTeacherAssignment()">Biriktirish</button>
+        </div>
+      </div>
+      <div id="subjects-list"></div>
+      <div id="assignments-list"></div>
     </div>
 
     <!-- BRANDING -->
@@ -318,6 +343,8 @@ let currentCenter = null;
 let schoolPositions = [];
 let schoolStaff = [];
 let schoolClasses = [];
+let schoolSubjects = [];
+let teacherAssignments = [];
 
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -395,7 +422,8 @@ async function loadCenter() {
     const isSchool = c.organization_type === 'school';
     document.getElementById('tab-staff').style.display = isSchool ? '' : 'none';
     document.getElementById('tab-classes').style.display = isSchool ? '' : 'none';
-    if (isSchool) { loadSchoolPositions(); loadSchoolStaff(); loadSchoolClasses(); }
+    document.getElementById('tab-subjects').style.display = isSchool ? '' : 'none';
+    if (isSchool) { loadSchoolPositions(); loadSchoolStaff(); loadSchoolClasses(); loadSubjectsAndAssignments(); }
     document.getElementById('center-title').textContent = c.branding?.brand_name || c.name;
     const statusBadge = c.is_active
       ? `<span class="badge success">● Faol</span>`
@@ -740,11 +768,13 @@ function switchSection(which) {
   document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
   document.getElementById('tab-staff').classList.toggle('active', which === 'staff');
   document.getElementById('tab-classes').classList.toggle('active', which === 'classes');
+  document.getElementById('tab-subjects').classList.toggle('active', which === 'subjects');
   document.getElementById('tab-branding').classList.toggle('active', which === 'branding');
   document.getElementById('section-groups').classList.toggle('active', which === 'groups');
   document.getElementById('section-stats').classList.toggle('active', which === 'stats');
   document.getElementById('section-staff').classList.toggle('active', which === 'staff');
   document.getElementById('section-classes').classList.toggle('active', which === 'classes');
+  document.getElementById('section-subjects').classList.toggle('active', which === 'subjects');
   document.getElementById('section-branding').classList.toggle('active', which === 'branding');
   if (which === 'stats') {
     loadStats();
@@ -813,6 +843,7 @@ async function toggleSchoolStaff(id) {
 function refreshHomeroomOptions() {
   const select=document.getElementById('class-homeroom');
   select.innerHTML='<option value="">Tayinlanmagan</option>'+schoolStaff.filter(s=>s.is_active).map(s=>`<option value="${s.id}">${escapeHtml(s.full_name)} — ${escapeHtml(s.position_name||'')}</option>`).join('');
+  refreshAssignmentOptions();
 }
 
 async function loadSchoolClasses() {
@@ -820,7 +851,8 @@ async function loadSchoolClasses() {
   list.innerHTML='<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>';
   try {
     schoolClasses=await apiCall('/api/school','/classes');empty.style.display=schoolClasses.length?'none':'block';
-    list.innerHTML=schoolClasses.map(c=>`<div class="group-card"><div class="group-head"><div><div class="group-name">${escapeHtml(c.name)}</div><div class="group-meta">${escapeHtml(c.academic_year)} · ${c.grade_level||'—'}-bosqich</div></div><span class="badge success">${c.students_count} o'quvchi</span></div><div class="group-body"><div class="group-row"><span class="badge muted">Rahbar: ${escapeHtml(c.homeroom_teacher||'tayinlanmagan')}</span><button class="btn-outline btn-sm" onclick="manageClassStudents(${c.id})">O'quvchilar</button></div><div id="class-students-${c.id}"></div></div></div>`).join('');
+    list.innerHTML=schoolClasses.map(c=>`<div class="group-card"><div class="group-head"><div><div class="group-name">${escapeHtml(c.name)}</div><div class="group-meta">${escapeHtml(c.academic_year)} · ${c.grade_level||'—'}-bosqich</div></div><span class="badge success">${c.students_count} o'quvchi</span></div><div class="group-body"><div class="group-row"><span class="badge muted">Rahbar: ${escapeHtml(c.homeroom_teacher||'tayinlanmagan')}</span><div class="group-actions"><button class="btn-outline btn-sm" onclick="manageClassStudents(${c.id})">O'quvchilar</button><button class="btn-outline btn-sm" onclick="document.getElementById('import-file-${c.id}').click()">Excel/CSV import</button><input id="import-file-${c.id}" type="file" accept=".xlsx,.csv" style="display:none;" onchange="importClassStudents(${c.id},this)"></div></div><div id="import-report-${c.id}"></div><div id="class-students-${c.id}"></div></div></div>`).join('');
+    refreshAssignmentOptions();
   } catch(e){list.innerHTML='';empty.textContent='→ '+e.message;empty.style.display='block';}
 }
 
@@ -852,6 +884,63 @@ async function addClassStudent(classId) {
 async function removeClassStudent(classId,studentId) {
   if(!confirm("O'quvchini sinfdan chiqarasizmi?"))return;
   try{await apiCall('/api/school',`/classes/${classId}/students/${studentId}`,{method:'DELETE'});await loadSchoolClasses();setTimeout(()=>manageClassStudents(classId),0);}catch(e){alert('Xatolik: '+e.message);}
+}
+
+async function downloadStudentTemplate() {
+  try {
+    const res = await fetch('/api/school/students/import-template', {headers:{Authorization:`Bearer ${token}`}});
+    if(!res.ok) throw new Error('Shablonni yuklab bo\'lmadi');
+    const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='school-students-import.xlsx';a.click();URL.revokeObjectURL(url);
+  } catch(e){alert(e.message);}
+}
+
+async function importClassStudents(classId,input) {
+  if(!input.files?.length)return;
+  const box=document.getElementById(`import-report-${classId}`),form=new FormData();form.append('file',input.files[0]);
+  box.innerHTML='<div class="empty-state"><span class="spinner"></span> Import qilinmoqda...</div>';
+  try {
+    const data=await apiCall('/api/school',`/classes/${classId}/import-students`,{method:'POST',body:form});
+    const errors=data.rows.filter(r=>r.status==='error');
+    box.innerHTML=`<div class="alert ${errors.length?'danger':'success'}" style="margin-top:12px;">Jami: ${data.total} · Import: ${data.imported} · Xato: ${data.failed}</div>`+
+      (errors.length?`<div style="overflow:auto;"><table class="students-table"><thead><tr><th>Qator</th><th>Email</th><th>Username</th><th>Xato</th></tr></thead><tbody>${errors.map(r=>`<tr><td>${r.row}</td><td>${escapeHtml(r.email)}</td><td>${escapeHtml(r.username)}</td><td>${escapeHtml(r.message)}</td></tr>`).join('')}</tbody></table></div>`:'');
+    await loadSchoolClasses();setTimeout(()=>{const restored=document.getElementById(`import-report-${classId}`);if(restored)restored.innerHTML=box.innerHTML;},0);
+  } catch(e){box.innerHTML=`<div class="alert danger" style="margin-top:12px;">→ ${escapeHtml(e.message)}</div>`;} finally{input.value='';}
+}
+
+function refreshAssignmentOptions() {
+  const classEl=document.getElementById('assignment-class'),subjectEl=document.getElementById('assignment-subject'),staffEl=document.getElementById('assignment-staff');
+  if(!classEl||!subjectEl||!staffEl)return;
+  classEl.innerHTML=schoolClasses.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} (${escapeHtml(c.academic_year)})</option>`).join('');
+  subjectEl.innerHTML=schoolSubjects.filter(s=>s.is_active).map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  staffEl.innerHTML=schoolStaff.filter(s=>s.is_active).map(s=>`<option value="${s.id}">${escapeHtml(s.full_name)} — ${escapeHtml(s.position_name||'')}</option>`).join('');
+}
+
+async function loadSubjectsAndAssignments() {
+  try {
+    [schoolSubjects,teacherAssignments]=await Promise.all([apiCall('/api/school','/subjects'),apiCall('/api/school','/teacher-assignments')]);
+    document.getElementById('subjects-list').innerHTML=`<div class="dash-section"><div class="dash-section-head">$ fanlar (${schoolSubjects.length})</div><div class="dash-section-body">${schoolSubjects.length?schoolSubjects.map(s=>`<span class="badge muted" style="margin:4px;">${escapeHtml(s.name)}${s.code?' · '+escapeHtml(s.code):''}</span>`).join(''):'<div class="empty-state">Fanlar yo\'q</div>'}</div></div>`;
+    document.getElementById('assignments-list').innerHTML=`<div class="dash-section"><div class="dash-section-head">$ biriktirishlar (${teacherAssignments.length})</div><div class="dash-section-body">${teacherAssignments.length?teacherAssignments.map(a=>`<div class="roster-row"><span><b>${escapeHtml(a.class_name)}</b> · ${escapeHtml(a.subject_name)} · ${escapeHtml(a.teacher_name)}</span><button class="btn-outline btn-sm danger" onclick="deleteTeacherAssignment(${a.id})">Olib tashlash</button></div>`).join(''):'<div class="empty-state">Biriktirishlar yo\'q</div>'}</div></div>`;
+    refreshAssignmentOptions();
+  }catch(e){document.getElementById('assignments-list').innerHTML=`<div class="alert danger">→ ${escapeHtml(e.message)}</div>`;}
+}
+
+async function createSubject() {
+  const name=document.getElementById('subject-name').value.trim();if(!name){alert('Fan nomini kiriting');return;}
+  const btn=document.getElementById('create-subject-btn');btn.disabled=true;
+  try{await apiCall('/api/school','/subjects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,code:document.getElementById('subject-code').value})});document.getElementById('subject-name').value='';document.getElementById('subject-code').value='';await loadSubjectsAndAssignments();}catch(e){alert('Xatolik: '+e.message);}finally{btn.disabled=false;}
+}
+
+async function createTeacherAssignment() {
+  const payload={class_id:Number(document.getElementById('assignment-class').value),subject_id:Number(document.getElementById('assignment-subject').value),staff_id:Number(document.getElementById('assignment-staff').value)};
+  if(!payload.class_id||!payload.subject_id||!payload.staff_id){alert("Sinf, fan va o'qituvchini tanlang");return;}
+  const btn=document.getElementById('create-assignment-btn');btn.disabled=true;
+  try{await apiCall('/api/school','/teacher-assignments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});await loadSubjectsAndAssignments();}catch(e){alert('Xatolik: '+e.message);}finally{btn.disabled=false;}
+}
+
+async function deleteTeacherAssignment(id) {
+  if(!confirm('Biriktirishni olib tashlaysizmi?'))return;
+  try{await apiCall('/api/school',`/teacher-assignments/${id}`,{method:'DELETE'});await loadSubjectsAndAssignments();}catch(e){alert('Xatolik: '+e.message);}
 }
 
 function applyBranding(branding) {

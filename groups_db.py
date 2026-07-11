@@ -148,6 +148,30 @@ async def ensure_center_group_tables():
         await conn.execute("CREATE INDEX IF NOT EXISTS school_staff_center_idx ON school_staff(center_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS school_classes_center_idx ON school_classes(center_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS school_class_students_student_idx ON school_class_students(student_id)")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS school_subjects (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                code TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(center_id, name)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS school_teacher_assignments (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
+                class_id INTEGER NOT NULL REFERENCES school_classes(id) ON DELETE CASCADE,
+                subject_id INTEGER NOT NULL REFERENCES school_subjects(id) ON DELETE CASCADE,
+                staff_id INTEGER NOT NULL REFERENCES school_staff(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(class_id, subject_id, staff_id)
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS school_assignments_staff_idx ON school_teacher_assignments(staff_id)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS school_assignments_class_idx ON school_teacher_assignments(class_id)")
 
 
 async def get_center_limits(conn, center_id: int):

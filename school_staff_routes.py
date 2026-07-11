@@ -58,6 +58,24 @@ async def _own_class_or_404(conn, class_id: int, center_id: int):
     return row
 
 
+async def _accessible_class_or_404(conn, class_id: int, staff: dict):
+    can_manage_all = bool({"manage_classes", "manage_students", "view_reports"}.intersection(staff["permissions"]))
+    row = await conn.fetchrow(
+        """
+        SELECT c.id, c.name, c.academic_year, c.grade_level
+        FROM school_classes c
+        WHERE c.id=$1 AND c.center_id=$2 AND c.is_active=TRUE
+          AND ($3::boolean OR EXISTS (
+              SELECT 1 FROM school_teacher_assignments a WHERE a.class_id=c.id AND a.staff_id=$4
+          ))
+        """,
+        class_id, staff["center_id"], can_manage_all, staff["staff_id"]
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Sinf topilmadi yoki sizga biriktirilmagan")
+    return row
+
+
 @router.get("/me")
 async def staff_me(staff: dict = Depends(get_current_school_staff)):
     db = await get_pool()
@@ -88,21 +106,28 @@ async def staff_classes(
     staff: dict = Depends(require_any_permission("manage_classes", "manage_students", "view_results"))
 ):
     db = await get_pool()
+    can_manage_all = bool({"manage_classes", "manage_students", "view_reports"}.intersection(staff["permissions"]))
     async with db.acquire() as conn:
         rows = await conn.fetch(
             """
             SELECT c.id, c.name, c.academic_year, c.grade_level,
                    u.full_name AS homeroom_teacher,
-                   COUNT(cs.id) FILTER (WHERE cs.left_at IS NULL) AS students_count
+                   STRING_AGG(DISTINCT sub.name, ', ' ORDER BY sub.name) AS subjects,
+                   COUNT(DISTINCT cs.id) FILTER (WHERE cs.left_at IS NULL) AS students_count
             FROM school_classes c
             LEFT JOIN school_staff hs ON hs.id=c.homeroom_staff_id
             LEFT JOIN users u ON u.id=hs.user_id
             LEFT JOIN school_class_students cs ON cs.class_id=c.id
+            LEFT JOIN school_teacher_assignments a ON a.class_id=c.id
+            LEFT JOIN school_subjects sub ON sub.id=a.subject_id
             WHERE c.center_id=$1 AND c.is_active=TRUE
+              AND ($2::boolean OR EXISTS (
+                  SELECT 1 FROM school_teacher_assignments own_a WHERE own_a.class_id=c.id AND own_a.staff_id=$3
+              ))
             GROUP BY c.id, u.full_name
             ORDER BY c.academic_year DESC, c.grade_level, c.name
             """,
-            staff["center_id"]
+            staff["center_id"], can_manage_all, staff["staff_id"]
         )
     return [dict(row) for row in rows]
 
@@ -114,7 +139,7 @@ async def class_students(
 ):
     db = await get_pool()
     async with db.acquire() as conn:
-        await _own_class_or_404(conn, class_id, staff["center_id"])
+        await _accessible_class_or_404(conn, class_id, staff)
         rows = await conn.fetch(
             """
             SELECT u.id, u.full_name, u.username, u.email, u.email_verified,
@@ -142,7 +167,7 @@ async def add_student(
     db = await get_pool()
     async with db.acquire() as conn:
         async with conn.transaction():
-            await _own_class_or_404(conn, class_id, staff["center_id"])
+            await _accessible_class_or_404(conn, class_id, staff)
             user = await conn.fetchrow("SELECT id, role, center_id FROM users WHERE username=$1 OR email=$1", login)
             if not user:
                 raise HTTPException(status_code=404, detail="O'quvchi topilmadi")
@@ -179,7 +204,7 @@ async def remove_student(
 ):
     db = await get_pool()
     async with db.acquire() as conn:
-        await _own_class_or_404(conn, class_id, staff["center_id"])
+        await _accessible_class_or_404(conn, class_id, staff)
         row = await conn.fetchrow(
             """
             UPDATE school_class_students SET left_at=NOW()
@@ -195,6 +220,7 @@ async def remove_student(
 @router.get("/results")
 async def school_results(staff: dict = Depends(require_any_permission("view_results"))):
     db = await get_pool()
+    can_view_all = bool({"manage_classes", "manage_students", "view_reports"}.intersection(staff["permissions"]))
     async with db.acquire() as conn:
         rows = await conn.fetch(
             """
@@ -206,8 +232,11 @@ async def school_results(staff: dict = Depends(require_any_permission("view_resu
             JOIN school_class_students cs ON cs.student_id=u.id AND cs.left_at IS NULL
             JOIN school_classes c ON c.id=cs.class_id
             WHERE c.center_id=$1
+              AND ($2::boolean OR EXISTS (
+                  SELECT 1 FROM school_teacher_assignments a WHERE a.class_id=c.id AND a.staff_id=$3
+              ))
             ORDER BY er.submitted_at DESC LIMIT 500
             """,
-            staff["center_id"]
+            staff["center_id"], can_view_all, staff["staff_id"]
         )
     return [dict(row) | {"submitted_at": row["submitted_at"].isoformat()} for row in rows]

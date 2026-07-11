@@ -546,6 +546,7 @@ async function doLogin() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Kirilmoqda...';
 
+  let countdownRunning = false;
   try {
     const data = await apiCall('/login', {
       method: 'POST',
@@ -554,6 +555,7 @@ async function doLogin() {
     });
     token = data.token;
     localStorage.setItem('ielts_token', token);
+    localStorage.removeItem('teacher_invite_code');
     currentUser = data.user;
     renderDashboard();
     loadDashboardStats();
@@ -563,9 +565,11 @@ async function doLogin() {
     errEl.style.display = 'block';
     const match = e.message.match(/Try again in (\d+) seconds/);
     if (match) {
+      countdownRunning = true;
       let seconds = parseInt(match[1], 10);
       const countdown = () => {
         if (seconds <= 0) {
+          countdownRunning = false;
           errEl.style.display = 'none';
           btn.disabled = false;
           btn.textContent = '→ Kirish';
@@ -577,15 +581,11 @@ async function doLogin() {
       };
       btn.disabled = true;
       countdown();
-      return;
     }
   } finally {
-    if (!btn.disabled || errEl.textContent.includes('soniya kuting')) {
-      // Don't re-enable if countdown is running
-      if (!btn.disabled) {
-        btn.disabled = false;
-        btn.textContent = '→ Kirish';
-      }
+    if (!countdownRunning) {
+      btn.disabled = false;
+      btn.textContent = '→ Kirish';
     }
   }
 }

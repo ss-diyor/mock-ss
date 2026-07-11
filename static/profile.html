@@ -463,6 +463,10 @@ function handlePostAuthRedirect() {
     window.location.href = '/teacher';
     return;
   }
+  if (currentUser.role === 'school_staff') {
+    window.location.href = '/school-staff';
+    return;
+  }
 
   if (redirectTarget === 'exam') {
     if (currentUser.email_verified) {
@@ -642,6 +646,10 @@ async function doRegister() {
 function renderDashboard() {
   if (currentUser && currentUser.role === 'teacher') {
     window.location.href = '/teacher';
+    return;
+  }
+  if (currentUser && currentUser.role === 'school_staff') {
+    window.location.href = '/school-staff';
     return;
   }
   showView('view-dashboard');

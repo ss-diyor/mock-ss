@@ -26,6 +26,7 @@ from groups_db import ensure_center_group_tables, DEFAULT_MAX_GROUPS_PER_CENTER,
 from head_teacher_routes import router as head_teacher_router
 from teacher_routes import router as teacher_router
 from school_routes import router as school_router
+from school_staff_routes import router as school_staff_router
 from branding import ORGANIZATION_TYPES, branding_payload
 
 app = FastAPI(title="IELTS Mock SS")
@@ -34,6 +35,7 @@ app.include_router(auth_router)
 app.include_router(head_teacher_router)
 app.include_router(teacher_router)
 app.include_router(school_router)
+app.include_router(school_staff_router)
 
 
 @app.middleware("http")
@@ -1398,6 +1400,10 @@ async def head_teacher_page():
 @app.get("/teacher")
 async def teacher_page():
     return FileResponse("static/teacher.html")
+
+@app.get("/school-staff")
+async def school_staff_page():
+    return FileResponse("static/school-staff.html")
 
 @app.get("/listening-demo")
 async def listening_demo_page():

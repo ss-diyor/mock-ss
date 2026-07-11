@@ -86,7 +86,13 @@ async def list_positions(current_user: dict = Depends(get_current_head_teacher))
             """,
             school["id"]
         )
-    return [dict(r) | {"created_at": r["created_at"].isoformat()} for r in rows]
+    return [
+        dict(r) | {
+            "permissions": json.loads(r["permissions"]) if isinstance(r["permissions"], str) else r["permissions"],
+            "created_at": r["created_at"].isoformat(),
+        }
+        for r in rows
+    ]
 
 
 @router.post("/positions")
@@ -113,7 +119,10 @@ async def create_position(data: PositionCreateIn, current_user: dict = Depends(g
             """,
             school["id"], name, json.dumps(permissions)
         )
-    return dict(row) | {"created_at": row["created_at"].isoformat(), "staff_count": 0}
+    return dict(row) | {
+        "permissions": json.loads(row["permissions"]) if isinstance(row["permissions"], str) else row["permissions"],
+        "created_at": row["created_at"].isoformat(), "staff_count": 0,
+    }
 
 
 @router.get("/staff")

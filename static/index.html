@@ -818,6 +818,9 @@ async function checkAuthStatus() {
     if (authUser.role === 'teacher') {
       dashboardLink = '/teacher';
       dashboardText = `👨‍🏫 Teacher Panel`;
+    } else if (authUser.role === 'school_staff') {
+      dashboardLink = '/school-staff';
+      dashboardText = `🏫 Xodim Panel`;
     } else if (authUser.role === 'head_teacher') {
       dashboardLink = '/head-teacher';
       dashboardText = `🏢 Dashboard`;

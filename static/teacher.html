@@ -403,6 +403,8 @@ function applyBranding(branding) {
     if (!favicon) { favicon = document.createElement('link'); favicon.rel = 'icon'; document.head.appendChild(favicon); }
     favicon.href = branding.favicon_url;
   }
+  if (window.renderWhiteLabelContactFooter) window.renderWhiteLabelContactFooter(branding);
+  else window.addEventListener('load', () => window.renderWhiteLabelContactFooter?.(branding), {once:true});
 }
 
 function copyInviteCode() {

@@ -603,7 +603,7 @@ async function submitGrade(studentId, resultId) {
   let band = Math.round(total * 2) / 2; // round to nearest 0.5
   
   try {
-    await apiCall(T_API, \`/students/\${studentId}/grade-writing/\${resultId}\`, {
+    await apiCall(T_API, `/students/${studentId}/grade-writing/${resultId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

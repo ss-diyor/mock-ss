@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from db import get_pool
 from auth import get_current_teacher
 from scoring import get_band_score, calculate_overall_band
+from branding import branding_payload
 
 router = APIRouter(prefix="/api/teacher", tags=["teacher"])
 
@@ -34,10 +35,20 @@ async def get_group(current_user: dict = Depends(get_current_teacher)):
     async with db.acquire() as conn:
         group = await _own_active_group_or_error(conn, current_user["id"])
         students_count = await conn.fetchval("SELECT COUNT(*) FROM users WHERE group_id=$1", group["id"])
+        center = await conn.fetchrow(
+            """
+            SELECT id, name, organization_type, slug, brand_name, brand_primary_color,
+                   brand_secondary_color, brand_logo_url, brand_favicon_url,
+                   brand_contact_email, brand_contact_phone, show_powered_by
+            FROM centers WHERE id=$1
+            """,
+            current_user["center_id"]
+        )
 
     return {
         "id": group["id"], "name": group["name"], "invite_code": group["invite_code"],
         "created_at": group["created_at"].isoformat(), "students_count": students_count,
+        "branding": branding_payload(center) if center else None,
     }
 
 

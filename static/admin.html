@@ -202,7 +202,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
     <button class="section-tab active" id="tab-results" onclick="switchSection('results')">Natijalar</button>
     <button class="section-tab" id="tab-users" onclick="switchSection('users')">Foydalanuvchilar</button>
-    <button class="section-tab" id="tab-centers" onclick="switchSection('centers')">Markazlar</button>
+    <button class="section-tab" id="tab-centers" onclick="switchSection('centers')">Tashkilotlar</button>
   </div>
 
   <!-- STATS SECTION -->
@@ -278,11 +278,18 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   <!-- CENTERS SECTION -->
   <div class="section-view" id="section-centers">
     <div class="form-card" style="margin-bottom:24px;">
-      <div class="form-card-head">$ centers --create</div>
+      <div class="form-card-head">$ organizations --create</div>
       <div class="form-card-body" style="flex-direction:row;flex-wrap:wrap;align-items:flex-end;">
         <div style="flex:2;min-width:180px;">
-          <label>Markaz nomi</label>
+          <label>Tashkilot nomi</label>
           <input type="text" id="center-name-input" placeholder="Masalan: Bo'stonliq IELTS Markazi">
+        </div>
+        <div style="flex:1;min-width:150px;">
+          <label>Tashkilot turi</label>
+          <select id="center-type-input" class="btn-outline" style="width:100%;padding:10px 12px;">
+            <option value="learning_center">O'quv markazi</option>
+            <option value="school">Maktab</option>
+          </select>
         </div>
         <div style="flex:1;min-width:120px;">
           <label>Max guruhlar (ixtiyoriy)</label>
@@ -302,7 +309,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     </div>
 
     <div id="centers-list"></div>
-    <div id="centers-empty" class="empty-state" style="display:none;">Hali markazlar yo'q</div>
+    <div id="centers-empty" class="empty-state" style="display:none;">Hali tashkilotlar yo'q</div>
   </div>
 </div>
 
@@ -726,7 +733,7 @@ function renderCenters() {
 
   if (!allCenters.length) {
     listEl.innerHTML = '';
-    emptyEl.textContent = 'Hali markazlar yo\'q — yuqoridagi formadan birinchisini yarating';
+    emptyEl.textContent = 'Hali tashkilotlar yo\'q — yuqoridagi formadan birinchisini yarating';
     emptyEl.style.display = 'block';
     return;
   }
@@ -736,15 +743,18 @@ function renderCenters() {
     const statusBadge = c.is_active
       ? `<span class="badge green">● Faol</span>`
       : `<span class="badge" style="background:var(--red-light);color:var(--red);">⛔ Yopiq</span>`;
+    const isSchool = c.organization_type === 'school';
+    const typeLabel = isSchool ? 'Maktab' : "O'quv markazi";
+    const leaderLabel = isSchool ? 'Direktor' : 'Head-teacher';
     const ownerHtml = c.owner_name
-      ? `<span class="center-stat">👤 Head-teacher: <b>${c.owner_name}</b> <span style="color:var(--muted);">(${c.owner_email})</span></span>`
-      : `<span class="center-stat" style="color:var(--amber);">⚠ Head-teacher tayinlanmagan</span>`;
+      ? `<span class="center-stat">👤 ${leaderLabel}: <b>${c.owner_name}</b> <span style="color:var(--muted);">(${c.owner_email})</span></span>`
+      : `<span class="center-stat" style="color:var(--amber);">⚠ ${leaderLabel} tayinlanmagan</span>`;
 
     return `
     <div class="center-card">
       <div class="center-head">
         <div>
-          <div class="center-name">${c.name}</div>
+          <div class="center-name">${c.name} <span class="badge">${typeLabel}</span></div>
           <div class="center-meta">yaratilgan: ${new Date(c.created_at).toLocaleDateString('uz-UZ')}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -761,7 +771,7 @@ function renderCenters() {
       </div>
       ${!c.owner_id ? `
       <div class="center-owner-form">
-        <input type="text" id="owner-input-${c.id}" placeholder="Head-teacher username yoki email">
+        <input type="text" id="owner-input-${c.id}" placeholder="${leaderLabel} username yoki email">
         <button class="btn-primary btn-sm" onclick="assignHeadTeacher(${c.id}, this)">Tayinlash</button>
       </div>` : ''}
     </div>`;
@@ -772,8 +782,9 @@ async function createCenter() {
   const nameEl = document.getElementById('center-name-input');
   const maxGroupsEl = document.getElementById('center-max-groups-input');
   const maxStudentsEl = document.getElementById('center-max-students-input');
+  const typeEl = document.getElementById('center-type-input');
   const name = nameEl.value.trim();
-  if (!name) { alert('Markaz nomini kiriting'); return; }
+  if (!name) { alert('Tashkilot nomini kiriting'); return; }
 
   const btn = document.getElementById('create-center-btn');
   btn.disabled = true;
@@ -785,6 +796,7 @@ async function createCenter() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         name,
+        organization_type: typeEl.value,
         max_groups: maxGroupsEl.value ? parseInt(maxGroupsEl.value) : null,
         max_students: maxStudentsEl.value ? parseInt(maxStudentsEl.value) : null
       })

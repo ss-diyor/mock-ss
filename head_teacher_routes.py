@@ -10,6 +10,7 @@ from db import get_pool
 from auth import get_current_head_teacher, FRONTEND_BASE_URL
 from groups_db import DEFAULT_MAX_GROUPS_PER_CENTER, DEFAULT_MAX_STUDENTS_PER_CENTER
 from scoring import get_band_score
+from branding import BrandingUpdateIn, branding_payload, validate_branding
 
 router = APIRouter(prefix="/api/head-teacher", tags=["head-teacher"])
 
@@ -28,7 +29,12 @@ async def get_center(current_user: dict = Depends(get_current_head_teacher)):
     db = await get_pool()
     async with db.acquire() as conn:
         center = await conn.fetchrow(
-            "SELECT id, name, is_active, max_groups, max_students, created_at FROM centers WHERE id=$1",
+            """
+            SELECT id, name, organization_type, slug, is_active, max_groups, max_students, created_at,
+                   brand_name, brand_primary_color, brand_secondary_color, brand_logo_url,
+                   brand_favicon_url, brand_contact_email, brand_contact_phone, show_powered_by
+            FROM centers WHERE id=$1
+            """,
             current_user["center_id"]
         )
         if not center:
@@ -41,13 +47,49 @@ async def get_center(current_user: dict = Depends(get_current_head_teacher)):
     return {
         "id": center["id"],
         "name": center["name"],
+        "organization_type": center["organization_type"],
         "is_active": center["is_active"],
         "created_at": center["created_at"].isoformat(),
         "groups_count": groups_count,
         "students_count": students_count,
         "max_groups": center["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER,
         "max_students": center["max_students"] or DEFAULT_MAX_STUDENTS_PER_CENTER,
+        "branding": branding_payload(center),
     }
+
+
+@router.put("/center/branding")
+async def update_center_branding(
+    data: BrandingUpdateIn,
+    current_user: dict = Depends(get_current_head_teacher)
+):
+    values = validate_branding(data)
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if values["slug"]:
+            duplicate = await conn.fetchval(
+                "SELECT 1 FROM centers WHERE LOWER(slug)=LOWER($1) AND id<>$2",
+                values["slug"], current_user["center_id"]
+            )
+            if duplicate:
+                raise HTTPException(status_code=409, detail="Bu slug boshqa tashkilot tomonidan band qilingan")
+        row = await conn.fetchrow(
+            """
+            UPDATE centers SET
+                brand_name=$1, slug=$2, brand_primary_color=$3, brand_secondary_color=$4,
+                brand_logo_url=$5, brand_favicon_url=$6, brand_contact_email=$7,
+                brand_contact_phone=$8, show_powered_by=$9
+            WHERE id=$10
+            RETURNING id, name, organization_type, slug, brand_name, brand_primary_color,
+                      brand_secondary_color, brand_logo_url, brand_favicon_url,
+                      brand_contact_email, brand_contact_phone, show_powered_by
+            """,
+            values["brand_name"], values["slug"], values["brand_primary_color"],
+            values["brand_secondary_color"], values["brand_logo_url"], values["brand_favicon_url"],
+            values["brand_contact_email"], values["brand_contact_phone"], values["show_powered_by"],
+            current_user["center_id"]
+        )
+    return {"message": "Brending saqlandi", "branding": branding_payload(row)}
 
 
 # ─── Guruhlar ───────────────────────────────────────────────────────────────

@@ -25,6 +25,7 @@ from auth import router as auth_router, ensure_users_table, get_current_user
 from groups_db import ensure_center_group_tables, DEFAULT_MAX_GROUPS_PER_CENTER, DEFAULT_MAX_STUDENTS_PER_CENTER
 from head_teacher_routes import router as head_teacher_router
 from teacher_routes import router as teacher_router
+from branding import ORGANIZATION_TYPES, branding_payload
 
 app = FastAPI(title="IELTS Mock SS")
 app.include_router(feature_router)
@@ -745,6 +746,7 @@ async def admin_users(search: Optional[str] = None, _: None = Depends(require_ad
 
 class CenterCreateIn(BaseModel):
     name: str
+    organization_type: str = "learning_center"
     max_groups: Optional[int] = None
     max_students: Optional[int] = None
 
@@ -757,17 +759,19 @@ class AssignHeadTeacherIn(BaseModel):
 async def admin_create_center(data: CenterCreateIn, _: None = Depends(require_admin)):
     name = data.name.strip()
     if not name:
-        raise HTTPException(status_code=400, detail="Markaz nomini kiriting")
+        raise HTTPException(status_code=400, detail="Tashkilot nomini kiriting")
+    if data.organization_type not in ORGANIZATION_TYPES:
+        raise HTTPException(status_code=400, detail="Tashkilot turi noto'g'ri")
 
     db = await get_pool()
     async with db.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO centers (name, max_groups, max_students)
-            VALUES ($1, $2, $3)
-            RETURNING id, name, max_groups, max_students, is_active, created_at
+            INSERT INTO centers (name, organization_type, max_groups, max_students, brand_name)
+            VALUES ($1, $2, $3, $4, $1)
+            RETURNING id, name, organization_type, max_groups, max_students, is_active, created_at
             """,
-            name, data.max_groups, data.max_students
+            name, data.organization_type, data.max_groups, data.max_students
         )
     return dict(row) | {"created_at": row["created_at"].isoformat()}
 
@@ -778,7 +782,9 @@ async def admin_list_centers(_: None = Depends(require_admin)):
     async with db.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT c.id, c.name, c.is_active, c.max_groups, c.max_students, c.created_at,
+            SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name,
+                   c.brand_primary_color, c.brand_logo_url,
+                   c.is_active, c.max_groups, c.max_students, c.created_at,
                    c.owner_id, owner.full_name AS owner_name, owner.email AS owner_email,
                    COUNT(DISTINCT g.id) AS groups_count,
                    COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'student') AS students_count
@@ -792,7 +798,10 @@ async def admin_list_centers(_: None = Depends(require_admin)):
         )
     return [
         {
-            "id": r["id"], "name": r["name"], "is_active": r["is_active"],
+            "id": r["id"], "name": r["name"], "organization_type": r["organization_type"],
+            "slug": r["slug"], "brand_name": r["brand_name"],
+            "primary_color": r["brand_primary_color"], "logo_url": r["brand_logo_url"],
+            "is_active": r["is_active"],
             "max_groups": r["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER,
             "max_students": r["max_students"] or DEFAULT_MAX_STUDENTS_PER_CENTER,
             "created_at": r["created_at"].isoformat(),
@@ -801,6 +810,24 @@ async def admin_list_centers(_: None = Depends(require_admin)):
         }
         for r in rows
     ]
+
+
+@app.get("/api/branding/{slug}")
+async def public_branding(slug: str):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, organization_type, slug, brand_name, brand_primary_color,
+                   brand_secondary_color, brand_logo_url, brand_favicon_url,
+                   brand_contact_email, brand_contact_phone, show_powered_by
+            FROM centers WHERE LOWER(slug)=LOWER($1) AND is_active=TRUE
+            """,
+            slug.strip()
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+    return branding_payload(row)
 
 
 @app.post("/api/admin/centers/{center_id}/assign-head-teacher")

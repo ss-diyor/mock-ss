@@ -370,6 +370,7 @@ function afterAuthResolved() {
 async function loadGroup() {
   try {
     const g = await apiCall(T_API, '/group');
+    applyBranding(g.branding);
     document.getElementById('group-title').textContent = g.name;
     document.getElementById('overview-stats').innerHTML = `
       <div class="dash-stat-card"><div class="dash-stat-num">${g.students_count}</div><div class="dash-stat-label">Talabalar</div></div>
@@ -379,6 +380,28 @@ async function loadGroup() {
     loadStudents();
   } catch (e) {
     showView('view-no-group');
+  }
+}
+
+function applyBranding(branding) {
+  if (!branding) return;
+  document.documentElement.style.setProperty('--blue', branding.primary_color);
+  document.documentElement.style.setProperty('--text', branding.secondary_color);
+  document.title = `${branding.brand_name} — Teacher Panel`;
+  document.querySelector('.nav-logo-text span:first-child').textContent = branding.brand_name;
+  document.querySelector('.nav-logo-text span:last-child').textContent = branding.organization_type === 'school' ? 'Maktab teacher paneli' : "O'quv markazi teacher paneli";
+  const icon = document.querySelector('.nav-logo-icon');
+  if (branding.logo_url) {
+    icon.innerHTML = `<img src="${branding.logo_url}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">`;
+    icon.style.background = 'transparent';
+  } else {
+    icon.textContent = branding.brand_name.charAt(0).toUpperCase();
+    icon.style.background = branding.primary_color;
+  }
+  if (branding.favicon_url) {
+    let favicon = document.querySelector('link[rel="icon"]');
+    if (!favicon) { favicon = document.createElement('link'); favicon.rel = 'icon'; document.head.appendChild(favicon); }
+    favicon.href = branding.favicon_url;
   }
 }
 
@@ -753,5 +776,6 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('view-auth').classList.contains('active')) doLogin();
 });
 </script>
+<script src="/static/branding.js"></script>
 </body>
 </html>

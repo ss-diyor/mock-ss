@@ -19,13 +19,34 @@ async def ensure_center_group_tables():
             CREATE TABLE IF NOT EXISTS centers (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
+                organization_type TEXT NOT NULL DEFAULT 'learning_center',
+                slug TEXT,
                 owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                 max_groups INTEGER,
                 max_students INTEGER,
+                brand_name TEXT,
+                brand_primary_color TEXT DEFAULT '#1a56e8',
+                brand_secondary_color TEXT DEFAULT '#0b1733',
+                brand_logo_url TEXT,
+                brand_favicon_url TEXT,
+                brand_contact_email TEXT,
+                brand_contact_phone TEXT,
+                show_powered_by BOOLEAN DEFAULT TRUE,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS organization_type TEXT NOT NULL DEFAULT 'learning_center'")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS slug TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_name TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_primary_color TEXT DEFAULT '#1a56e8'")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_secondary_color TEXT DEFAULT '#0b1733'")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_logo_url TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_favicon_url TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_contact_email TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_contact_phone TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS show_powered_by BOOLEAN DEFAULT TRUE")
+        await conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS centers_slug_unique ON centers (LOWER(slug)) WHERE slug IS NOT NULL")
 
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS groups (

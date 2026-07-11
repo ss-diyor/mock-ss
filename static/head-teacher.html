@@ -192,6 +192,7 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
     <div class="section-tabs">
       <button class="section-tab active" id="tab-groups" onclick="switchSection('groups')">Guruhlar</button>
       <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
+      <button class="section-tab" id="tab-branding" onclick="switchSection('branding')">Brending</button>
     </div>
 
     <!-- GROUPS -->
@@ -227,6 +228,32 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
         </div>
       </div>
     </div>
+
+    <!-- BRANDING -->
+    <div class="section-view" id="section-branding">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ white-label --settings</span></div>
+        <div class="dash-section-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+            <div><label>Brend nomi</label><input id="brand-name" placeholder="Tashkilot nomi"></div>
+            <div><label>Public slug</label><input id="brand-slug" placeholder="masalan-maktabi"></div>
+            <div><label>Asosiy rang</label><input id="brand-primary" type="color" value="#1a56e8" style="height:42px;padding:4px;"></div>
+            <div><label>Ikkinchi rang</label><input id="brand-secondary" type="color" value="#0b1733" style="height:42px;padding:4px;"></div>
+            <div><label>Logo URL (HTTPS)</label><input id="brand-logo" placeholder="https://.../logo.png"></div>
+            <div><label>Favicon URL (HTTPS)</label><input id="brand-favicon" placeholder="https://.../favicon.png"></div>
+            <div><label>Aloqa email</label><input id="brand-email" type="email" placeholder="info@example.uz"></div>
+            <div><label>Aloqa telefoni</label><input id="brand-phone" placeholder="+998 ..."></div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:16px;text-transform:none;">
+            <input id="brand-powered" type="checkbox" checked style="width:auto;"> “Powered by IELTS Mock SS” yozuvini ko'rsatish
+          </label>
+          <div id="branding-error" class="alert danger" style="display:none;margin-top:14px;"></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+            <button class="btn-primary" id="save-branding-btn" onclick="saveBranding()">Saqlash</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -237,6 +264,7 @@ let token = localStorage.getItem('ielts_token');
 let currentUser = null;
 let allGroups = [];
 let expandedGroupId = null;
+let currentCenter = null;
 
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -308,7 +336,10 @@ function afterAuthResolved() {
 async function loadCenter() {
   try {
     const c = await apiCall(HT_API, '/center');
-    document.getElementById('center-title').textContent = c.name;
+    currentCenter = c;
+    applyBranding(c.branding);
+    fillBrandingForm(c.branding);
+    document.getElementById('center-title').textContent = c.branding?.brand_name || c.name;
     const statusBadge = c.is_active
       ? `<span class="badge success">● Faol</span>`
       : `<span class="badge danger">⛔ Yopiq</span>`;
@@ -650,12 +681,75 @@ async function viewRoster(groupId) {
 function switchSection(which) {
   document.getElementById('tab-groups').classList.toggle('active', which === 'groups');
   document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
+  document.getElementById('tab-branding').classList.toggle('active', which === 'branding');
   document.getElementById('section-groups').classList.toggle('active', which === 'groups');
   document.getElementById('section-stats').classList.toggle('active', which === 'stats');
+  document.getElementById('section-branding').classList.toggle('active', which === 'branding');
   if (which === 'stats') {
     loadStats();
     loadTrend();
   }
+}
+
+function applyBranding(branding) {
+  if (!branding) return;
+  document.documentElement.style.setProperty('--blue', branding.primary_color);
+  document.documentElement.style.setProperty('--text', branding.secondary_color);
+  document.title = `${branding.brand_name} — Boshqaruv paneli`;
+  document.querySelector('.nav-logo-text span:first-child').textContent = branding.brand_name;
+  document.querySelector('.nav-logo-text span:last-child').textContent = branding.organization_type === 'school' ? 'Maktab paneli' : "O'quv markazi paneli";
+  const icon = document.querySelector('.nav-logo-icon');
+  if (branding.logo_url) {
+    icon.innerHTML = `<img src="${branding.logo_url}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">`;
+    icon.style.background = 'transparent';
+  } else {
+    icon.textContent = branding.brand_name.charAt(0).toUpperCase();
+    icon.style.background = branding.primary_color;
+  }
+  if (branding.favicon_url) {
+    let favicon = document.querySelector('link[rel="icon"]');
+    if (!favicon) { favicon = document.createElement('link'); favicon.rel = 'icon'; document.head.appendChild(favicon); }
+    favicon.href = branding.favicon_url;
+  }
+}
+
+function fillBrandingForm(b) {
+  if (!b) return;
+  document.getElementById('brand-name').value = b.brand_name || '';
+  document.getElementById('brand-slug').value = b.slug || '';
+  document.getElementById('brand-primary').value = b.primary_color || '#1a56e8';
+  document.getElementById('brand-secondary').value = b.secondary_color || '#0b1733';
+  document.getElementById('brand-logo').value = b.logo_url || '';
+  document.getElementById('brand-favicon').value = b.favicon_url || '';
+  document.getElementById('brand-email').value = b.contact_email || '';
+  document.getElementById('brand-phone').value = b.contact_phone || '';
+  document.getElementById('brand-powered').checked = b.show_powered_by !== false;
+}
+
+async function saveBranding() {
+  const btn = document.getElementById('save-branding-btn');
+  const err = document.getElementById('branding-error');
+  err.style.display = 'none'; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saqlanmoqda...';
+  try {
+    const data = await apiCall(HT_API, '/center/branding', {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        brand_name: document.getElementById('brand-name').value,
+        slug: document.getElementById('brand-slug').value,
+        primary_color: document.getElementById('brand-primary').value,
+        secondary_color: document.getElementById('brand-secondary').value,
+        logo_url: document.getElementById('brand-logo').value,
+        favicon_url: document.getElementById('brand-favicon').value,
+        contact_email: document.getElementById('brand-email').value,
+        contact_phone: document.getElementById('brand-phone').value,
+        show_powered_by: document.getElementById('brand-powered').checked
+      })
+    });
+    applyBranding(data.branding); fillBrandingForm(data.branding);
+    btn.textContent = '✓ Saqlandi'; setTimeout(() => btn.textContent = 'Saqlash', 1500);
+  } catch (e) {
+    err.textContent = '→ ' + e.message; err.style.display = 'block';
+  } finally { btn.disabled = false; if (!btn.textContent.includes('Saqlandi')) btn.textContent = 'Saqlash'; }
 }
 
 let trendChartInst = null;
@@ -786,5 +880,6 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('view-auth').classList.contains('active')) doLogin();
 });
 </script>
+<script src="/static/branding.js"></script>
 </body>
 </html>

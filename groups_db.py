@@ -98,6 +98,57 @@ async def ensure_center_group_tables():
             )
         """)
 
+        # Maktablar uchun moslashuvchan lavozim, xodim va sinf modeli.
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS school_positions (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+                is_system BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(center_id, name)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS school_staff (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                position_id INTEGER REFERENCES school_positions(id) ON DELETE SET NULL,
+                employee_code TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(center_id, user_id)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS school_classes (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                academic_year TEXT NOT NULL,
+                grade_level INTEGER,
+                homeroom_staff_id INTEGER REFERENCES school_staff(id) ON DELETE SET NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(center_id, name, academic_year)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS school_class_students (
+                id SERIAL PRIMARY KEY,
+                class_id INTEGER NOT NULL REFERENCES school_classes(id) ON DELETE CASCADE,
+                student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                joined_at TIMESTAMP DEFAULT NOW(),
+                left_at TIMESTAMP,
+                UNIQUE(class_id, student_id)
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS school_staff_center_idx ON school_staff(center_id)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS school_classes_center_idx ON school_classes(center_id)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS school_class_students_student_idx ON school_class_students(student_id)")
+
 
 async def get_center_limits(conn, center_id: int):
     """Markaz uchun effektiv (max_groups, max_students) qiymatlarini qaytaradi.

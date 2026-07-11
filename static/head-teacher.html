@@ -192,6 +192,8 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
     <div class="section-tabs">
       <button class="section-tab active" id="tab-groups" onclick="switchSection('groups')">Guruhlar</button>
       <button class="section-tab" id="tab-stats" onclick="switchSection('stats')">Statistika</button>
+      <button class="section-tab" id="tab-staff" onclick="switchSection('staff')" style="display:none;">Xodimlar</button>
+      <button class="section-tab" id="tab-classes" onclick="switchSection('classes')" style="display:none;">Sinflar</button>
       <button class="section-tab" id="tab-branding" onclick="switchSection('branding')">Brending</button>
     </div>
 
@@ -227,6 +229,54 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
           <canvas id="trendChart" width="400" height="200"></canvas>
         </div>
       </div>
+    </div>
+
+    <!-- SCHOOL STAFF -->
+    <div class="section-view" id="section-staff">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ lavozim --create</span></div>
+        <div class="dash-section-body">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="flex:1;min-width:200px;"><label>Lavozim nomi</label><input id="position-name" placeholder="Masalan: IELTS koordinatori"></div>
+            <button class="btn-primary" id="create-position-btn" onclick="createPosition()">+ Lavozim</button>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;font-family:var(--mono);font-size:11px;">
+            <label style="text-transform:none;"><input type="checkbox" class="position-permission" value="manage_staff" style="width:auto;"> Xodimlar</label>
+            <label style="text-transform:none;"><input type="checkbox" class="position-permission" value="manage_classes" style="width:auto;"> Sinflar</label>
+            <label style="text-transform:none;"><input type="checkbox" class="position-permission" value="manage_students" style="width:auto;"> O'quvchilar</label>
+            <label style="text-transform:none;"><input type="checkbox" class="position-permission" value="view_results" style="width:auto;"> Natijalar</label>
+            <label style="text-transform:none;"><input type="checkbox" class="position-permission" value="manage_exams" style="width:auto;"> Imtihonlar</label>
+            <label style="text-transform:none;"><input type="checkbox" class="position-permission" value="view_reports" style="width:auto;"> Hisobotlar</label>
+          </div>
+        </div>
+      </div>
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ xodim --add</span></div>
+        <div class="dash-section-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:2;min-width:200px;"><label>Username yoki email</label><input id="staff-login" placeholder="teacher@example.uz"></div>
+          <div style="flex:1;min-width:180px;"><label>Lavozim</label><select id="staff-position" class="btn-outline" style="width:100%;padding:10px;"></select></div>
+          <div style="flex:1;min-width:140px;"><label>Xodim kodi</label><input id="staff-code" placeholder="EMP-001"></div>
+          <button class="btn-primary" id="add-staff-btn" onclick="addStaff()">+ Xodim</button>
+        </div>
+      </div>
+      <div id="staff-list"></div>
+      <div id="staff-empty" class="empty-state" style="display:none;">Hali xodimlar yo'q</div>
+    </div>
+
+    <!-- SCHOOL CLASSES -->
+    <div class="section-view" id="section-classes">
+      <div class="dash-section">
+        <div class="dash-section-head"><span>$ sinf --create</span></div>
+        <div class="dash-section-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:1;min-width:130px;"><label>Sinf nomi</label><input id="class-name" placeholder="7-A"></div>
+          <div style="flex:1;min-width:140px;"><label>O'quv yili</label><input id="class-year" placeholder="2026/2027"></div>
+          <div style="flex:1;min-width:110px;"><label>Bosqich</label><input id="class-grade" type="number" min="1" max="12" placeholder="7"></div>
+          <div style="flex:2;min-width:180px;"><label>Sinf rahbari</label><select id="class-homeroom" class="btn-outline" style="width:100%;padding:10px;"><option value="">Tayinlanmagan</option></select></div>
+          <button class="btn-primary" id="create-class-btn" onclick="createSchoolClass()">+ Sinf</button>
+        </div>
+      </div>
+      <div id="classes-list"></div>
+      <div id="classes-empty" class="empty-state" style="display:none;">Hali sinflar yo'q</div>
     </div>
 
     <!-- BRANDING -->
@@ -265,6 +315,9 @@ let currentUser = null;
 let allGroups = [];
 let expandedGroupId = null;
 let currentCenter = null;
+let schoolPositions = [];
+let schoolStaff = [];
+let schoolClasses = [];
 
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -339,6 +392,10 @@ async function loadCenter() {
     currentCenter = c;
     applyBranding(c.branding);
     fillBrandingForm(c.branding);
+    const isSchool = c.organization_type === 'school';
+    document.getElementById('tab-staff').style.display = isSchool ? '' : 'none';
+    document.getElementById('tab-classes').style.display = isSchool ? '' : 'none';
+    if (isSchool) { loadSchoolPositions(); loadSchoolStaff(); loadSchoolClasses(); }
     document.getElementById('center-title').textContent = c.branding?.brand_name || c.name;
     const statusBadge = c.is_active
       ? `<span class="badge success">● Faol</span>`
@@ -681,14 +738,120 @@ async function viewRoster(groupId) {
 function switchSection(which) {
   document.getElementById('tab-groups').classList.toggle('active', which === 'groups');
   document.getElementById('tab-stats').classList.toggle('active', which === 'stats');
+  document.getElementById('tab-staff').classList.toggle('active', which === 'staff');
+  document.getElementById('tab-classes').classList.toggle('active', which === 'classes');
   document.getElementById('tab-branding').classList.toggle('active', which === 'branding');
   document.getElementById('section-groups').classList.toggle('active', which === 'groups');
   document.getElementById('section-stats').classList.toggle('active', which === 'stats');
+  document.getElementById('section-staff').classList.toggle('active', which === 'staff');
+  document.getElementById('section-classes').classList.toggle('active', which === 'classes');
   document.getElementById('section-branding').classList.toggle('active', which === 'branding');
   if (which === 'stats') {
     loadStats();
     loadTrend();
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+
+async function loadSchoolPositions() {
+  schoolPositions = await apiCall('/api/school', '/positions');
+  const options = schoolPositions.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  document.getElementById('staff-position').innerHTML = options || '<option value="">Lavozim yarating</option>';
+}
+
+async function createPosition() {
+  const input = document.getElementById('position-name');
+  const name = input.value.trim();
+  if (!name) { alert('Lavozim nomini kiriting'); return; }
+  const permissions = [...document.querySelectorAll('.position-permission:checked')].map(x => x.value);
+  const btn = document.getElementById('create-position-btn'); btn.disabled = true;
+  try {
+    await apiCall('/api/school', '/positions', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,permissions})});
+    input.value = ''; document.querySelectorAll('.position-permission').forEach(x => x.checked=false);
+    await loadSchoolPositions();
+  } catch(e) { alert('Xatolik: ' + e.message); } finally { btn.disabled=false; }
+}
+
+async function loadSchoolStaff() {
+  const list = document.getElementById('staff-list');
+  const empty = document.getElementById('staff-empty');
+  list.innerHTML = '<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>';
+  try {
+    schoolStaff = await apiCall('/api/school', '/staff');
+    empty.style.display = schoolStaff.length ? 'none' : 'block';
+    list.innerHTML = schoolStaff.map(s => `
+      <div class="group-card"><div class="group-head"><div>
+        <div class="group-name">${escapeHtml(s.full_name)}</div>
+        <div class="group-meta">@${escapeHtml(s.username)} · ${escapeHtml(s.email)}</div>
+      </div><span class="badge ${s.is_active?'success':'danger'}">${s.is_active?'● Faol':'⛔ Nofaol'}</span></div>
+      <div class="group-body"><div class="group-row"><div>
+        <span class="badge muted">${escapeHtml(s.position_name || 'Lavozimsiz')}</span>
+        ${s.employee_code ? `<span class="badge muted">${escapeHtml(s.employee_code)}</span>` : ''}
+      </div><button class="btn-outline btn-sm" onclick="toggleSchoolStaff(${s.id})">${s.is_active?'Faolsizlantirish':'Faollashtirish'}</button></div></div></div>`).join('');
+    refreshHomeroomOptions();
+  } catch(e) { list.innerHTML=''; empty.textContent='→ '+e.message; empty.style.display='block'; }
+}
+
+async function addStaff() {
+  const loginEl=document.getElementById('staff-login'), positionEl=document.getElementById('staff-position');
+  if(!loginEl.value.trim() || !positionEl.value){alert('Foydalanuvchi va lavozimni tanlang');return;}
+  const btn=document.getElementById('add-staff-btn');btn.disabled=true;
+  try {
+    await apiCall('/api/school','/staff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:loginEl.value,position_id:Number(positionEl.value),employee_code:document.getElementById('staff-code').value})});
+    loginEl.value='';document.getElementById('staff-code').value='';await loadSchoolStaff();await loadSchoolPositions();
+  } catch(e){alert('Xatolik: '+e.message);} finally{btn.disabled=false;}
+}
+
+async function toggleSchoolStaff(id) {
+  try { await apiCall('/api/school',`/staff/${id}/toggle`,{method:'POST'}); await loadSchoolStaff(); }
+  catch(e){alert('Xatolik: '+e.message);}
+}
+
+function refreshHomeroomOptions() {
+  const select=document.getElementById('class-homeroom');
+  select.innerHTML='<option value="">Tayinlanmagan</option>'+schoolStaff.filter(s=>s.is_active).map(s=>`<option value="${s.id}">${escapeHtml(s.full_name)} — ${escapeHtml(s.position_name||'')}</option>`).join('');
+}
+
+async function loadSchoolClasses() {
+  const list=document.getElementById('classes-list'),empty=document.getElementById('classes-empty');
+  list.innerHTML='<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>';
+  try {
+    schoolClasses=await apiCall('/api/school','/classes');empty.style.display=schoolClasses.length?'none':'block';
+    list.innerHTML=schoolClasses.map(c=>`<div class="group-card"><div class="group-head"><div><div class="group-name">${escapeHtml(c.name)}</div><div class="group-meta">${escapeHtml(c.academic_year)} · ${c.grade_level||'—'}-bosqich</div></div><span class="badge success">${c.students_count} o'quvchi</span></div><div class="group-body"><div class="group-row"><span class="badge muted">Rahbar: ${escapeHtml(c.homeroom_teacher||'tayinlanmagan')}</span><button class="btn-outline btn-sm" onclick="manageClassStudents(${c.id})">O'quvchilar</button></div><div id="class-students-${c.id}"></div></div></div>`).join('');
+  } catch(e){list.innerHTML='';empty.textContent='→ '+e.message;empty.style.display='block';}
+}
+
+async function createSchoolClass() {
+  const name=document.getElementById('class-name').value.trim(),year=document.getElementById('class-year').value.trim();
+  if(!name||!year){alert("Sinf nomi va o'quv yilini kiriting");return;}
+  const btn=document.getElementById('create-class-btn');btn.disabled=true;
+  try {
+    await apiCall('/api/school','/classes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,academic_year:year,grade_level:Number(document.getElementById('class-grade').value)||null,homeroom_staff_id:Number(document.getElementById('class-homeroom').value)||null})});
+    document.getElementById('class-name').value='';document.getElementById('class-grade').value='';await loadSchoolClasses();
+  } catch(e){alert('Xatolik: '+e.message);} finally{btn.disabled=false;}
+}
+
+async function manageClassStudents(classId) {
+  const box=document.getElementById(`class-students-${classId}`);
+  box.innerHTML='<div class="empty-state"><span class="spinner"></span></div>';
+  try {
+    const students=await apiCall('/api/school',`/classes/${classId}/students`);
+    box.innerHTML=`<div style="display:flex;gap:8px;margin-top:14px;"><input id="class-student-login-${classId}" placeholder="O'quvchi username yoki email"><button class="btn-primary btn-sm" onclick="addClassStudent(${classId})">Qo'shish</button></div>`+
+      (students.length?students.map(s=>`<div class="roster-row"><span>${escapeHtml(s.full_name)} <small>${escapeHtml(s.email)}</small></span><button class="btn-outline btn-sm danger" onclick="removeClassStudent(${classId},${s.id})">Chiqarish</button></div>`).join(''):'<div class="empty-state">Sinfda o\'quvchilar yo\'q</div>');
+  } catch(e){box.innerHTML=`<div class="empty-state">→ ${escapeHtml(e.message)}</div>`;}
+}
+
+async function addClassStudent(classId) {
+  const input=document.getElementById(`class-student-login-${classId}`);if(!input.value.trim())return;
+  try{await apiCall('/api/school',`/classes/${classId}/students`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:input.value})});await loadSchoolClasses();setTimeout(()=>manageClassStudents(classId),0);}catch(e){alert('Xatolik: '+e.message);}
+}
+
+async function removeClassStudent(classId,studentId) {
+  if(!confirm("O'quvchini sinfdan chiqarasizmi?"))return;
+  try{await apiCall('/api/school',`/classes/${classId}/students/${studentId}`,{method:'DELETE'});await loadSchoolClasses();setTimeout(()=>manageClassStudents(classId),0);}catch(e){alert('Xatolik: '+e.message);}
 }
 
 function applyBranding(branding) {

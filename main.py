@@ -25,6 +25,7 @@ from auth import router as auth_router, ensure_users_table, get_current_user
 from groups_db import ensure_center_group_tables, DEFAULT_MAX_GROUPS_PER_CENTER, DEFAULT_MAX_STUDENTS_PER_CENTER
 from head_teacher_routes import router as head_teacher_router
 from teacher_routes import router as teacher_router
+from school_routes import router as school_router
 from branding import ORGANIZATION_TYPES, branding_payload
 
 app = FastAPI(title="IELTS Mock SS")
@@ -32,6 +33,7 @@ app.include_router(feature_router)
 app.include_router(auth_router)
 app.include_router(head_teacher_router)
 app.include_router(teacher_router)
+app.include_router(school_router)
 
 
 @app.middleware("http")

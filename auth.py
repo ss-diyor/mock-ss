@@ -436,6 +436,7 @@ async def register(data: RegisterIn):
                 role_val = "teacher"
                 center_id_val = group_row["center_id"]
                 teacher_group_id = group_row["id"]
+                group_id_val = group_row["id"]
 
             # ── Group-invite: talaba sifatida guruhga qo'shilish ──
             elif data.group_invite_code:

@@ -366,7 +366,7 @@ async function loadGroup() {
     const g = await apiCall(T_API, '/group');
     document.getElementById('group-title').textContent = g.name;
     document.getElementById('overview-stats').innerHTML = `
-      <div class="dash-stat-card"><div class="dash-stat-num">${g.students_count}</div><div class="dash-stat-label">$ talabalar</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-num">${g.students_count}</div><div class="dash-stat-label">Talabalar</div></div>
     `;
     document.getElementById('invite-code-text').textContent = g.invite_code;
     showView('view-dashboard');

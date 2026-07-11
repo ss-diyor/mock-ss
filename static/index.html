@@ -812,9 +812,20 @@ async function checkAuthStatus() {
     const data = await res.json();
     authUser = data.user;
 
+    let dashboardLink = '/profile';
+    let dashboardText = `👤 ${authUser.full_name.split(' ')[0]}`;
+    
+    if (authUser.role === 'teacher') {
+      dashboardLink = '/teacher';
+      dashboardText = `👨‍🏫 Teacher Panel`;
+    } else if (authUser.role === 'head_teacher') {
+      dashboardLink = '/head-teacher';
+      dashboardText = `🏢 Dashboard`;
+    }
+
     document.getElementById('nav-right').innerHTML = `
-      <a href="/profile" class="btn-outline" style="font-size:12px; padding:8px 16px; text-decoration:none;">
-        👤 ${authUser.full_name.split(' ')[0]}
+      <a href="${dashboardLink}" class="btn-outline" style="font-size:12px; padding:8px 16px; text-decoration:none;">
+        ${dashboardText}
       </a>`;
   } catch (e) {
     // Tarmoq xatosi — gost rejimida davom etamiz

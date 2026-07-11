@@ -456,11 +456,20 @@ if (teacherInviteCode) {
 }
 
 function handlePostAuthRedirect() {
-  if (redirectTarget !== 'exam' || !currentUser) return;
-  if (currentUser.email_verified) {
-    window.location.href = '/?startExam=1';
-  } else {
-    openVerifyModal();
+  if (!currentUser) return;
+  
+  // O'qituvchilarni avtomatik teacher sahifasiga yo'naltirish
+  if (currentUser.role === 'teacher') {
+    window.location.href = '/teacher';
+    return;
+  }
+
+  if (redirectTarget === 'exam') {
+    if (currentUser.email_verified) {
+      window.location.href = '/?startExam=1';
+    } else {
+      openVerifyModal();
+    }
   }
 }
 
@@ -631,6 +640,10 @@ async function doRegister() {
 
 // ─── DASHBOARD RENDER ─────────────────────────────────────
 function renderDashboard() {
+  if (currentUser && currentUser.role === 'teacher') {
+    window.location.href = '/teacher';
+    return;
+  }
   showView('view-dashboard');
   document.getElementById('profile-fullname').textContent = currentUser.full_name;
   document.getElementById('profile-username').textContent = '@' + currentUser.username;

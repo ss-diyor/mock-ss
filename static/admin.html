@@ -877,7 +877,7 @@ async function viewSubscriptionReceipt(id,mime) {
 async function reviewSubscriptionPayment(id,action) {
   const label=action==='approve'?'tasdiqlash':'rad etish';if(!confirm(`To'lovni ${label}?`))return;
   const note=prompt('Izoh (ixtiyoriy):')||null;
-  try { const res=await adminFetch(`/api/admin/subscription-payments/${id}/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,note})});const data=await res.json();if(!res.ok)throw new Error(data.detail||'Xatolik');await loadSubscriptionPayments(); }
+  try { const res=await adminFetch(`/api/admin/subscription-payments/${id}/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,note})});const text=await res.text();let data={};try{data=text?JSON.parse(text):{};}catch{data={detail:text||`Server xatosi (${res.status})`};}if(!res.ok)throw new Error(data.detail||`Server xatosi (${res.status})`);await loadSubscriptionPayments(); }
   catch(e){alert('Xatolik: '+e.message);}
 }
 

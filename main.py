@@ -16,7 +16,7 @@ try:
     import openpyxl
 except ImportError:
     openpyxl = None
-from datetime import datetime, timedelta
+from datetime import datetime
 from fpdf import FPDF
 
 from db import get_pool
@@ -918,22 +918,27 @@ async def admin_review_subscription_payment(
                 new_status, note, payment_id
             )
             if data.action == "approve":
-                current_end = await conn.fetchval(
-                    "SELECT current_period_end FROM organization_subscriptions WHERE center_id=$1 FOR UPDATE",
-                    payment["center_id"]
-                )
-                start = current_end if current_end and current_end > datetime.utcnow() else datetime.utcnow()
-                period_end = start + (timedelta(days=365) if payment["billing_cycle"] == "yearly" else timedelta(days=30))
                 await conn.execute(
                     """
                     INSERT INTO organization_subscriptions(
                         center_id, plan_id, status, current_period_start, current_period_end, grace_ends_at, updated_at
-                    ) VALUES ($1,$2,'active',$3,$4,$4 + INTERVAL '7 days',NOW())
+                    ) VALUES (
+                        $1, $2, 'active', NOW(),
+                        NOW() + CASE WHEN $3='yearly' THEN INTERVAL '1 year' ELSE INTERVAL '1 month' END,
+                        NOW() + CASE WHEN $3='yearly' THEN INTERVAL '1 year 7 days' ELSE INTERVAL '1 month 7 days' END,
+                        NOW()
+                    )
                     ON CONFLICT(center_id) DO UPDATE SET
-                        plan_id=EXCLUDED.plan_id, status='active', current_period_start=EXCLUDED.current_period_start,
-                        current_period_end=EXCLUDED.current_period_end, grace_ends_at=EXCLUDED.grace_ends_at, updated_at=NOW()
+                        plan_id=EXCLUDED.plan_id,
+                        status='active',
+                        current_period_start=GREATEST(COALESCE(organization_subscriptions.current_period_end, NOW()), NOW()),
+                        current_period_end=GREATEST(COALESCE(organization_subscriptions.current_period_end, NOW()), NOW())
+                            + CASE WHEN $3='yearly' THEN INTERVAL '1 year' ELSE INTERVAL '1 month' END,
+                        grace_ends_at=GREATEST(COALESCE(organization_subscriptions.current_period_end, NOW()), NOW())
+                            + CASE WHEN $3='yearly' THEN INTERVAL '1 year 7 days' ELSE INTERVAL '1 month 7 days' END,
+                        updated_at=NOW()
                     """,
-                    payment["center_id"], payment["plan_id"], start, period_end
+                    payment["center_id"], payment["plan_id"], payment["billing_cycle"]
                 )
     return {"message": "To'lov tasdiqlandi" if data.action == "approve" else "To'lov rad etildi"}
 

@@ -350,7 +350,13 @@ async function doLogin() {
 
 function afterAuthResolved() {
   if (!currentUser || currentUser.role !== 'teacher') {
-    showView('view-denied');
+    localStorage.removeItem('ielts_token');
+    token = null;
+    currentUser = null;
+    showView('view-auth');
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = "→ Bu hisob o'qituvchi rolida emas. Markaz rahbaringizdan teacher-invite link so'rang.";
+    errEl.style.display = 'block';
     return;
   }
   document.getElementById('nav-right').innerHTML = `

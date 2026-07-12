@@ -115,43 +115,36 @@ async def _can_access_test(conn, test_id: int, user: dict) -> bool:
 async def public_test_catalog(user: Optional[dict] = Depends(get_optional_user)):
     db = await get_pool()
     async with db.acquire() as conn:
-        if user:
-            rows = await conn.fetch(
-                """
-                SELECT DISTINCT t.id, t.slug, t.title, t.description, t.test_type, t.visibility,
-                       t.duration_minutes, t.difficulty, t.attempt_limit, t.legacy_url,
-                       c.name AS organization_name, c.brand_name, c.brand_logo_url, c.brand_primary_color,
-                       COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT hs.section), NULL), ARRAY[]::text[]) AS sections
-                FROM tests t
-                LEFT JOIN centers c ON c.id=t.center_id
-                LEFT JOIN test_html_sections hs ON hs.test_id=t.id
-                LEFT JOIN test_assignments a ON a.test_id=t.id
-                WHERE t.status='published' AND (
-                  t.visibility='public'
-                  OR (t.center_id=$1 AND t.visibility='organization')
-                  OR (a.center_id=$1 AND (a.available_from IS NULL OR a.available_from<=NOW())
-                      AND (a.available_until IS NULL OR a.available_until>=NOW())
-                      AND ((a.class_id IS NULL AND a.group_id IS NULL)
-                           OR a.group_id=$2
-                           OR EXISTS (SELECT 1 FROM school_class_students cs WHERE cs.class_id=a.class_id AND cs.student_id=$3 AND cs.left_at IS NULL)))
-                )
-                GROUP BY t.id, c.id ORDER BY t.created_at DESC
-                """,
-                user.get("center_id"), user.get("group_id"), user["id"]
+        center_id = user.get("center_id") if user else None
+        group_id = user.get("group_id") if user else None
+        user_id = user["id"] if user else None
+        rows = await conn.fetch(
+            """
+            SELECT t.id, t.slug, t.title, t.description, t.test_type, t.visibility,
+                   t.duration_minutes, t.difficulty, t.attempt_limit, t.legacy_url,
+                   c.name AS organization_name, c.brand_name, c.brand_logo_url, c.brand_primary_color,
+                   COALESCE((SELECT ARRAY_AGG(s.section ORDER BY s.id)
+                             FROM test_html_sections s WHERE s.test_id=t.id), ARRAY[]::text[]) AS sections
+            FROM tests t
+            LEFT JOIN centers c ON c.id=t.center_id
+            WHERE t.status='published' AND (
+              t.visibility='public'
+              OR ($1::integer IS NOT NULL AND t.visibility='organization' AND t.center_id=$1)
+              OR ($1::integer IS NOT NULL AND EXISTS (
+                SELECT 1 FROM test_assignments a
+                WHERE a.test_id=t.id AND a.center_id=$1
+                  AND (a.available_from IS NULL OR a.available_from<=NOW())
+                  AND (a.available_until IS NULL OR a.available_until>=NOW())
+                  AND ((a.class_id IS NULL AND a.group_id IS NULL)
+                       OR a.group_id=$2
+                       OR EXISTS (SELECT 1 FROM school_class_students cs
+                                  WHERE cs.class_id=a.class_id AND cs.student_id=$3 AND cs.left_at IS NULL))
+              ))
             )
-        else:
-            rows = await conn.fetch(
-                """
-                SELECT t.id, t.slug, t.title, t.description, t.test_type, t.visibility,
-                       t.duration_minutes, t.difficulty, t.attempt_limit, t.legacy_url,
-                       NULL::text AS organization_name, NULL::text AS brand_name,
-                       NULL::text AS brand_logo_url, NULL::text AS brand_primary_color,
-                       COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT hs.section), NULL), ARRAY[]::text[]) AS sections
-                FROM tests t LEFT JOIN test_html_sections hs ON hs.test_id=t.id
-                WHERE t.status='published' AND t.visibility='public'
-                GROUP BY t.id ORDER BY t.created_at DESC
-                """
-            )
+            ORDER BY t.created_at DESC
+            """,
+            center_id, group_id, user_id
+        )
     return [dict(row) for row in rows]
 
 

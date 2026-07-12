@@ -1553,6 +1553,14 @@ async def school_staff_page():
 async def tests_page():
     return FileResponse("static/tests.html")
 
+@app.get("/mock-mode")
+async def mock_mode_page():
+    return FileResponse("static/mock-mode.html")
+
+@app.get("/mock-result")
+async def mock_result_page():
+    return FileResponse("static/mock-result.html")
+
 @app.get("/tests/{test_id}/run")
 async def test_runner_page(test_id: int):
     return FileResponse("static/test-runner.html")

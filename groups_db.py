@@ -47,6 +47,7 @@ async def ensure_center_group_tables():
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_contact_phone TEXT")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS show_powered_by BOOLEAN DEFAULT TRUE")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS subscription_required BOOLEAN NOT NULL DEFAULT FALSE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
         await conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS centers_slug_unique ON centers (LOWER(slug)) WHERE slug IS NOT NULL")
 
         await conn.execute("""
@@ -63,6 +64,7 @@ async def ensure_center_group_tables():
             )
         """)
         await conn.execute("ALTER TABLE groups ADD COLUMN IF NOT EXISTS teacher_invite_expires_at TIMESTAMP")
+        await conn.execute("ALTER TABLE groups ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
 
 
         # PostgreSQL "ADD CONSTRAINT IF NOT EXISTS"ni qo'llab-quvvatlamaydi,
@@ -173,6 +175,10 @@ async def ensure_center_group_tables():
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS school_assignments_staff_idx ON school_teacher_assignments(staff_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS school_assignments_class_idx ON school_teacher_assignments(class_id)")
+        await conn.execute("ALTER TABLE school_positions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
+        await conn.execute("ALTER TABLE school_staff ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
+        await conn.execute("ALTER TABLE school_classes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
+        await conn.execute("ALTER TABLE school_subjects ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
 
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS subscription_plans (
@@ -276,6 +282,7 @@ async def ensure_center_group_tables():
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS tests_catalog_idx ON tests(status, visibility, center_id)")
         await conn.execute("ALTER TABLE tests ADD COLUMN IF NOT EXISTS card_order INTEGER NOT NULL DEFAULT 100")
+        await conn.execute("ALTER TABLE tests ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
         await conn.execute("CREATE INDEX IF NOT EXISTS test_assignments_center_idx ON test_assignments(center_id, test_id)")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS test_upload_enabled BOOLEAN NOT NULL DEFAULT TRUE")
         await conn.execute("""

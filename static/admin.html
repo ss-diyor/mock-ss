@@ -521,7 +521,7 @@ function renderUsers(users) {
     const verifiedBadge = u.email_verified
       ? `<span class="badge green">✓ Tasdiqlangan</span>`
       : `<span class="badge amber">Tasdiqlanmagan</span>`;
-    const suspendedBadge = u.is_suspended ? `<span class="badge" style="background:var(--red-light);color:var(--red);">⛔ Bloklangan</span>` : '';
+    const suspendedBadge = u.deleted_at ? `<span class="badge amber">Savatda</span>` : u.is_suspended ? `<span class="badge" style="background:var(--red-light);color:var(--red);">⛔ Bloklangan</span>` : '';
     const suspendLabel = u.is_suspended ? '✓ Blokdan chiqarish' : '⛔ Bloklash';
     const initials = (u.full_name || u.username || '?').trim().charAt(0).toUpperCase();
     const avatarHtml = u.avatar_url
@@ -545,8 +545,7 @@ function renderUsers(users) {
       <td>${u.attempts}</td>
       <td>
         <div class="row-actions">
-          <button class="btn-outline btn-sm" onclick="toggleSuspend(${u.id}, this)">${suspendLabel}</button>
-          <button class="btn-outline btn-sm danger" onclick="deleteUser(${u.id}, '${u.username.replace(/'/g, "\\'")}')">🗑 O'chirish</button>
+          ${u.deleted_at ? `<button class="btn-outline btn-sm" onclick="restoreUser(${u.id})">Tiklash</button><button class="btn-outline btn-sm danger" onclick="purgeUser(${u.id},'${u.username.replace(/'/g, "\\'")}')">Butunlay o'chirish</button>` : `<button class="btn-outline btn-sm" onclick="toggleSuspend(${u.id}, this)">${suspendLabel}</button><button class="btn-outline btn-sm danger" onclick="deleteUser(${u.id}, '${u.username.replace(/'/g, "\\'")}')">🗑 Savatga</button>`}
         </div>
       </td>
     </tr>`;
@@ -567,7 +566,7 @@ async function toggleSuspend(id, btnEl) {
 }
 
 async function deleteUser(id, username) {
-  if (!confirm(`@${username} foydalanuvchisini butunlay o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi.`)) return;
+  if (!confirm(`@${username} foydalanuvchisi savatga o'tkazilsinmi?`)) return;
 
   try {
     const res = await adminFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
@@ -772,7 +771,9 @@ function renderCenters() {
   emptyEl.style.display = 'none';
 
   listEl.innerHTML = allCenters.map(c => {
-    const statusBadge = c.is_active
+    const statusBadge = c.deleted_at
+      ? `<span class="badge" style="background:var(--amber-light);color:var(--amber);">Savatda</span>`
+      : c.is_active
       ? `<span class="badge green">● Faol</span>`
       : `<span class="badge" style="background:var(--red-light);color:var(--red);">⛔ Yopiq</span>`;
     const isSchool = c.organization_type === 'school';
@@ -795,7 +796,7 @@ function renderCenters() {
         <div style="display:flex;align-items:center;gap:8px;">
           ${statusBadge}
           ${subscriptionBadge}
-          <button class="btn-outline btn-sm" onclick="toggleCenter(${c.id}, this)">${c.is_active ? '⛔ Yopish' : '✓ Qayta ochish'}</button>
+          ${c.deleted_at ? `<button class="btn-outline btn-sm" onclick="restoreCenter(${c.id},this)">Tiklash</button><button class="btn-outline btn-sm" style="color:var(--red)" onclick="purgeCenter(${c.id})">Butunlay o'chirish</button>` : `<button class="btn-outline btn-sm" onclick="toggleCenter(${c.id}, this)">${c.is_active ? '⛔ Yopish' : '✓ Qayta ochish'}</button><button class="btn-outline btn-sm" style="color:var(--red)" onclick="trashCenter(${c.id})">Savatga</button>`}
         </div>
       </div>
       <div class="center-body">
@@ -805,7 +806,9 @@ function renderCenters() {
           ${ownerHtml}
           <button class="btn-outline btn-sm" onclick="toggleCenterSubscription(${c.id}, this)">${c.subscription_required ? "Obuna talabini o'chirish" : 'Obuna talabini yoqish'}</button>
           <button class="btn-outline btn-sm" onclick="toggleTestUpload(${c.id}, this)">${c.test_upload_enabled ? "Test yuklashni o'chirish" : 'Test yuklashga ruxsat'}</button>
+          <button class="btn-outline btn-sm" onclick="toggleInventory(${c.id},this)">Tarkibini boshqarish</button>
         </div>
+        <div id="inventory-${c.id}" style="display:none;margin-top:14px"></div>
       </div>
       ${!c.owner_id ? `
       <div class="center-owner-form">
@@ -863,6 +866,37 @@ async function toggleCenter(id, btnEl) {
     btnEl.disabled = false;
   }
 }
+async function restoreUser(id){const res=await adminFetch(`/api/admin/entities/user/${id}/restore`,{method:'POST'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');await loadUsers()}
+async function purgeUser(id,username){if(!confirm(`@${username} butunlay o'chiriladi. Bu amalni qaytarib bo'lmaydi.`))return;const res=await adminFetch(`/api/admin/entities/user/${id}`,{method:'DELETE'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');await loadUsers()}
+
+async function trashCenter(id) {
+  if (!confirm("Tashkilot savatga o'tkazilsinmi? Uni keyin tiklash mumkin.")) return;
+  const res=await adminFetch(`/api/admin/centers/${id}/trash`,{method:'POST'}),data=await res.json();
+  if(!res.ok)return alert(data.detail||'Xatolik'); await loadCenters();
+}
+async function restoreCenter(id,btn){btn.disabled=true;const res=await adminFetch(`/api/admin/centers/${id}/restore`,{method:'POST'}),data=await res.json();if(!res.ok){btn.disabled=false;return alert(data.detail||'Xatolik')}await loadCenters()}
+async function purgeCenter(id) {
+  const name=(allCenters.find(c=>c.id===id)||{}).name;
+  if(!name)return alert('Tashkilot topilmadi');
+  const typed=prompt(`DIQQAT: barcha bog'liq guruh, sinf, xodim va testlar qaytarib bo'lmaydigan tarzda o'chadi.\n\nTasdiqlash uchun tashkilot nomini yozing:\n${name}`);
+  if(typed!==name)return typed===null?null:alert('Nom mos kelmadi');
+  const res=await adminFetch(`/api/admin/centers/${id}?confirm_name=${encodeURIComponent(typed)}`,{method:'DELETE'}),data=await res.json();
+  if(!res.ok)return alert(data.detail||'Xatolik'); await loadCenters();
+}
+
+const inventoryKinds={groups:['group','Guruhlar'],classes:['class','Sinflar'],subjects:['subject','Fanlar'],positions:['position','Lavozimlar'],staff:['staff','Xodimlar'],users:['user',"O'quvchi va foydalanuvchilar"],tests:['test','Testlar']};
+async function toggleInventory(centerId,btn){
+  const box=document.getElementById(`inventory-${centerId}`);
+  if(box.style.display!=='none'){box.style.display='none';btn.textContent='Tarkibini boshqarish';return}
+  box.style.display='block';box.innerHTML='<span class="spinner"></span> Yuklanmoqda...';btn.textContent='Yopish';
+  const res=await adminFetch(`/api/admin/centers/${centerId}/inventory`),data=await res.json();
+  if(!res.ok){box.innerHTML=`<div class="alert danger">${adminEsc(data.detail||'Xatolik')}</div>`;return}
+  box.innerHTML=Object.entries(inventoryKinds).map(([key,[kind,title]])=>{const rows=data[key]||[];return `<div style="margin-top:12px"><b>${title} (${rows.length})</b><div style="display:grid;gap:6px;margin-top:6px">${rows.length?rows.map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px"><span>${adminEsc(x.name||x.email||'#'+x.id)} ${x.email?`<small style="color:var(--muted)">${adminEsc(x.email)}</small>`:''} ${x.deleted_at?'<span class="badge">Savatda</span>':''}</span><span>${x.deleted_at?`<button class="btn-outline btn-sm" onclick="restoreEntity('${kind}',${x.id},${centerId})">Tiklash</button> <button class="btn-outline btn-sm" style="color:var(--red)" onclick="purgeEntity('${kind}',${x.id},${centerId})">Butunlay o'chirish</button>`:`<button class="btn-outline btn-sm" style="color:var(--red)" onclick="trashEntity('${kind}',${x.id},${centerId})">Savatga</button>`}</span></div>`).join(''):'<small style="color:var(--muted)">Mavjud emas</small>'}</div></div>`}).join('');
+}
+async function refreshInventory(centerId){const box=document.getElementById(`inventory-${centerId}`),btn=[...box.closest('.center-card').querySelectorAll('button')].find(b=>b.textContent==='Yopish');box.style.display='none';if(btn)await toggleInventory(centerId,btn)}
+async function trashEntity(kind,id,centerId){if(!confirm("Obyekt savatga o'tkazilsinmi?"))return;const res=await adminFetch(`/api/admin/entities/${kind}/${id}/trash`,{method:'POST'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');await refreshInventory(centerId)}
+async function restoreEntity(kind,id,centerId){const res=await adminFetch(`/api/admin/entities/${kind}/${id}/restore`,{method:'POST'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');await refreshInventory(centerId)}
+async function purgeEntity(kind,id,centerId){if(!confirm("Butunlay o'chirish qaytarib bo'lmaydi. Davom etilsinmi?"))return;const res=await adminFetch(`/api/admin/entities/${kind}/${id}`,{method:'DELETE'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');await refreshInventory(centerId)}
 
 async function toggleCenterSubscription(id, btnEl) {
   btnEl.disabled = true;

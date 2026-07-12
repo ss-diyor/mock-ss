@@ -768,7 +768,7 @@ async def admin_users(search: Optional[str] = None, _: None = Depends(require_ad
         rows = await conn.fetch(
             """
             SELECT u.id, u.username, u.email, u.full_name, u.created_at,
-                   u.email_verified, u.is_suspended,
+                   u.email_verified, u.is_suspended, u.deleted_at,
                    (u.avatar_mime IS NOT NULL) AS has_avatar,
                    COUNT(er.id) AS attempts
             FROM users u
@@ -791,6 +791,7 @@ async def admin_users(search: Optional[str] = None, _: None = Depends(require_ad
                 "created_at": r["created_at"].isoformat(),
                 "email_verified": r["email_verified"],
                 "is_suspended": r["is_suspended"],
+                "deleted_at": r["deleted_at"].isoformat() if r["deleted_at"] else None,
                 "attempts": r["attempts"],
                 "avatar_url": f"/api/auth/avatar/{r['username']}" if r.get("has_avatar") else None
             }
@@ -844,7 +845,7 @@ async def admin_list_centers(_: None = Depends(require_admin)):
             """
             SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name, c.subscription_required, c.test_upload_enabled,
                    c.brand_primary_color, c.brand_logo_url,
-                   c.is_active, c.max_groups, c.max_students, c.created_at,
+                   c.is_active, c.deleted_at, c.max_groups, c.max_students, c.created_at,
                    c.owner_id, owner.full_name AS owner_name, owner.email AS owner_email,
                    sub.status AS subscription_status, sub.current_period_end,
                    COUNT(DISTINCT g.id) AS groups_count,
@@ -868,6 +869,7 @@ async def admin_list_centers(_: None = Depends(require_admin)):
             "subscription_period_end": r["current_period_end"].isoformat() if r["current_period_end"] else None,
             "primary_color": r["brand_primary_color"], "logo_url": r["brand_logo_url"],
             "is_active": r["is_active"],
+            "deleted_at": r["deleted_at"].isoformat() if r["deleted_at"] else None,
             "max_groups": r["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER,
             "max_students": r["max_students"] or DEFAULT_MAX_STUDENTS_PER_CENTER,
             "created_at": r["created_at"].isoformat(),
@@ -1063,6 +1065,146 @@ async def admin_toggle_center(center_id: int, _: None = Depends(require_admin)):
     }
 
 
+ADMIN_ENTITY_CONFIG = {
+    "group": ("groups", "name", "is_active"),
+    "class": ("school_classes", "name", "is_active"),
+    "staff": ("school_staff", "employee_code", "is_active"),
+    "subject": ("school_subjects", "name", "is_active"),
+    "position": ("school_positions", "name", None),
+    "user": ("users", "full_name", "is_suspended"),
+    "test": ("tests", "title", None),
+}
+
+
+@app.get("/api/admin/centers/{center_id}/inventory")
+async def admin_center_inventory(center_id: int, _: None = Depends(require_admin)):
+    """Tashkilot tarkibini bitta xavfsiz boshqaruv oynasida ko'rsatadi."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        center = await conn.fetchrow("SELECT id, name FROM centers WHERE id=$1", center_id)
+        if not center:
+            raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+        groups = await conn.fetch("SELECT id,name,is_active,deleted_at FROM groups WHERE center_id=$1 ORDER BY name", center_id)
+        classes = await conn.fetch("SELECT id,name,academic_year,is_active,deleted_at FROM school_classes WHERE center_id=$1 ORDER BY name", center_id)
+        subjects = await conn.fetch("SELECT id,name,is_active,deleted_at FROM school_subjects WHERE center_id=$1 ORDER BY name", center_id)
+        positions = await conn.fetch("SELECT id,name,deleted_at FROM school_positions WHERE center_id=$1 ORDER BY name", center_id)
+        staff = await conn.fetch("""
+            SELECT ss.id, COALESCE(u.full_name,ss.employee_code,'Xodim') AS name,
+                   ss.is_active,ss.deleted_at
+            FROM school_staff ss LEFT JOIN users u ON u.id=ss.user_id
+            WHERE ss.center_id=$1 ORDER BY name
+        """, center_id)
+        users = await conn.fetch("SELECT id,full_name AS name,email,role,is_suspended,deleted_at FROM users WHERE center_id=$1 ORDER BY full_name", center_id)
+        tests = await conn.fetch("SELECT id,title AS name,status,deleted_at FROM tests WHERE center_id=$1 ORDER BY title", center_id)
+
+    def serialize(rows):
+        return [dict(r) | {"deleted_at": r["deleted_at"].isoformat() if r["deleted_at"] else None} for r in rows]
+    return {"center": dict(center), "groups": serialize(groups), "classes": serialize(classes),
+            "subjects": serialize(subjects), "positions": serialize(positions),
+            "staff": serialize(staff), "users": serialize(users), "tests": serialize(tests)}
+
+
+@app.post("/api/admin/centers/{center_id}/trash")
+async def admin_trash_center(center_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow("UPDATE centers SET deleted_at=NOW(),is_active=FALSE WHERE id=$1 RETURNING name", center_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+    return {"message": f"{row['name']} savatga o'tkazildi"}
+
+
+@app.post("/api/admin/centers/{center_id}/restore")
+async def admin_restore_center(center_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow("UPDATE centers SET deleted_at=NULL,is_active=TRUE WHERE id=$1 RETURNING name", center_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+    return {"message": f"{row['name']} tiklandi"}
+
+
+@app.delete("/api/admin/centers/{center_id}")
+async def admin_purge_center(center_id: int, confirm_name: str, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        async with conn.transaction():
+            center = await conn.fetchrow("SELECT name,deleted_at FROM centers WHERE id=$1 FOR UPDATE", center_id)
+            if not center:
+                raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+            if not center["deleted_at"]:
+                raise HTTPException(status_code=409, detail="Avval tashkilotni savatga o'tkazing")
+            if confirm_name.strip() != center["name"]:
+                raise HTTPException(status_code=400, detail="Tashkilot nomi mos kelmadi")
+            await conn.execute("UPDATE users SET role='student',center_id=NULL,group_id=NULL WHERE center_id=$1", center_id)
+            await conn.execute("DELETE FROM centers WHERE id=$1", center_id)
+    return {"message": "Tashkilot va unga bog'liq ma'lumotlar butunlay o'chirildi"}
+
+
+@app.post("/api/admin/entities/{entity_type}/{entity_id}/trash")
+async def admin_trash_entity(entity_type: str, entity_id: int, _: None = Depends(require_admin)):
+    config = ADMIN_ENTITY_CONFIG.get(entity_type)
+    if not config:
+        raise HTTPException(status_code=400, detail="Obyekt turi noto'g'ri")
+    table, label_col, active_col = config
+    if entity_type == "user":
+        sql = f"UPDATE {table} SET deleted_at=NOW(),is_suspended=TRUE WHERE id=$1 RETURNING {label_col} AS label"
+    elif entity_type == "test":
+        sql = f"UPDATE {table} SET deleted_at=NOW(),status='archived' WHERE id=$1 RETURNING {label_col} AS label"
+    elif active_col:
+        sql = f"UPDATE {table} SET deleted_at=NOW(),{active_col}=FALSE WHERE id=$1 RETURNING {label_col} AS label"
+    else:
+        sql = f"UPDATE {table} SET deleted_at=NOW() WHERE id=$1 RETURNING {label_col} AS label"
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(sql, entity_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Obyekt topilmadi")
+    return {"message": f"{row['label'] or 'Obyekt'} savatga o'tkazildi"}
+
+
+@app.post("/api/admin/entities/{entity_type}/{entity_id}/restore")
+async def admin_restore_entity(entity_type: str, entity_id: int, _: None = Depends(require_admin)):
+    config = ADMIN_ENTITY_CONFIG.get(entity_type)
+    if not config:
+        raise HTTPException(status_code=400, detail="Obyekt turi noto'g'ri")
+    table, label_col, active_col = config
+    if entity_type == "user":
+        sql = f"UPDATE {table} SET deleted_at=NULL,is_suspended=FALSE WHERE id=$1 RETURNING {label_col} AS label"
+    elif entity_type == "test":
+        sql = f"UPDATE {table} SET deleted_at=NULL,status='draft' WHERE id=$1 RETURNING {label_col} AS label"
+    elif active_col:
+        sql = f"UPDATE {table} SET deleted_at=NULL,{active_col}=TRUE WHERE id=$1 RETURNING {label_col} AS label"
+    else:
+        sql = f"UPDATE {table} SET deleted_at=NULL WHERE id=$1 RETURNING {label_col} AS label"
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(sql, entity_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Obyekt topilmadi")
+    return {"message": f"{row['label'] or 'Obyekt'} tiklandi"}
+
+
+@app.delete("/api/admin/entities/{entity_type}/{entity_id}")
+async def admin_purge_entity(entity_type: str, entity_id: int, _: None = Depends(require_admin)):
+    config = ADMIN_ENTITY_CONFIG.get(entity_type)
+    if not config:
+        raise HTTPException(status_code=400, detail="Obyekt turi noto'g'ri")
+    table, _, _ = config
+    db = await get_pool()
+    async with db.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(f"SELECT deleted_at FROM {table} WHERE id=$1 FOR UPDATE", entity_id)
+            if not row:
+                raise HTTPException(status_code=404, detail="Obyekt topilmadi")
+            if not row["deleted_at"]:
+                raise HTTPException(status_code=409, detail="Avval obyektni savatga o'tkazing")
+            if entity_type == "user":
+                await conn.execute("UPDATE users SET referred_by=NULL WHERE referred_by=$1", entity_id)
+            await conn.execute(f"DELETE FROM {table} WHERE id=$1", entity_id)
+    return {"message": "Obyekt butunlay o'chirildi"}
+
+
 @app.post("/api/admin/users/{user_id}/suspend")
 async def admin_suspend_user(user_id: int, _: None = Depends(require_admin)):
     db = await get_pool()
@@ -1084,11 +1226,13 @@ async def admin_suspend_user(user_id: int, _: None = Depends(require_admin)):
 async def admin_delete_user(user_id: int, _: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
-        row = await conn.fetchrow("DELETE FROM users WHERE id = $1 RETURNING id", user_id)
+        row = await conn.fetchrow(
+            "UPDATE users SET deleted_at=NOW(),is_suspended=TRUE WHERE id=$1 RETURNING id", user_id
+        )
         if not row:
             raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi")
 
-    return {"message": "Foydalanuvchi o'chirildi"}
+    return {"message": "Foydalanuvchi savatga o'tkazildi"}
 
 
 @app.post("/api/admin/grade-writing")

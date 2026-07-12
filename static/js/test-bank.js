@@ -10,7 +10,7 @@ async function loadTests() {
 
   container.innerHTML = `<div class="empty-state">Testlar yuklanmoqda...</div>`;
 
-  const response = await fetch("/api/tests");
+  const response = await fetch("/api/legacy-tests");
 
   if (!response.ok) {
     throw new Error("Test-bank olinmadi.");

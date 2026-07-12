@@ -30,7 +30,7 @@ STATIC_DIR = BASE_DIR / "static"
 router = APIRouter()
 
 
-@router.get("/tests")
+@router.get("/legacy-test-bank")
 async def test_bank_page():
    return FileResponse(STATIC_DIR / "test-bank.html")
 
@@ -40,12 +40,12 @@ async def speaking_demo_page():
     return FileResponse(STATIC_DIR / "speaking-demo.html")
 
 
-@router.get("/api/tests")
+@router.get("/api/legacy-tests")
 async def list_tests():
     return {"tests": public_test_catalog()}
 
 
-@router.get("/api/tests/{test_id}")
+@router.get("/api/legacy-tests/{test_id}")
 async def get_test(test_id: str):
     test = get_test_by_id(test_id)
     if not test:

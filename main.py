@@ -1525,6 +1525,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def root():
     return FileResponse("static/index.html")
 
+@app.head("/")
+async def root_healthcheck():
+    return Response(status_code=200)
+
 @app.get("/admin")
 async def admin_page():
     return FileResponse("static/admin.html")

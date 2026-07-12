@@ -42,10 +42,19 @@ class AdminTestUpdate(BaseModel):
     duration_minutes: int = 180
     difficulty: str = "Medium"
     attempt_limit: int = 1
+    card_order: int = 100
 
 
 class AdminTestAssignment(BaseModel):
     center_id: int
+
+
+class TestCardCreate(BaseModel):
+    title: str
+    description: str = ""
+    visibility: str = "public"
+    center_id: Optional[int] = None
+    card_order: int = 100
 
 
 async def get_optional_user(authorization: Optional[str] = Header(None)) -> Optional[dict]:
@@ -127,14 +136,17 @@ async def public_test_catalog(user: Optional[dict] = Depends(get_optional_user))
         user_id = user["id"] if user else None
         rows = await conn.fetch(
             """
-            SELECT t.id, t.slug, t.title, t.description, t.test_type, t.visibility,
+            SELECT t.id, t.slug, t.title, t.description, t.test_type, t.visibility, t.status, t.card_order,
                    t.duration_minutes, t.difficulty, t.attempt_limit, t.legacy_url,
                    c.name AS organization_name, c.brand_name, c.brand_logo_url, c.brand_primary_color,
                    COALESCE((SELECT ARRAY_AGG(s.section ORDER BY s.id)
-                             FROM test_html_sections s WHERE s.test_id=t.id), ARRAY[]::text[]) AS sections
+                             FROM test_html_sections s WHERE s.test_id=t.id),
+                            CASE WHEN t.status='planned' OR t.slug='ielts-mock-ss-1'
+                                 THEN ARRAY['listening','reading','writing','speaking']::text[]
+                                 ELSE ARRAY[]::text[] END) AS sections
             FROM tests t
             LEFT JOIN centers c ON c.id=t.center_id
-            WHERE t.status='published' AND (
+            WHERE t.status IN ('published','planned') AND (
               t.visibility='public'
               OR ($1::integer IS NOT NULL AND t.visibility='organization' AND t.center_id=$1)
               OR ($1::integer IS NOT NULL AND EXISTS (
@@ -148,7 +160,7 @@ async def public_test_catalog(user: Optional[dict] = Depends(get_optional_user))
                                   WHERE cs.class_id=a.class_id AND cs.student_id=$3 AND cs.left_at IS NULL))
               ))
             )
-            ORDER BY t.created_at DESC
+            ORDER BY t.card_order, t.created_at DESC
             """,
             center_id, group_id, user_id
         )
@@ -170,6 +182,36 @@ async def my_tests(current_user: dict = Depends(get_current_head_teacher)):
             current_user["center_id"]
         )
     return [dict(row) | {"created_at": row["created_at"].isoformat()} for row in rows]
+
+
+@router.post("/manage/cards")
+async def organization_create_card(data:TestCardCreate,current_user:dict=Depends(get_current_head_teacher)):
+    if not data.title.strip(): raise HTTPException(400,"Test nomini kiriting")
+    db=await get_pool()
+    async with db.acquire() as conn:
+        allowed=await conn.fetchval("SELECT test_upload_enabled FROM centers WHERE id=$1",current_user["center_id"])
+        if not allowed: raise HTTPException(403,"Super-admin test yuklash vakolatini o'chirgan")
+        test_id=await conn.fetchval("""INSERT INTO tests(slug,title,description,test_type,visibility,center_id,status,created_by,card_order)
+          VALUES($1,$2,$3,'IELTS Academic','organization',$4,'planned',$5,$6) RETURNING id""",f"org-{current_user['center_id']}-{secrets.token_urlsafe(8).lower()}",data.title.strip(),data.description[:1000],current_user["center_id"],current_user["id"],max(0,min(data.card_order,9999)))
+    return {"id":test_id,"status":"planned"}
+
+
+@router.post("/manage/{test_id}/sections")
+async def organization_attach_sections(test_id:int,listening:Optional[UploadFile]=File(None),reading:Optional[UploadFile]=File(None),writing:Optional[UploadFile]=File(None),speaking:Optional[UploadFile]=File(None),current_user:dict=Depends(get_current_head_teacher)):
+    files={k:v for k,v in {"listening":listening,"reading":reading,"writing":writing,"speaking":speaking}.items() if v and v.filename}
+    if not files: raise HTTPException(400,"Kamida bitta HTML fayl tanlang")
+    validated={};total=0
+    for section,file in files.items():
+        content=await file.read(MAX_HTML_BYTES+1);total+=len(content)
+        if total>MAX_FULL_MOCK_BYTES: raise HTTPException(413,"Fayllar 20 MB limitdan oshdi")
+        _,compressed,digest=_validate_html_file(file,content);validated[section]=(file.filename,compressed,digest,len(content))
+    db=await get_pool()
+    async with db.acquire() as conn:
+      async with conn.transaction():
+        if not await conn.fetchval("SELECT 1 FROM tests WHERE id=$1 AND center_id=$2",test_id,current_user["center_id"]): raise HTTPException(404,"Test topilmadi")
+        for section,(name,content,digest,size) in validated.items(): await conn.execute("""INSERT INTO test_html_sections(test_id,section,original_filename,html_compressed,html_sha256,original_size) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(test_id,section) DO UPDATE SET original_filename=EXCLUDED.original_filename,html_compressed=EXCLUDED.html_compressed,html_sha256=EXCLUDED.html_sha256,original_size=EXCLUDED.original_size,created_at=NOW()""",test_id,section,name,content,digest,size)
+        await conn.execute("UPDATE tests SET status='draft',updated_at=NOW() WHERE id=$1 AND status='planned'",test_id)
+    return {"message":"Fayllar biriktirildi"}
 
 
 @router.post("")
@@ -239,13 +281,13 @@ async def admin_all_tests(_: None = Depends(require_admin)):
     db = await get_pool()
     async with db.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT t.id,t.title,t.description,t.test_type,t.visibility,t.center_id,t.duration_minutes,
-                   t.difficulty,t.attempt_limit,t.status,t.created_at,c.name AS organization_name,
+            SELECT t.id,t.slug,t.title,t.description,t.test_type,t.visibility,t.center_id,t.duration_minutes,
+                   t.difficulty,t.attempt_limit,t.status,t.card_order,t.legacy_url,t.created_at,c.name AS organization_name,
                    COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT s.section),NULL),ARRAY[]::text[]) sections,
                    COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT a.center_id),NULL),ARRAY[]::int[]) assigned_centers
             FROM tests t LEFT JOIN centers c ON c.id=t.center_id
             LEFT JOIN test_html_sections s ON s.test_id=t.id LEFT JOIN test_assignments a ON a.test_id=t.id
-            GROUP BY t.id,c.id ORDER BY t.created_at DESC
+            GROUP BY t.id,c.id ORDER BY t.card_order,t.created_at DESC
         """)
     return [dict(r) | {"created_at": r["created_at"].isoformat()} for r in rows]
 
@@ -279,22 +321,78 @@ async def admin_upload_test(
     return {"id":test_id,"status":"draft"}
 
 
+@router.post("/admin/cards")
+async def admin_create_card(data: TestCardCreate, _: None = Depends(require_admin)):
+    if not data.title.strip() or data.visibility not in ("public", "organization"):
+        raise HTTPException(400, "Karta ma'lumotlari noto'g'ri")
+    if data.visibility == "organization" and not data.center_id:
+        raise HTTPException(400, "Tashkilotni tanlang")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if data.center_id and not await conn.fetchval("SELECT 1 FROM centers WHERE id=$1", data.center_id):
+            raise HTTPException(404, "Tashkilot topilmadi")
+        test_id = await conn.fetchval(
+            """INSERT INTO tests(slug,title,description,test_type,visibility,center_id,status,card_order)
+               VALUES($1,$2,$3,'IELTS Academic',$4,$5,'planned',$6) RETURNING id""",
+            f"card-{secrets.token_urlsafe(8).lower()}", data.title.strip(), data.description[:1000],
+            data.visibility, data.center_id, max(0, min(data.card_order, 9999))
+        )
+    return {"id": test_id, "status": "planned"}
+
+
+@router.post("/admin/{test_id}/sections")
+async def admin_attach_sections(
+    test_id: int, listening: Optional[UploadFile]=File(None), reading: Optional[UploadFile]=File(None),
+    writing: Optional[UploadFile]=File(None), speaking: Optional[UploadFile]=File(None),
+    _: None=Depends(require_admin)
+):
+    files={k:v for k,v in {"listening":listening,"reading":reading,"writing":writing,"speaking":speaking}.items() if v and v.filename}
+    if not files: raise HTTPException(400,"Kamida bitta HTML section tanlang")
+    validated={}; total=0
+    for section,file in files.items():
+        content=await file.read(MAX_HTML_BYTES+1);total+=len(content)
+        if total>MAX_FULL_MOCK_BYTES: raise HTTPException(413,"Fayllar hajmi 20 MB dan oshmasligi kerak")
+        _,compressed,digest=_validate_html_file(file,content);validated[section]=(file.filename,compressed,digest,len(content))
+    db=await get_pool()
+    async with db.acquire() as conn:
+      async with conn.transaction():
+        if not await conn.fetchval("SELECT 1 FROM tests WHERE id=$1",test_id): raise HTTPException(404,"Test kartasi topilmadi")
+        for section,(name,content,digest,size) in validated.items():
+            await conn.execute("""INSERT INTO test_html_sections(test_id,section,original_filename,html_compressed,html_sha256,original_size)
+              VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(test_id,section) DO UPDATE SET original_filename=EXCLUDED.original_filename,
+              html_compressed=EXCLUDED.html_compressed,html_sha256=EXCLUDED.html_sha256,original_size=EXCLUDED.original_size,created_at=NOW()""",
+              test_id,section,name,content,digest,size)
+        await conn.execute("UPDATE tests SET updated_at=NOW() WHERE id=$1",test_id)
+    return {"message":"Section fayllari biriktirildi","sections":list(validated)}
+
+
+@router.delete("/admin/{test_id}/sections/{section}")
+async def admin_delete_section(test_id:int,section:str,_:None=Depends(require_admin)):
+    if section not in SECTIONS: raise HTTPException(404,"Section topilmadi")
+    db=await get_pool()
+    async with db.acquire() as conn: await conn.execute("DELETE FROM test_html_sections WHERE test_id=$1 AND section=$2",test_id,section)
+    return {"message":"Section olib tashlandi"}
+
+
 @router.put("/admin/{test_id}")
 async def admin_update_test(test_id:int,data:AdminTestUpdate,_:None=Depends(require_admin)):
     if data.visibility not in ("public","organization") or (data.visibility=="organization" and not data.center_id): raise HTTPException(400,"Visibility noto'g'ri")
     if not data.title.strip() or not 1 <= data.duration_minutes <= 360 or not 1 <= data.attempt_limit <= 20: raise HTTPException(400,"Test ma'lumotlari noto'g'ri")
     db=await get_pool()
     async with db.acquire() as conn:
-        row=await conn.fetchrow("""UPDATE tests SET title=$2,description=$3,test_type=$4,visibility=$5,center_id=$6,duration_minutes=$7,difficulty=$8,attempt_limit=$9,updated_at=NOW() WHERE id=$1 RETURNING id""",test_id,data.title.strip(),data.description[:1000],data.test_type[:80],data.visibility,data.center_id,data.duration_minutes,data.difficulty[:30],data.attempt_limit)
+        row=await conn.fetchrow("""UPDATE tests SET title=$2,description=$3,test_type=$4,visibility=$5,center_id=$6,duration_minutes=$7,difficulty=$8,attempt_limit=$9,card_order=$10,updated_at=NOW() WHERE id=$1 RETURNING id""",test_id,data.title.strip(),data.description[:1000],data.test_type[:80],data.visibility,data.center_id,data.duration_minutes,data.difficulty[:30],data.attempt_limit,max(0,min(data.card_order,9999)))
     if not row: raise HTTPException(404,"Test topilmadi")
     return {"message":"Test yangilandi"}
 
 
 @router.post("/admin/{test_id}/status/{status}")
 async def admin_test_status(test_id:int,status:str,_:None=Depends(require_admin)):
-    if status not in ("draft","published","archived"): raise HTTPException(400,"Status noto'g'ri")
+    if status not in ("planned","draft","published","archived"): raise HTTPException(400,"Status noto'g'ri")
     db=await get_pool()
     async with db.acquire() as conn:
+        if status == "published":
+            ready = await conn.fetchval("SELECT legacy_url IS NOT NULL OR EXISTS(SELECT 1 FROM test_html_sections WHERE test_id=tests.id) FROM tests WHERE id=$1",test_id)
+            if not ready: raise HTTPException(400,"Available qilish uchun kamida bitta section fayli kerak")
         row=await conn.fetchrow("UPDATE tests SET status=$2,updated_at=NOW() WHERE id=$1 RETURNING id",test_id,status)
     if not row: raise HTTPException(404,"Test topilmadi")
     return {"status":status}
@@ -322,7 +420,11 @@ async def admin_unassign_test(test_id:int,center_id:int,_:None=Depends(require_a
 async def admin_delete_test(test_id:int,_:None=Depends(require_admin)):
     db=await get_pool()
     async with db.acquire() as conn:
-        result=await conn.execute("DELETE FROM tests WHERE id=$1",test_id)
+        slug=await conn.fetchval("SELECT slug FROM tests WHERE id=$1",test_id)
+        if slug in {"ielts-mock-ss-1","ielts-mock-ss-2","ielts-mock-ss-3","cambridge-ielts-21"}:
+            result=await conn.execute("UPDATE tests SET status='archived',updated_at=NOW() WHERE id=$1",test_id)
+        else:
+            result=await conn.execute("DELETE FROM tests WHERE id=$1",test_id)
     if result.endswith("0"): raise HTTPException(404,"Test topilmadi")
     return {"message":"Test o'chirildi"}
 

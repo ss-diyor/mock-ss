@@ -1618,6 +1618,10 @@ async def mock_result_page():
 async def test_runner_page(test_id: int):
     return FileResponse("static/test-runner.html")
 
+@app.get("/tests/{test_id}/mode")
+async def test_mode_page(test_id: int):
+    return FileResponse("static/test-mode.html")
+
 @app.get("/listening-demo")
 async def listening_demo_page():
     return FileResponse("static/Listening-demo.html")

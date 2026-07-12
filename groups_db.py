@@ -275,17 +275,19 @@ async def ensure_center_group_tables():
             )
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS tests_catalog_idx ON tests(status, visibility, center_id)")
+        await conn.execute("ALTER TABLE tests ADD COLUMN IF NOT EXISTS card_order INTEGER NOT NULL DEFAULT 100")
         await conn.execute("CREATE INDEX IF NOT EXISTS test_assignments_center_idx ON test_assignments(center_id, test_id)")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS test_upload_enabled BOOLEAN NOT NULL DEFAULT TRUE")
         await conn.execute("""
-            INSERT INTO tests(slug, title, description, test_type, visibility, duration_minutes, difficulty, status, legacy_url)
+            INSERT INTO tests(slug,title,description,test_type,visibility,duration_minutes,difficulty,status,legacy_url,card_order)
             VALUES
-              ('public-listening-demo', 'IELTS Listening Demo', 'Listening bo''limi uchun public mock test', 'IELTS Academic', 'public', 30, 'Medium', 'published', '/listening-demo'),
-              ('public-reading-demo', 'IELTS Reading Demo', 'Reading bo''limi uchun public mock test', 'IELTS Academic', 'public', 60, 'Medium', 'published', '/reading-demo'),
-              ('public-writing-demo', 'IELTS Writing Demo', 'Writing bo''limi uchun public mock test', 'IELTS Academic', 'public', 60, 'Medium', 'published', '/writing-demo'),
-              ('public-speaking-demo', 'IELTS Speaking Demo', 'Speaking bo''limi uchun public mock test', 'IELTS Academic', 'public', 14, 'Medium', 'published', '/speaking-demo')
-            ON CONFLICT(slug) DO NOTHING
+              ('ielts-mock-ss-1','IELTS Mock SS 1','To''liq IELTS Academic mock test','IELTS Academic','public',164,'Medium','published','/mock-mode',1),
+              ('ielts-mock-ss-2','IELTS Mock SS 2','Yangi full mock test tayyorlanmoqda','IELTS Academic','public',180,'Medium','planned',NULL,2),
+              ('ielts-mock-ss-3','IELTS Mock SS 3','Yangi full mock test tayyorlanmoqda','IELTS Academic','public',180,'Medium','planned',NULL,3),
+              ('cambridge-ielts-21','Cambridge IELTS 21','Yangi full mock test tayyorlanmoqda','IELTS Academic','public',180,'Medium','planned',NULL,4)
+            ON CONFLICT(slug) DO UPDATE SET card_order=EXCLUDED.card_order
         """)
+        await conn.execute("DELETE FROM tests WHERE slug IN ('public-listening-demo','public-reading-demo','public-writing-demo','public-speaking-demo')")
 
 
 async def get_center_limits(conn, center_id: int):

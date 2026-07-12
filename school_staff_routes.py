@@ -1,12 +1,14 @@
 import json
 from collections.abc import Callable
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+import secrets
 from pydantic import BaseModel
 
 from auth import get_current_user
 from branding import branding_payload
 from db import get_pool
+from test_catalog_routes import MAX_FULL_MOCK_BYTES, MAX_HTML_BYTES, _validate_html_file
 
 
 router = APIRouter(prefix="/api/school-staff", tags=["school-staff"])
@@ -14,6 +16,11 @@ router = APIRouter(prefix="/api/school-staff", tags=["school-staff"])
 
 class StudentLookupIn(BaseModel):
     login: str
+
+
+class ExamCardIn(BaseModel):
+    title: str
+    description: str = ""
 
 
 async def get_current_school_staff(current_user: dict = Depends(get_current_user)) -> dict:
@@ -46,6 +53,56 @@ def require_any_permission(*required: str) -> Callable:
             raise HTTPException(status_code=403, detail="Bu amal uchun ruxsat berilmagan")
         return staff
     return dependency
+
+
+@router.get("/tests")
+async def staff_tests(staff: dict = Depends(require_any_permission("manage_exams"))):
+    db=await get_pool()
+    async with db.acquire() as conn:
+        rows=await conn.fetch("""SELECT t.id,t.title,t.description,t.status,t.card_order,
+          COALESCE((SELECT ARRAY_AGG(s.section ORDER BY s.id) FROM test_html_sections s WHERE s.test_id=t.id),ARRAY[]::text[]) sections
+          FROM tests t WHERE t.center_id=$1 ORDER BY t.card_order,t.created_at DESC""",staff["center_id"])
+    return [dict(r) for r in rows]
+
+
+@router.post("/tests/cards")
+async def staff_create_test_card(data:ExamCardIn,staff:dict=Depends(require_any_permission("manage_exams"))):
+    if not data.title.strip(): raise HTTPException(400,"Test nomini kiriting")
+    db=await get_pool()
+    async with db.acquire() as conn:
+        allowed=await conn.fetchval("SELECT test_upload_enabled FROM centers WHERE id=$1",staff["center_id"])
+        if not allowed: raise HTTPException(403,"Super-admin test yuklash vakolatini o'chirgan")
+        test_id=await conn.fetchval("""INSERT INTO tests(slug,title,description,test_type,visibility,center_id,status,created_by)
+          VALUES($1,$2,$3,'IELTS Academic','organization',$4,'planned',$5) RETURNING id""",
+          f"org-{staff['center_id']}-{secrets.token_urlsafe(8).lower()}",data.title.strip(),data.description[:1000],staff["center_id"],staff["id"])
+    return {"id":test_id,"status":"planned"}
+
+
+@router.post("/tests/{test_id}/sections")
+async def staff_attach_test_sections(test_id:int,listening:UploadFile|None=File(None),reading:UploadFile|None=File(None),writing:UploadFile|None=File(None),speaking:UploadFile|None=File(None),staff:dict=Depends(require_any_permission("manage_exams"))):
+    files={k:v for k,v in {"listening":listening,"reading":reading,"writing":writing,"speaking":speaking}.items() if v and v.filename}
+    if not files: raise HTTPException(400,"Kamida bitta HTML fayl tanlang")
+    validated={};total=0
+    for section,file in files.items():
+        content=await file.read(MAX_HTML_BYTES+1);total+=len(content)
+        if total>MAX_FULL_MOCK_BYTES: raise HTTPException(413,"Fayllar 20 MB limitdan oshdi")
+        _,compressed,digest=_validate_html_file(file,content);validated[section]=(file.filename,compressed,digest,len(content))
+    db=await get_pool()
+    async with db.acquire() as conn:
+      async with conn.transaction():
+        if not await conn.fetchval("SELECT 1 FROM tests WHERE id=$1 AND center_id=$2",test_id,staff["center_id"]): raise HTTPException(404,"Test topilmadi")
+        for section,(name,content,digest,size) in validated.items(): await conn.execute("""INSERT INTO test_html_sections(test_id,section,original_filename,html_compressed,html_sha256,original_size) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(test_id,section) DO UPDATE SET original_filename=EXCLUDED.original_filename,html_compressed=EXCLUDED.html_compressed,html_sha256=EXCLUDED.html_sha256,original_size=EXCLUDED.original_size,created_at=NOW()""",test_id,section,name,content,digest,size)
+        await conn.execute("UPDATE tests SET status='draft',updated_at=NOW() WHERE id=$1 AND status='planned'",test_id)
+    return {"message":"Fayllar biriktirildi"}
+
+
+@router.post("/tests/{test_id}/submit")
+async def staff_submit_test(test_id:int,staff:dict=Depends(require_any_permission("manage_exams"))):
+    db=await get_pool()
+    async with db.acquire() as conn:
+        row=await conn.fetchrow("""UPDATE tests SET status='pending',updated_at=NOW() WHERE id=$1 AND center_id=$2 AND EXISTS(SELECT 1 FROM test_html_sections WHERE test_id=$1) RETURNING id""",test_id,staff["center_id"])
+    if not row: raise HTTPException(400,"Test topilmadi yoki section fayli yo'q")
+    return {"status":"pending"}
 
 
 async def _own_class_or_404(conn, class_id: int, center_id: int):

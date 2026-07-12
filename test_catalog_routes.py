@@ -80,6 +80,13 @@ def _validate_html_file(file: UploadFile, content: bytes) -> tuple[str, bytes, s
     for pattern, message in UNSAFE_HTML_PATTERNS:
         if pattern.search(html):
             raise HTTPException(status_code=400, detail=f"{filename}: {message}")
+    if "IELTSMock.submitResult" not in html:
+        raise HTTPException(
+            status_code=400,
+            detail=(f"{filename}: natija protokoli topilmadi. Test yakunida "
+                    "window.IELTSMock.submitResult({score, total, answers}) chaqirilsin; "
+                    "Writing uchun writing_task1 va writing_task2 ham yuborilsin")
+        )
     digest = hashlib.sha256(content).hexdigest()
     return html, zlib.compress(content, level=9), digest
 
@@ -346,7 +353,7 @@ async def test_detail(test_id: int, user: Optional[dict] = Depends(get_optional_
     db = await get_pool()
     async with db.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, title, description, test_type, duration_minutes, difficulty, attempt_limit, legacy_url FROM tests WHERE id=$1 AND status='published'",
+            "SELECT id, slug, title, description, test_type, duration_minutes, difficulty, attempt_limit, legacy_url FROM tests WHERE id=$1 AND status='published'",
             test_id
         )
         if not row:

@@ -70,9 +70,10 @@ async def user_dashboard(current_user: dict = Depends(get_current_user)):
 
         rows = await conn.fetch(
             """
-            SELECT section, score, total, writing_band, writing_feedback, submitted_at
-            FROM exam_results
-            WHERE email = $1
+            SELECT er.section, er.score, er.total, er.writing_band, er.writing_feedback, er.submitted_at,
+                   COALESCE(t.title, er.test_slug, 'IELTS Mock SS') AS test_title
+            FROM exam_results er LEFT JOIN tests t ON t.id=er.test_id
+            WHERE er.email = $1
             ORDER BY submitted_at DESC
             """,
             clean_email,
@@ -88,8 +89,10 @@ async def user_dashboard(current_user: dict = Depends(get_current_user)):
 
         if section == "writing":
             band = float(row["writing_band"]) if row["writing_band"] is not None else None
-        else:
+        elif row["score"] is not None and row["total"] is not None:
             band = get_band_score(row["score"], row["total"], section)
+        else:
+            band = None
 
         item = {
             "section": section,
@@ -97,6 +100,7 @@ async def user_dashboard(current_user: dict = Depends(get_current_user)):
             "total": row["total"],
             "band": band,
             "writing_feedback": row["writing_feedback"],
+            "test_title": row["test_title"],
             "submitted_at": row["submitted_at"].isoformat() if row["submitted_at"] else None,
         }
         history.append(item)

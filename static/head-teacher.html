@@ -309,6 +309,7 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
     <!-- TESTS -->
     <div class="section-view" id="section-tests">
       <div class="dash-section"><div class="dash-section-head"><span>$ test --upload</span></div><div class="dash-section-body">
+        <div class="alert" style="margin-bottom:12px;">HTML test yakunida <code>window.IELTSMock.submitResult({score, total, answers})</code> chaqirilishi shart. Shunda natija va xabarnomalar saqlanadi.</div>
         <form id="test-upload-form" onsubmit="uploadOrganizationTest(event)">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;">
             <div><label>Test nomi</label><input name="title" required maxlength="160" placeholder="IELTS Full Mock 1"></div>

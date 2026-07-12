@@ -106,9 +106,10 @@ async def get_student(student_id: int, current_user: dict = Depends(get_current_
 
         history = await conn.fetch(
             """
-            SELECT section, score, total, writing_band, submitted_at
-            FROM exam_results WHERE email=$1
-            ORDER BY submitted_at DESC
+            SELECT er.section, er.score, er.total, er.writing_band, er.submitted_at,
+                   COALESCE(t.title, er.test_slug, 'IELTS Mock SS') AS test_title
+            FROM exam_results er LEFT JOIN tests t ON t.id=er.test_id WHERE er.email=$1
+            ORDER BY er.submitted_at DESC
             """,
             student["email"]
         )
@@ -119,6 +120,7 @@ async def get_student(student_id: int, current_user: dict = Depends(get_current_
             {
                 "section": h["section"], "score": h["score"], "total": h["total"],
                 "writing_band": float(h["writing_band"]) if h["writing_band"] is not None else None,
+                "test_title": h["test_title"],
                 "submitted_at": h["submitted_at"].isoformat(),
             }
             for h in history

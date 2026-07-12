@@ -104,6 +104,10 @@ async def startup():
 
     await ensure_users_table()
     await ensure_center_group_tables()
+    async with db.acquire() as conn:
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_id INTEGER REFERENCES tests(id) ON DELETE SET NULL")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_slug TEXT")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_mode TEXT")
 
 
 # ─── Models ───────────────────────────────────────────────────────────────────
@@ -124,6 +128,9 @@ class SubmitResult(BaseModel):
     writing_task1: Optional[str] = None
     writing_task2: Optional[str] = None
     duration_seconds: Optional[int] = None
+    test_id: Optional[int] = None
+    test_slug: Optional[str] = None
+    test_mode: Optional[str] = None
 
 
 class GradeWriting(BaseModel):
@@ -194,8 +201,9 @@ def build_result_email(name: str, section: str, score, total, band, feedback=Non
     section_names = {"listening": "Listening", "reading": "Reading", "writing": "Writing"}
     section_name = section_names.get(section, section)
 
-    if section == "writing":
+    if section == "writing" or score is None or total is None:
         body = f"""
+        <p><b>Holat:</b> {'Baholandi' if band is not None else 'Qabul qilindi, baholash kutilmoqda'}</p>
         <p><b>Band Score:</b> {band if band is not None else 'Hali baholanmagan'}</p>
         {f'<p><b>Izoh:</b> {feedback}</p>' if feedback else ''}
         """
@@ -252,12 +260,20 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
     if data.score is not None and data.total is not None:
         if data.total <= 0 or data.score < 0 or data.score > data.total:
             raise HTTPException(status_code=400, detail="Natija qiymatlari noto'g'ri")
+    if data.section in {"listening", "reading"} and (data.score is None or data.total is None):
+        raise HTTPException(status_code=400, detail="Listening/Reading uchun score va total majburiy")
+    if data.answers and len(json.dumps(data.answers)) > 1_000_000:
+        raise HTTPException(status_code=413, detail="Javoblar hajmi juda katta")
 
     user_email = current_user["email"].strip().lower()
     user_name = current_user["full_name"].strip()
 
     db = await get_pool()
     async with db.acquire() as conn:
+        if data.test_id and not await conn.fetchval(
+            "SELECT 1 FROM tests WHERE id=$1 AND status='published'", data.test_id
+        ):
+            raise HTTPException(status_code=404, detail="Test topilmadi yoki publish qilinmagan")
         session_row = await conn.fetchrow(
             "SELECT id FROM exam_sessions WHERE id = $1 AND email = $2",
             data.session_id, user_email
@@ -269,8 +285,8 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
             """
             INSERT INTO exam_results 
                 (full_name, email, section, score, total, answers, 
-                 writing_task1, writing_task2, duration_seconds)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                 writing_task1, writing_task2, duration_seconds, test_id, test_slug, test_mode)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING id
             """,
             user_name,
@@ -281,7 +297,10 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
             json.dumps(data.answers) if data.answers else None,
             data.writing_task1,
             data.writing_task2,
-            data.duration_seconds
+            data.duration_seconds,
+            data.test_id,
+            (data.test_slug or "")[:120] or None,
+            data.test_mode if data.test_mode in {"full", "practice"} else None
         )
 
         await conn.execute(
@@ -316,6 +335,15 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
         except Exception:
             pass
 
+    if current_user.get("center_id"):
+        try:
+            from notifications import notify_head_teacher_new_result
+            db4 = await get_pool()
+            async with db4.acquire() as conn4:
+                await notify_head_teacher_new_result(conn4, current_user["center_id"], user_name, data.section, band)
+        except Exception:
+            pass
+
     if data.section != "writing":
         try:
             db = await get_pool()
@@ -334,8 +362,10 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
             for r in rows:
                 if r["section"] == "writing":
                     r_band = float(r["writing_band"]) if r["writing_band"] is not None else None
-                else:
+                elif r["score"] is not None and r["total"] is not None:
                     r_band = get_band_score(r["score"], r["total"], r["section"])
+                else:
+                    r_band = None
                 sections.append({
                     "section": r["section"],
                     "score": r["score"],
@@ -360,6 +390,17 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
                 
         except Exception as e:
             print("Email/PDF jo'natishda xatolik:", e)
+    else:
+        try:
+            await send_email(
+                user_email, user_name, "IELTS Mock — Writing javobingiz qabul qilindi",
+                build_result_email(user_name, "writing", None, None, None)
+            )
+            if chat_id:
+                from telegram import notify_user_result_ready
+                await notify_user_result_ready(chat_id, user_name, "writing", None, None, None)
+        except Exception as e:
+            print("Writing xabarnomasida xatolik:", e)
 
     return {
         "result_id": result_row["id"],
@@ -500,7 +541,8 @@ async def get_results(email: str, current_user: dict = Depends(get_current_user)
             "section": r["section"],
             "score": r["score"],
             "total": r["total"],
-            "band": get_band_score(r["score"], r["total"], r["section"]),
+            "band": get_band_score(r["score"], r["total"], r["section"])
+                    if r["score"] is not None and r["total"] is not None else None,
             "submitted_at": r["submitted_at"].isoformat()
         }
         for r in rows
@@ -639,8 +681,10 @@ async def get_results_pdf(email: str, current_user: dict = Depends(get_current_u
     for r in rows:
         if r["section"] == "writing":
             band = float(r["writing_band"]) if r["writing_band"] is not None else None
-        else:
+        elif r["score"] is not None and r["total"] is not None:
             band = get_band_score(r["score"], r["total"], r["section"])
+        else:
+            band = None
         sections.append({
             "section": r["section"],
             "score": r["score"],
@@ -682,10 +726,11 @@ async def admin_results(_: None = Depends(require_admin)):
     async with db.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT id, full_name, email, section, score, total,
-                   writing_band, writing_feedback, notified, submitted_at
-            FROM exam_results
-            ORDER BY submitted_at DESC
+            SELECT er.id, er.full_name, er.email, er.section, er.score, er.total,
+                   er.writing_band, er.writing_feedback, er.notified, er.submitted_at,
+                   COALESCE(t.title, er.test_slug, 'IELTS Mock SS') AS test_title
+            FROM exam_results er LEFT JOIN tests t ON t.id=er.test_id
+            ORDER BY er.submitted_at DESC
             LIMIT 300
             """
         )
@@ -697,11 +742,13 @@ async def admin_results(_: None = Depends(require_admin)):
                 "full_name": r["full_name"],
                 "email": r["email"],
                 "section": r["section"],
+                "test_title": r["test_title"],
                 "score": r["score"],
                 "total": r["total"],
                 "band": (
                     float(r["writing_band"]) if r["section"] == "writing" and r["writing_band"] is not None
-                    else get_band_score(r["score"], r["total"], r["section"]) if r["section"] != "writing"
+                    else get_band_score(r["score"], r["total"], r["section"])
+                    if r["section"] != "writing" and r["score"] is not None and r["total"] is not None
                     else None
                 ),
                 "writing_feedback": r["writing_feedback"],
@@ -1082,8 +1129,10 @@ async def grade_writing(data: GradeWriting, _: None = Depends(require_admin)):
             for r in rows:
                 if r["section"] == "writing":
                     r_band = float(r["writing_band"]) if r["writing_band"] is not None else None
-                else:
+                elif r["score"] is not None and r["total"] is not None:
                     r_band = get_band_score(r["score"], r["total"], r["section"])
+                else:
+                    r_band = None
                 sections.append({
                     "section": r["section"],
                     "score": r["score"],
@@ -1136,8 +1185,10 @@ async def notify_result(result_id: int, _: None = Depends(require_admin)):
         for r in rows:
             if r["section"] == "writing":
                 r_band = float(r["writing_band"]) if r["writing_band"] is not None else None
-            else:
+            elif r["score"] is not None and r["total"] is not None:
                 r_band = get_band_score(r["score"], r["total"], r["section"])
+            else:
+                r_band = None
             sections.append({
                 "section": r["section"],
                 "score": r["score"],
@@ -1145,7 +1196,7 @@ async def notify_result(result_id: int, _: None = Depends(require_admin)):
                 "band": r_band
             })
 
-    band = get_band_score(row["score"], row["total"], row["section"])
+    band = get_band_score(row["score"], row["total"], row["section"]) if row["score"] is not None and row["total"] is not None else None
     try:
         pdf_bytes = build_result_pdf(row["full_name"], row["email"].lower(), sections)
         html = build_result_email(row["full_name"], row["section"], row["score"], row["total"], band)
@@ -1217,8 +1268,10 @@ async def admin_stats(days: int = 30, _: None = Depends(require_admin)):
         s = r["section"]
         if s == "writing":
             b = float(r["writing_band"]) if r["writing_band"] is not None else None
-        else:
+        elif r["score"] is not None and r["total"] is not None:
             b = get_band_score(r["score"], r["total"], s)
+        else:
+            b = None
             
         if b is not None:
             b_str = str(b)
@@ -1248,7 +1301,7 @@ async def export_results(format: str = "csv", _: None = Depends(require_admin)):
         
     data = []
     for r in rows:
-        b = float(r["writing_band"]) if r["section"] == "writing" and r["writing_band"] is not None else get_band_score(r["score"], r["total"], r["section"]) if r["section"] != "writing" else ""
+        b = float(r["writing_band"]) if r["section"] == "writing" and r["writing_band"] is not None else get_band_score(r["score"], r["total"], r["section"]) if r["section"] != "writing" and r["score"] is not None and r["total"] is not None else ""
         data.append({
             "ID": r["id"],
             "Ism": r["full_name"],

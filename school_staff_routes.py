@@ -225,9 +225,11 @@ async def school_results(staff: dict = Depends(require_any_permission("view_resu
         rows = await conn.fetch(
             """
             SELECT er.id, er.section, er.score, er.total, er.writing_band, er.speaking_band,
+                   COALESCE(t.title, er.test_slug, 'IELTS Mock SS') AS test_title,
                    er.submitted_at, u.id AS student_id, u.full_name, u.email,
                    c.id AS class_id, c.name AS class_name
             FROM exam_results er
+            LEFT JOIN tests t ON t.id=er.test_id
             JOIN users u ON u.email=er.email
             JOIN school_class_students cs ON cs.student_id=u.id AND cs.left_at IS NULL
             JOIN school_classes c ON c.id=cs.class_id

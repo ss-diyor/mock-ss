@@ -292,6 +292,7 @@ table.students-table tr.clickable:hover { background: var(--bg); }
 <script>
 const AUTH_API = '/api/auth';
 const T_API = '/api/teacher';
+const resultEsc = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
 let token = localStorage.getItem('ielts_token');
 let currentUser = null;
 let allStudents = [];
@@ -486,7 +487,7 @@ async function openStudent(id) {
       return `
       <div class="history-row">
         <div>
-          <div>${sectionNames[h.section] || h.section}</div>
+          <div>${sectionNames[h.section] || h.section} · ${resultEsc(h.test_title || 'IELTS Mock SS')}</div>
           <div class="history-date">${date}</div>
         </div>
         <div class="history-band">${bandVal ?? '—'}</div>

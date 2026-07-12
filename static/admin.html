@@ -324,6 +324,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   </div>
   <div class="section-view" id="section-tests">
     <div class="form-card" style="margin-bottom:20px;"><div class="form-card-head">$ tests --upload</div><div class="form-card-body">
+      <div class="alert" style="margin-bottom:12px;">HTML test yakunida <code>window.IELTSMock.submitResult({score, total, answers})</code> chaqirilishi shart. Shunda natija va xabarnomalar saqlanadi.</div>
       <form id="admin-test-form" onsubmit="adminUploadTest(event)">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;"><div><label>Test nomi</label><input name="title" required></div><div><label>Ko‘rinishi</label><select name="visibility" id="admin-test-visibility" class="btn-outline" style="width:100%;padding:10px" onchange="updateAdminTestCenter()"><option value="public">Public</option><option value="organization">Tashkilot uchun</option></select></div><div id="admin-test-center-wrap" style="display:none"><label>Tashkilot</label><select name="center_id" id="admin-test-center" class="btn-outline" style="width:100%;padding:10px"></select></div><div><label>Daqiqa</label><input name="duration_minutes" type="number" min="1" max="360" value="180"></div><div><label>Urinish limiti</label><input name="attempt_limit" type="number" min="1" max="20" value="1"></div></div>
         <div style="margin-top:12px"><label>Izoh</label><input name="description" maxlength="1000"></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:12px"><div><label>Listening HTML</label><input name="listening" type="file" accept=".html"></div><div><label>Reading HTML</label><input name="reading" type="file" accept=".html"></div><div><label>Writing HTML</label><input name="writing" type="file" accept=".html"></div><div><label>Speaking HTML</label><input name="speaking" type="file" accept=".html"></div></div>
@@ -609,8 +610,8 @@ function renderResults() {
     return;
   }
 
-  const sectionIcons = {listening:'🎧', reading:'📖', writing:'✍️'};
-  const sectionNames = {listening:'Listening', reading:'Reading', writing:'Writing'};
+  const sectionIcons = {listening:'🎧', reading:'📖', writing:'✍️', speaking:'🎤'};
+  const sectionNames = {listening:'Listening', reading:'Reading', writing:'Writing', speaking:'Speaking'};
 
   container.innerHTML = filtered.map(r => {
     const date = new Date(r.submitted_at).toLocaleString('uz-UZ', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -641,8 +642,10 @@ function renderResults() {
           </div>
         </div>`;
       }
-    } else {
+    } else if (r.score !== null && r.total !== null) {
       scoreHtml = `<span class="result-score">${r.score}/${r.total}</span><span class="badge">Band ${r.band}</span>`;
+    } else {
+      scoreHtml = `<span class="badge amber">Baholash kutilmoqda</span>`;
     }
 
     if (r.section !== 'writing' || r.band !== null) {
@@ -656,7 +659,7 @@ function renderResults() {
       <div class="result-head">
         <div>
           <div class="result-name">${r.full_name}</div>
-          <div class="result-email">${r.email}</div>
+          <div class="result-email">${adminEsc(r.email)} · ${adminEsc(r.test_title || 'IELTS Mock SS')}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="badge muted">${sectionIcons[r.section]} ${sectionNames[r.section]}</span>

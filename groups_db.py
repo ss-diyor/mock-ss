@@ -279,10 +279,10 @@ async def ensure_center_group_tables():
         await conn.execute("""
             INSERT INTO tests(slug, title, description, test_type, visibility, duration_minutes, difficulty, status, legacy_url)
             VALUES
-              ('public-listening-demo', 'IELTS Listening Demo', 'Listening bo\'limi uchun public mock test', 'IELTS Academic', 'public', 30, 'Medium', 'published', '/listening-demo'),
-              ('public-reading-demo', 'IELTS Reading Demo', 'Reading bo\'limi uchun public mock test', 'IELTS Academic', 'public', 60, 'Medium', 'published', '/reading-demo'),
-              ('public-writing-demo', 'IELTS Writing Demo', 'Writing bo\'limi uchun public mock test', 'IELTS Academic', 'public', 60, 'Medium', 'published', '/writing-demo'),
-              ('public-speaking-demo', 'IELTS Speaking Demo', 'Speaking bo\'limi uchun public mock test', 'IELTS Academic', 'public', 14, 'Medium', 'published', '/speaking-demo')
+              ('public-listening-demo', 'IELTS Listening Demo', 'Listening bo''limi uchun public mock test', 'IELTS Academic', 'public', 30, 'Medium', 'published', '/listening-demo'),
+              ('public-reading-demo', 'IELTS Reading Demo', 'Reading bo''limi uchun public mock test', 'IELTS Academic', 'public', 60, 'Medium', 'published', '/reading-demo'),
+              ('public-writing-demo', 'IELTS Writing Demo', 'Writing bo''limi uchun public mock test', 'IELTS Academic', 'public', 60, 'Medium', 'published', '/writing-demo'),
+              ('public-speaking-demo', 'IELTS Speaking Demo', 'Speaking bo''limi uchun public mock test', 'IELTS Academic', 'public', 14, 'Medium', 'published', '/speaking-demo')
             ON CONFLICT(slug) DO NOTHING
         """)
 

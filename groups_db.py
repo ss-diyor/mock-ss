@@ -227,6 +227,65 @@ async def ensure_center_group_tables():
             ON CONFLICT(code) DO NOTHING
         """)
 
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS tests (
+                id SERIAL PRIMARY KEY,
+                slug TEXT UNIQUE NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                test_type TEXT NOT NULL DEFAULT 'IELTS Academic',
+                visibility TEXT NOT NULL DEFAULT 'private',
+                center_id INTEGER REFERENCES centers(id) ON DELETE CASCADE,
+                duration_minutes INTEGER,
+                difficulty TEXT,
+                attempt_limit INTEGER DEFAULT 1,
+                status TEXT NOT NULL DEFAULT 'draft',
+                legacy_url TEXT,
+                created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS test_html_sections (
+                id SERIAL PRIMARY KEY,
+                test_id INTEGER NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
+                section TEXT NOT NULL,
+                original_filename TEXT NOT NULL,
+                html_compressed BYTEA NOT NULL,
+                html_sha256 TEXT NOT NULL,
+                original_size INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(test_id, section)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS test_assignments (
+                id SERIAL PRIMARY KEY,
+                test_id INTEGER NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
+                center_id INTEGER NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
+                class_id INTEGER REFERENCES school_classes(id) ON DELETE CASCADE,
+                group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+                available_from TIMESTAMP,
+                available_until TIMESTAMP,
+                attempt_limit INTEGER,
+                assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(test_id, center_id, class_id, group_id)
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS tests_catalog_idx ON tests(status, visibility, center_id)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS test_assignments_center_idx ON test_assignments(center_id, test_id)")
+        await conn.execute("""
+            INSERT INTO tests(slug, title, description, test_type, visibility, duration_minutes, difficulty, status, legacy_url)
+            VALUES
+              ('public-listening-demo', 'IELTS Listening Demo', 'Listening bo\'limi uchun public mock test', 'IELTS Academic', 'public', 30, 'Medium', 'published', '/listening-demo'),
+              ('public-reading-demo', 'IELTS Reading Demo', 'Reading bo\'limi uchun public mock test', 'IELTS Academic', 'public', 60, 'Medium', 'published', '/reading-demo'),
+              ('public-writing-demo', 'IELTS Writing Demo', 'Writing bo\'limi uchun public mock test', 'IELTS Academic', 'public', 60, 'Medium', 'published', '/writing-demo'),
+              ('public-speaking-demo', 'IELTS Speaking Demo', 'Speaking bo\'limi uchun public mock test', 'IELTS Academic', 'public', 14, 'Medium', 'published', '/speaking-demo')
+            ON CONFLICT(slug) DO NOTHING
+        """)
+
 
 async def get_center_limits(conn, center_id: int):
     """Markaz uchun effektiv (max_groups, max_students) qiymatlarini qaytaradi.

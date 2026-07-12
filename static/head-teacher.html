@@ -195,6 +195,7 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
       <button class="section-tab" id="tab-staff" onclick="switchSection('staff')" style="display:none;">Xodimlar</button>
       <button class="section-tab" id="tab-classes" onclick="switchSection('classes')" style="display:none;">Sinflar</button>
       <button class="section-tab" id="tab-subjects" onclick="switchSection('subjects')" style="display:none;">Fanlar</button>
+      <button class="section-tab" id="tab-tests" onclick="switchSection('tests')">Testlar</button>
       <button class="section-tab" id="tab-branding" onclick="switchSection('branding')">Brending</button>
       <button class="section-tab" id="tab-subscription" onclick="switchSection('subscription')" style="display:none;">Obuna</button>
     </div>
@@ -303,6 +304,25 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
       </div>
       <div id="subjects-list"></div>
       <div id="assignments-list"></div>
+    </div>
+
+    <!-- TESTS -->
+    <div class="section-view" id="section-tests">
+      <div class="dash-section"><div class="dash-section-head"><span>$ test --upload</span></div><div class="dash-section-body">
+        <form id="test-upload-form" onsubmit="uploadOrganizationTest(event)">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;">
+            <div><label>Test nomi</label><input name="title" required maxlength="160" placeholder="IELTS Full Mock 1"></div>
+            <div><label>Test turi</label><select name="test_type" class="btn-outline" style="width:100%;padding:10px;"><option>IELTS Academic</option><option>IELTS General</option><option>Ichki imtihon</option></select></div>
+            <div><label>Davomiyligi (daqiqa)</label><input name="duration_minutes" type="number" min="1" max="360" value="180"></div>
+            <div><label>Urinish limiti</label><input name="attempt_limit" type="number" min="1" max="20" value="1"></div>
+          </div>
+          <div style="margin-top:12px;"><label>Izoh</label><input name="description" maxlength="1000" placeholder="O'quvchilar uchun qisqa ma'lumot"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:12px;">
+            <div><label>Listening HTML</label><input name="listening" type="file" accept=".html,text/html"></div><div><label>Reading HTML</label><input name="reading" type="file" accept=".html,text/html"></div><div><label>Writing HTML</label><input name="writing" type="file" accept=".html,text/html"></div><div><label>Speaking HTML</label><input name="speaking" type="file" accept=".html,text/html"></div>
+          </div>
+          <div id="test-upload-error" class="alert danger" style="display:none;margin-top:12px;"></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button class="btn-primary" id="test-upload-btn" type="submit">Draft saqlash</button></div>
+        </form>
+      </div></div><div id="organization-tests"></div><div id="organization-tests-empty" class="empty-state" style="display:none;">Hali test yuklanmagan</div>
     </div>
 
     <!-- BRANDING -->
@@ -431,6 +451,7 @@ function afterAuthResolved() {
   showView('view-dashboard');
   loadCenter();
   loadGroups();
+  loadOrganizationTests();
   loadBillingStatus();
 }
 
@@ -791,6 +812,7 @@ function switchSection(which) {
   document.getElementById('tab-staff').classList.toggle('active', which === 'staff');
   document.getElementById('tab-classes').classList.toggle('active', which === 'classes');
   document.getElementById('tab-subjects').classList.toggle('active', which === 'subjects');
+  document.getElementById('tab-tests').classList.toggle('active', which === 'tests');
   document.getElementById('tab-branding').classList.toggle('active', which === 'branding');
   document.getElementById('tab-subscription').classList.toggle('active', which === 'subscription');
   document.getElementById('section-groups').classList.toggle('active', which === 'groups');
@@ -798,6 +820,7 @@ function switchSection(which) {
   document.getElementById('section-staff').classList.toggle('active', which === 'staff');
   document.getElementById('section-classes').classList.toggle('active', which === 'classes');
   document.getElementById('section-subjects').classList.toggle('active', which === 'subjects');
+  document.getElementById('section-tests').classList.toggle('active', which === 'tests');
   document.getElementById('section-branding').classList.toggle('active', which === 'branding');
   document.getElementById('section-subscription').classList.toggle('active', which === 'subscription');
   if (which === 'stats') {
@@ -805,6 +828,19 @@ function switchSection(which) {
     loadTrend();
   }
 }
+
+async function loadOrganizationTests() {
+  const box=document.getElementById('organization-tests'),empty=document.getElementById('organization-tests-empty');
+  try { const rows=await apiCall('/api/tests','/mine'); empty.style.display=rows.length?'none':'';
+    box.innerHTML=rows.map(t=>`<div class="dash-section"><div class="dash-section-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="flex:1;min-width:220px;"><strong>${escapeHtml(t.title)}</strong><div style="font:11px var(--mono);color:var(--muted);margin-top:5px;">${escapeHtml((t.sections||[]).join(', ')||'section yo‘q')} · ${t.duration_minutes} daqiqa</div></div><span class="badge ${t.status==='published'?'success':'muted'}">${t.status==='published'?'Publish qilingan':'Draft'}</span>${t.status==='draft'?`<button class="btn-primary btn-sm" onclick="publishOrganizationTest(${t.id})">Publish</button>`:''}</div></div>`).join('');
+  } catch(e) { box.innerHTML=`<div class="empty-state">→ ${escapeHtml(e.message)}</div>`; }
+}
+async function uploadOrganizationTest(event) {
+  event.preventDefault(); const form=event.currentTarget,btn=document.getElementById('test-upload-btn'),err=document.getElementById('test-upload-error');err.style.display='none';btn.disabled=true;
+  try { const res=await fetch('/api/tests',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:new FormData(form)}),data=await res.json();if(!res.ok)throw new Error(data.detail||'Test saqlanmadi');form.reset();form.duration_minutes.value=180;form.attempt_limit.value=1;await loadOrganizationTests(); }
+  catch(e){err.textContent='→ '+e.message;err.style.display='block'} finally{btn.disabled=false}
+}
+async function publishOrganizationTest(id) { try { await apiCall('/api/tests',`/${id}/publish`,{method:'POST'});await loadOrganizationTests(); } catch(e){alert(e.message)} }
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));

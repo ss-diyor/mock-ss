@@ -457,6 +457,10 @@ if (teacherInviteCode) {
 
 function handlePostAuthRedirect() {
   if (!currentUser) return;
+  if (redirectTarget === 'tests') {
+    window.location.href = '/tests';
+    return;
+  }
   
   // O'qituvchilarni avtomatik teacher sahifasiga yo'naltirish
   if (currentUser.role === 'teacher') {

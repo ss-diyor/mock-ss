@@ -28,6 +28,7 @@ from teacher_routes import router as teacher_router
 from school_routes import router as school_router
 from school_staff_routes import router as school_staff_router
 from billing_routes import router as billing_router
+from test_catalog_routes import router as test_catalog_router
 from branding import ORGANIZATION_TYPES, branding_payload
 
 app = FastAPI(title="IELTS Mock SS")
@@ -38,6 +39,7 @@ app.include_router(teacher_router)
 app.include_router(school_router)
 app.include_router(school_staff_router)
 app.include_router(billing_router)
+app.include_router(test_catalog_router)
 
 
 @app.middleware("http")
@@ -1532,6 +1534,14 @@ async def teacher_page():
 async def school_staff_page():
     return FileResponse("static/school-staff.html")
 
+@app.get("/tests")
+async def tests_page():
+    return FileResponse("static/tests.html")
+
+@app.get("/tests/{test_id}/run")
+async def test_runner_page(test_id: int):
+    return FileResponse("static/test-runner.html")
+
 @app.get("/listening-demo")
 async def listening_demo_page():
     return FileResponse("static/Listening-demo.html")
@@ -1543,6 +1553,10 @@ async def reading_demo_page():
 @app.get("/writing-demo")
 async def writing_demo_page():
     return FileResponse("static/writing-demo.html")
+
+@app.get("/speaking-demo")
+async def speaking_demo_page():
+    return FileResponse("static/speaking-demo.html")
 
 @app.get("/register")
 async def register_page():

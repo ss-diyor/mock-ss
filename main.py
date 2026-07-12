@@ -795,7 +795,7 @@ async def admin_list_centers(_: None = Depends(require_admin)):
     async with db.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name, c.subscription_required,
+            SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name, c.subscription_required, c.test_upload_enabled,
                    c.brand_primary_color, c.brand_logo_url,
                    c.is_active, c.max_groups, c.max_students, c.created_at,
                    c.owner_id, owner.full_name AS owner_name, owner.email AS owner_email,
@@ -816,6 +816,7 @@ async def admin_list_centers(_: None = Depends(require_admin)):
             "id": r["id"], "name": r["name"], "organization_type": r["organization_type"],
             "slug": r["slug"], "brand_name": r["brand_name"],
             "subscription_required": r["subscription_required"],
+            "test_upload_enabled": r["test_upload_enabled"],
             "subscription_status": r["subscription_status"],
             "subscription_period_end": r["current_period_end"].isoformat() if r["current_period_end"] else None,
             "primary_color": r["brand_primary_color"], "logo_url": r["brand_logo_url"],
@@ -828,6 +829,16 @@ async def admin_list_centers(_: None = Depends(require_admin)):
         }
         for r in rows
     ]
+
+
+@app.post("/api/admin/centers/{center_id}/toggle-test-upload")
+async def admin_toggle_test_upload(center_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow("UPDATE centers SET test_upload_enabled=NOT test_upload_enabled WHERE id=$1 RETURNING test_upload_enabled", center_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+    return {"test_upload_enabled": row["test_upload_enabled"]}
 
 
 @app.post("/api/admin/centers/{center_id}/toggle-subscription")

@@ -203,6 +203,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <button class="section-tab active" id="tab-results" onclick="switchSection('results')">Natijalar</button>
     <button class="section-tab" id="tab-users" onclick="switchSection('users')">Foydalanuvchilar</button>
     <button class="section-tab" id="tab-centers" onclick="switchSection('centers')">Tashkilotlar</button>
+    <button class="section-tab" id="tab-tests" onclick="switchSection('tests')">Testlar</button>
     <button class="section-tab" id="tab-subscriptions" onclick="switchSection('subscriptions')">Obuna to'lovlari</button>
   </div>
 
@@ -321,6 +322,15 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <div id="subscription-payments-list"></div>
     <div id="subscription-payments-empty" class="empty-state" style="display:none;">To'lovlar yo'q</div>
   </div>
+  <div class="section-view" id="section-tests">
+    <div class="form-card" style="margin-bottom:20px;"><div class="form-card-head">$ tests --upload</div><div class="form-card-body">
+      <form id="admin-test-form" onsubmit="adminUploadTest(event)">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;"><div><label>Test nomi</label><input name="title" required></div><div><label>Ko‘rinishi</label><select name="visibility" id="admin-test-visibility" class="btn-outline" style="width:100%;padding:10px" onchange="updateAdminTestCenter()"><option value="public">Public</option><option value="organization">Tashkilot uchun</option></select></div><div id="admin-test-center-wrap" style="display:none"><label>Tashkilot</label><select name="center_id" id="admin-test-center" class="btn-outline" style="width:100%;padding:10px"></select></div><div><label>Daqiqa</label><input name="duration_minutes" type="number" min="1" max="360" value="180"></div><div><label>Urinish limiti</label><input name="attempt_limit" type="number" min="1" max="20" value="1"></div></div>
+        <div style="margin-top:12px"><label>Izoh</label><input name="description" maxlength="1000"></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:12px"><div><label>Listening HTML</label><input name="listening" type="file" accept=".html"></div><div><label>Reading HTML</label><input name="reading" type="file" accept=".html"></div><div><label>Writing HTML</label><input name="writing" type="file" accept=".html"></div><div><label>Speaking HTML</label><input name="speaking" type="file" accept=".html"></div></div>
+        <div id="admin-test-error" class="alert danger" style="display:none;margin-top:12px"></div><button class="btn-primary" id="admin-test-upload-btn" style="margin-top:12px">Draft yuklash</button>
+      </form>
+    </div></div><div id="admin-tests-list"></div><div id="admin-tests-empty" class="empty-state" style="display:none">Testlar yo‘q</div>
+  </div>
 </div>
 
 <script>
@@ -401,17 +411,20 @@ function switchSection(which) {
   if (document.getElementById('tab-results')) document.getElementById('tab-results').classList.toggle('active', which === 'results');
   if (document.getElementById('tab-users')) document.getElementById('tab-users').classList.toggle('active', which === 'users');
   if (document.getElementById('tab-centers')) document.getElementById('tab-centers').classList.toggle('active', which === 'centers');
+  if (document.getElementById('tab-tests')) document.getElementById('tab-tests').classList.toggle('active', which === 'tests');
   if (document.getElementById('tab-subscriptions')) document.getElementById('tab-subscriptions').classList.toggle('active', which === 'subscriptions');
 
   if (document.getElementById('section-stats')) document.getElementById('section-stats').classList.toggle('active', which === 'stats');
   if (document.getElementById('section-results')) document.getElementById('section-results').classList.toggle('active', which === 'results');
   if (document.getElementById('section-users')) document.getElementById('section-users').classList.toggle('active', which === 'users');
   if (document.getElementById('section-centers')) document.getElementById('section-centers').classList.toggle('active', which === 'centers');
+  if (document.getElementById('section-tests')) document.getElementById('section-tests').classList.toggle('active', which === 'tests');
   if (document.getElementById('section-subscriptions')) document.getElementById('section-subscriptions').classList.toggle('active', which === 'subscriptions');
 
   if (which === 'users') loadUsers();
   if (which === 'stats') loadStats();
   if (which === 'centers') loadCenters();
+  if (which === 'tests') { loadCenters().then(fillAdminTestCenters); loadAdminTests(); }
   if (which === 'subscriptions') loadSubscriptionPayments();
 }
 
@@ -785,6 +798,7 @@ function renderCenters() {
           <span class="center-stat">🎓 Talabalar: <b>${c.students_count}</b> / ${c.max_students}</span>
           ${ownerHtml}
           <button class="btn-outline btn-sm" onclick="toggleCenterSubscription(${c.id}, this)">${c.subscription_required ? "Obuna talabini o'chirish" : 'Obuna talabini yoqish'}</button>
+          <button class="btn-outline btn-sm" onclick="toggleTestUpload(${c.id}, this)">${c.test_upload_enabled ? "Test yuklashni o'chirish" : 'Test yuklashga ruxsat'}</button>
         </div>
       </div>
       ${!c.owner_id ? `
@@ -853,6 +867,17 @@ async function toggleCenterSubscription(id, btnEl) {
     await loadCenters();
   } catch(e) { alert('Xatolik: ' + e.message); btnEl.disabled=false; }
 }
+
+async function toggleTestUpload(id, btnEl) { btnEl.disabled=true;try{const res=await adminFetch(`/api/admin/centers/${id}/toggle-test-upload`,{method:'POST'}),data=await res.json();if(!res.ok)throw new Error(data.detail||'Xatolik');await loadCenters()}catch(e){alert(e.message);btnEl.disabled=false} }
+
+function fillAdminTestCenters(){const el=document.getElementById('admin-test-center');if(el)el.innerHTML=allCenters.map(c=>`<option value="${c.id}">${adminEsc(c.name)}</option>`).join('')}
+function updateAdminTestCenter(){document.getElementById('admin-test-center-wrap').style.display=document.getElementById('admin-test-visibility').value==='organization'?'':'none'}
+async function adminUploadTest(event){event.preventDefault();const form=event.currentTarget,btn=document.getElementById('admin-test-upload-btn'),err=document.getElementById('admin-test-error'),fd=new FormData(form);if(fd.get('visibility')==='public')fd.delete('center_id');err.style.display='none';btn.disabled=true;try{const res=await adminFetch('/api/tests/admin/upload',{method:'POST',body:fd}),data=await res.json();if(!res.ok)throw new Error(data.detail||'Test yuklanmadi');form.reset();updateAdminTestCenter();await loadAdminTests()}catch(e){err.textContent='→ '+e.message;err.style.display='block'}finally{btn.disabled=false}}
+async function loadAdminTests(){const list=document.getElementById('admin-tests-list'),empty=document.getElementById('admin-tests-empty');list.innerHTML='<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>';try{const res=await adminFetch('/api/tests/admin/all'),rows=await res.json();if(!res.ok)throw new Error(rows.detail||'Testlar yuklanmadi');empty.style.display=rows.length?'none':'';list.innerHTML=rows.map(t=>`<div class="center-card"><div class="center-head"><div><div class="center-name">${adminEsc(t.title)}</div><div class="center-meta">${adminEsc(t.organization_name||(t.visibility==='public'?'Public':'Tashkilotsiz'))} · ${adminEsc((t.sections||[]).join(', '))}</div></div><span class="badge ${t.status==='published'?'green':''}">${adminEsc(t.status)}</span></div><div class="center-body"><div class="center-stats"><button class="btn-outline btn-sm" onclick="adminTestStatus(${t.id},'draft')">Draft</button><button class="btn-outline btn-sm" onclick="adminTestStatus(${t.id},'published')">Publish/tasdiqlash</button><button class="btn-outline btn-sm" onclick="adminTestStatus(${t.id},'archived')">Archive</button><button class="btn-outline btn-sm" onclick="adminEditTest(${t.id})">Tahrirlash</button><button class="btn-outline btn-sm" onclick="adminAssignTest(${t.id})">Tashkilotga biriktirish</button><button class="btn-outline btn-sm" onclick="adminDeleteTest(${t.id})">O‘chirish</button></div></div></div>`).join('');window.adminTestRows=rows}catch(e){list.innerHTML=`<div class="empty-state">→ ${adminEsc(e.message)}</div>`}}
+async function adminTestStatus(id,status){const res=await adminFetch(`/api/tests/admin/${id}/status/${status}`,{method:'POST'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');loadAdminTests()}
+async function adminDeleteTest(id){if(!confirm('Test butunlay o‘chirilsinmi?'))return;const res=await adminFetch(`/api/tests/admin/${id}`,{method:'DELETE'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');loadAdminTests()}
+async function adminAssignTest(id){if(!allCenters.length)await loadCenters();const names=allCenters.map(c=>`${c.id}: ${c.name}`).join('\n'),centerId=Number(prompt(`Tashkilot ID sini kiriting:\n${names}`));if(!centerId)return;const res=await adminFetch(`/api/tests/admin/${id}/assign`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({center_id:centerId})}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');loadAdminTests()}
+async function adminEditTest(id){const t=(window.adminTestRows||[]).find(x=>x.id===id);if(!t)return;const title=prompt('Test nomi:',t.title);if(title===null)return;const description=prompt('Izoh:',t.description||'');if(description===null)return;const res=await adminFetch(`/api/tests/admin/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,description,test_type:t.test_type,visibility:t.visibility,center_id:t.center_id,duration_minutes:t.duration_minutes,difficulty:t.difficulty,attempt_limit:t.attempt_limit})}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');loadAdminTests()}
 
 function adminEsc(value) {
   return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));

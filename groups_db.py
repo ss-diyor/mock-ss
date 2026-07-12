@@ -276,6 +276,7 @@ async def ensure_center_group_tables():
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS tests_catalog_idx ON tests(status, visibility, center_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS test_assignments_center_idx ON test_assignments(center_id, test_id)")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS test_upload_enabled BOOLEAN NOT NULL DEFAULT TRUE")
         await conn.execute("""
             INSERT INTO tests(slug, title, description, test_type, visibility, duration_minutes, difficulty, status, legacy_url)
             VALUES

@@ -1,4 +1,6 @@
 import hashlib
+import hmac
+import os
 import re
 import secrets
 import zlib
@@ -6,6 +8,7 @@ from typing import Optional
 
 import jwt
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from pydantic import BaseModel
 
 from auth import JWT_ALGO, JWT_SECRET, get_current_head_teacher, get_current_user
 from db import get_pool
@@ -22,6 +25,27 @@ UNSAFE_HTML_PATTERNS = (
     (re.compile(r"document\s*\.\s*cookie|\b(?:localStorage|sessionStorage)\b", re.I), "cookie/localStorage mumkin emas"),
     (re.compile(r"\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(", re.I), "tashqi tarmoq chaqiruvlari mumkin emas"),
 )
+
+
+def require_admin(x_admin_secret: str = Header("", alias="X-Admin-Secret")):
+    secret = os.environ.get("ADMIN_SECRET", "")
+    if len(secret) < 32 or not hmac.compare_digest(x_admin_secret, secret):
+        raise HTTPException(status_code=403, detail="Ruxsat yo'q")
+
+
+class AdminTestUpdate(BaseModel):
+    title: str
+    description: str = ""
+    test_type: str = "IELTS Academic"
+    visibility: str = "public"
+    center_id: Optional[int] = None
+    duration_minutes: int = 180
+    difficulty: str = "Medium"
+    attempt_limit: int = 1
+
+
+class AdminTestAssignment(BaseModel):
+    center_id: int
 
 
 async def get_optional_user(authorization: Optional[str] = Header(None)) -> Optional[dict]:
@@ -185,6 +209,9 @@ async def upload_test(
 
     db = await get_pool()
     async with db.acquire() as conn:
+        allowed = await conn.fetchval("SELECT test_upload_enabled FROM centers WHERE id=$1", current_user["center_id"])
+        if not allowed:
+            raise HTTPException(status_code=403, detail="Super-admin test yuklash vakolatini o'chirgan")
         async with conn.transaction():
             slug = f"org-{current_user['center_id']}-{secrets.token_urlsafe(8).lower()}"
             test_id = await conn.fetchval(
@@ -207,6 +234,99 @@ async def upload_test(
     return {"id": test_id, "status": "draft", "message": "Test draft sifatida saqlandi"}
 
 
+@router.get("/admin/all")
+async def admin_all_tests(_: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT t.id,t.title,t.description,t.test_type,t.visibility,t.center_id,t.duration_minutes,
+                   t.difficulty,t.attempt_limit,t.status,t.created_at,c.name AS organization_name,
+                   COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT s.section),NULL),ARRAY[]::text[]) sections,
+                   COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT a.center_id),NULL),ARRAY[]::int[]) assigned_centers
+            FROM tests t LEFT JOIN centers c ON c.id=t.center_id
+            LEFT JOIN test_html_sections s ON s.test_id=t.id LEFT JOIN test_assignments a ON a.test_id=t.id
+            GROUP BY t.id,c.id ORDER BY t.created_at DESC
+        """)
+    return [dict(r) | {"created_at": r["created_at"].isoformat()} for r in rows]
+
+
+@router.post("/admin/upload")
+async def admin_upload_test(
+    title: str=Form(...), description: str=Form(""), test_type: str=Form("IELTS Academic"),
+    visibility: str=Form("public"), center_id: Optional[int]=Form(None), duration_minutes: int=Form(180),
+    difficulty: str=Form("Medium"), attempt_limit: int=Form(1), listening: Optional[UploadFile]=File(None),
+    reading: Optional[UploadFile]=File(None), writing: Optional[UploadFile]=File(None),
+    speaking: Optional[UploadFile]=File(None), _: None=Depends(require_admin)
+):
+    if visibility not in ("public","organization") or (visibility == "organization" and not center_id):
+        raise HTTPException(400, "Visibility yoki tashkilot noto'g'ri")
+    if not title.strip() or not 1 <= duration_minutes <= 360 or not 1 <= attempt_limit <= 20:
+        raise HTTPException(400, "Test ma'lumotlari noto'g'ri")
+    files={k:v for k,v in {"listening":listening,"reading":reading,"writing":writing,"speaking":speaking}.items() if v and v.filename}
+    if not files: raise HTTPException(400,"Kamida bitta HTML section yuklang")
+    validated={}; total=0
+    for section,file in files.items():
+        content=await file.read(MAX_HTML_BYTES+1); total+=len(content)
+        if total>MAX_FULL_MOCK_BYTES: raise HTTPException(413,"Full mock hajmi 20 MB dan oshmasligi kerak")
+        _,compressed,digest=_validate_html_file(file,content);validated[section]=(file.filename,compressed,digest,len(content))
+    db=await get_pool()
+    async with db.acquire() as conn:
+      async with conn.transaction():
+        if center_id and not await conn.fetchval("SELECT 1 FROM centers WHERE id=$1",center_id): raise HTTPException(404,"Tashkilot topilmadi")
+        test_id=await conn.fetchval("""INSERT INTO tests(slug,title,description,test_type,visibility,center_id,duration_minutes,difficulty,attempt_limit,status)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft') RETURNING id""",f"admin-{secrets.token_urlsafe(8).lower()}",title.strip(),description[:1000],test_type[:80],visibility,center_id,duration_minutes,difficulty[:30],attempt_limit)
+        for section,(name,data,digest,size) in validated.items(): await conn.execute("INSERT INTO test_html_sections(test_id,section,original_filename,html_compressed,html_sha256,original_size) VALUES($1,$2,$3,$4,$5,$6)",test_id,section,name,data,digest,size)
+    return {"id":test_id,"status":"draft"}
+
+
+@router.put("/admin/{test_id}")
+async def admin_update_test(test_id:int,data:AdminTestUpdate,_:None=Depends(require_admin)):
+    if data.visibility not in ("public","organization") or (data.visibility=="organization" and not data.center_id): raise HTTPException(400,"Visibility noto'g'ri")
+    if not data.title.strip() or not 1 <= data.duration_minutes <= 360 or not 1 <= data.attempt_limit <= 20: raise HTTPException(400,"Test ma'lumotlari noto'g'ri")
+    db=await get_pool()
+    async with db.acquire() as conn:
+        row=await conn.fetchrow("""UPDATE tests SET title=$2,description=$3,test_type=$4,visibility=$5,center_id=$6,duration_minutes=$7,difficulty=$8,attempt_limit=$9,updated_at=NOW() WHERE id=$1 RETURNING id""",test_id,data.title.strip(),data.description[:1000],data.test_type[:80],data.visibility,data.center_id,data.duration_minutes,data.difficulty[:30],data.attempt_limit)
+    if not row: raise HTTPException(404,"Test topilmadi")
+    return {"message":"Test yangilandi"}
+
+
+@router.post("/admin/{test_id}/status/{status}")
+async def admin_test_status(test_id:int,status:str,_:None=Depends(require_admin)):
+    if status not in ("draft","published","archived"): raise HTTPException(400,"Status noto'g'ri")
+    db=await get_pool()
+    async with db.acquire() as conn:
+        row=await conn.fetchrow("UPDATE tests SET status=$2,updated_at=NOW() WHERE id=$1 RETURNING id",test_id,status)
+    if not row: raise HTTPException(404,"Test topilmadi")
+    return {"status":status}
+
+
+@router.post("/admin/{test_id}/assign")
+async def admin_assign_test(test_id:int,data:AdminTestAssignment,_:None=Depends(require_admin)):
+    db=await get_pool()
+    async with db.acquire() as conn:
+        if not await conn.fetchval("SELECT 1 FROM tests WHERE id=$1",test_id): raise HTTPException(404,"Test topilmadi")
+        if not await conn.fetchval("SELECT 1 FROM centers WHERE id=$1",data.center_id): raise HTTPException(404,"Tashkilot topilmadi")
+        exists=await conn.fetchval("SELECT 1 FROM test_assignments WHERE test_id=$1 AND center_id=$2 AND class_id IS NULL AND group_id IS NULL",test_id,data.center_id)
+        if not exists: await conn.execute("INSERT INTO test_assignments(test_id,center_id) VALUES($1,$2)",test_id,data.center_id)
+    return {"message":"Test biriktirildi"}
+
+
+@router.delete("/admin/{test_id}/assign/{center_id}")
+async def admin_unassign_test(test_id:int,center_id:int,_:None=Depends(require_admin)):
+    db=await get_pool()
+    async with db.acquire() as conn: await conn.execute("DELETE FROM test_assignments WHERE test_id=$1 AND center_id=$2",test_id,center_id)
+    return {"message":"Biriktirish olib tashlandi"}
+
+
+@router.delete("/admin/{test_id}")
+async def admin_delete_test(test_id:int,_:None=Depends(require_admin)):
+    db=await get_pool()
+    async with db.acquire() as conn:
+        result=await conn.execute("DELETE FROM tests WHERE id=$1",test_id)
+    if result.endswith("0"): raise HTTPException(404,"Test topilmadi")
+    return {"message":"Test o'chirildi"}
+
+
 @router.post("/{test_id}/publish")
 async def publish_test(test_id: int, current_user: dict = Depends(get_current_head_teacher)):
     db = await get_pool()
@@ -218,14 +338,14 @@ async def publish_test(test_id: int, current_user: dict = Depends(get_current_he
             raise HTTPException(status_code=400, detail="Testsiz section fayli yo'q")
         row = await conn.fetchrow(
             """
-            UPDATE tests SET status='published', updated_at=NOW()
+            UPDATE tests SET status='pending', updated_at=NOW()
             WHERE id=$1 AND center_id=$2 RETURNING id
             """,
             test_id, current_user["center_id"]
         )
     if not row:
         raise HTTPException(status_code=404, detail="Test topilmadi")
-    return {"message": "Test publish qilindi"}
+    return {"message": "Test super-adminga tasdiqlash uchun yuborildi", "status": "pending"}
 
 
 @router.get("/{test_id}")

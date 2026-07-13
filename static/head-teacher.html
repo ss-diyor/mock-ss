@@ -308,6 +308,14 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
 
     <!-- TESTS -->
     <div class="section-view" id="section-tests">
+      <div class="dash-section"><div class="dash-section-head"><span>$ tests --schedule</span></div><div class="dash-section-body">
+        <div style="display:grid;grid-template-columns:2fr 1fr 2fr 1.5fr 1.5fr 1fr;gap:10px;align-items:end">
+          <div><label>Test</label><select id="schedule-test" class="btn-outline" style="width:100%;padding:10px"></select></div>
+          <div><label>Kimga</label><select id="schedule-target-type" class="btn-outline" style="width:100%;padding:10px" onchange="updateScheduleTargets()"><option value="organization">Barchaga</option><option value="group">Guruhga</option><option value="class">Sinfga</option></select></div>
+          <div id="schedule-target-wrap" style="display:none"><label>Guruh/sinf</label><select id="schedule-target" class="btn-outline" style="width:100%;padding:10px"></select></div>
+          <div><label>Boshlanish</label><input id="schedule-from" type="datetime-local"></div><div><label>Tugash</label><input id="schedule-until" type="datetime-local"></div><div><label>Urinish</label><input id="schedule-attempts" type="number" min="1" max="20" value="1"></div>
+        </div><button class="btn-primary" style="margin-top:12px" onclick="createTestSchedule()">Rejalashtirish</button><div id="test-schedules" style="margin-top:14px"></div>
+      </div></div>
       <div class="dash-section"><div class="dash-section-head"><span>$ test-card --create-soon</span></div><div class="dash-section-body" style="display:flex;gap:8px"><input id="org-card-title" placeholder="Test karta nomi"><input id="org-card-description" placeholder="Izoh"><button class="btn-primary" onclick="createOrganizationCard()">+ Soon karta</button></div></div>
       <div class="dash-section"><div class="dash-section-head"><span>$ test --upload</span></div><div class="dash-section-body">
         <div class="alert" style="margin-bottom:12px;">HTML test yakunida <code>window.IELTSMock.submitResult({score, total, answers})</code> chaqirilishi shart. Shunda natija va xabarnomalar saqlanadi.</div>
@@ -454,6 +462,7 @@ function afterAuthResolved() {
   loadCenter();
   loadGroups();
   loadOrganizationTests();
+  loadTestSchedules();
   loadBillingStatus();
 }
 
@@ -856,6 +865,19 @@ async function loadOrganizationTests() {
     box.innerHTML=rows.map(t=>`<div class="dash-section"><div class="dash-section-body"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="flex:1;min-width:220px;"><strong>${escapeHtml(t.title)}</strong><div style="font:11px var(--mono);color:var(--muted);margin-top:5px;">${escapeHtml((t.sections||[]).join(', ')||'section yo‘q')}</div></div><span class="badge ${t.status==='published'?'success':'muted'}">${t.status==='published'?'Tasdiqlangan':t.status==='pending'?'Tasdiqlash kutilmoqda':t.status==='planned'?'Soon':'Draft'}</span>${t.status==='draft'?`<button class="btn-primary btn-sm" onclick="publishOrganizationTest(${t.id})">Tasdiqlashga yuborish</button>`:''}</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">${['listening','reading','writing','speaking'].map(s=>`<div><label>${s}</label><input id="org-${t.id}-${s}" type="file" accept=".html"></div>`).join('')}</div><button class="btn-outline btn-sm" style="margin-top:10px" onclick="attachOrganizationSections(${t.id})">Fayllarni biriktirish/almashtirish</button></div></div>`).join('');
   } catch(e) { box.innerHTML=`<div class="empty-state">→ ${escapeHtml(e.message)}</div>`; }
 }
+let schedulableTests=[],scheduleGroups=[],scheduleClasses=[],schedules=[];
+async function loadTestSchedules(){
+  try{
+    const requests=[apiCall('/api/tests','/manage/schedulable'),apiCall(HT_API,'/groups'),apiCall('/api/tests','/manage/schedules')];
+    try{scheduleClasses=await apiCall('/api/school','/classes')}catch{scheduleClasses=[]}
+    [schedulableTests,scheduleGroups,schedules]=await Promise.all(requests);
+    document.getElementById('schedule-test').innerHTML=schedulableTests.map(t=>`<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('')||'<option value="">Publish qilingan test yo‘q</option>';updateScheduleTargets();
+    document.getElementById('test-schedules').innerHTML=schedules.map(s=>`<div class="roster-row"><span><b>${escapeHtml(s.title)}</b> · ${escapeHtml(s.group_name||s.class_name||'Barcha o‘quvchilar')}<small style="display:block;color:var(--muted)">${s.available_from?new Date(s.available_from).toLocaleString('uz-UZ'):'Hozirdan'} → ${s.available_until?new Date(s.available_until).toLocaleString('uz-UZ'):'Cheklanmagan'} · ${s.attempt_limit||'test default'} urinish</small></span><button class="btn-outline btn-sm danger" onclick="deleteTestSchedule(${s.id})">Olib tashlash</button></div>`).join('')||'<div class="empty-state">Rejalashtirilgan testlar yo‘q</div>';
+  }catch(e){document.getElementById('test-schedules').innerHTML=`<div class="alert danger">${escapeHtml(e.message)}</div>`}
+}
+function updateScheduleTargets(){const type=document.getElementById('schedule-target-type').value,wrap=document.getElementById('schedule-target-wrap'),select=document.getElementById('schedule-target');wrap.style.display=type==='organization'?'none':'';const rows=type==='group'?scheduleGroups:type==='class'?scheduleClasses:[];select.innerHTML=rows.map(x=>`<option value="${x.id}">${escapeHtml(x.name)}${x.academic_year?' · '+escapeHtml(x.academic_year):''}</option>`).join('')}
+async function createTestSchedule(){const type=document.getElementById('schedule-target-type').value,testId=Number(document.getElementById('schedule-test').value),targetId=type==='organization'?null:Number(document.getElementById('schedule-target').value),from=document.getElementById('schedule-from').value,until=document.getElementById('schedule-until').value,attempts=Number(document.getElementById('schedule-attempts').value);if(!testId||type!=='organization'&&!targetId)return alert('Test va guruh/sinfni tanlang');try{await apiCall('/api/tests','/manage/schedules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({test_id:testId,target_type:type,target_id:targetId,available_from:from?new Date(from).toISOString():null,available_until:until?new Date(until).toISOString():null,attempt_limit:attempts||null})});await loadTestSchedules()}catch(e){alert(e.message)}}
+async function deleteTestSchedule(id){if(!confirm('Test rejasi olib tashlansinmi?'))return;try{await apiCall('/api/tests',`/manage/schedules/${id}`,{method:'DELETE'});await loadTestSchedules()}catch(e){alert(e.message)}}
 async function createOrganizationCard(){const title=document.getElementById('org-card-title').value.trim(),description=document.getElementById('org-card-description').value.trim();if(!title)return;try{await apiCall('/api/tests','/manage/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,description,visibility:'organization',card_order:100})});document.getElementById('org-card-title').value='';await loadOrganizationTests()}catch(e){alert(e.message)}}
 async function attachOrganizationSections(id){const fd=new FormData();['listening','reading','writing','speaking'].forEach(s=>{const f=document.getElementById(`org-${id}-${s}`).files[0];if(f)fd.append(s,f)});try{const res=await fetch(`/api/tests/manage/${id}/sections`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd}),data=await res.json();if(!res.ok)throw new Error(data.detail||'Fayllar biriktirilmadi');await loadOrganizationTests()}catch(e){alert(e.message)}}
 async function uploadOrganizationTest(event) {

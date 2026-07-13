@@ -28,7 +28,7 @@ from teacher_routes import router as teacher_router
 from school_routes import router as school_router
 from school_staff_routes import router as school_staff_router
 from billing_routes import router as billing_router
-from test_catalog_routes import router as test_catalog_router
+from test_catalog_routes import router as test_catalog_router, _can_access_test
 from branding import ORGANIZATION_TYPES, branding_payload
 
 app = FastAPI(title="IELTS Mock SS")
@@ -151,6 +151,7 @@ async def startup():
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_id INTEGER REFERENCES tests(id) ON DELETE SET NULL")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_slug TEXT")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_mode TEXT")
+        await conn.execute("ALTER TABLE exam_sessions ADD COLUMN IF NOT EXISTS test_id INTEGER REFERENCES tests(id) ON DELETE SET NULL")
 
 
 # ─── Models ───────────────────────────────────────────────────────────────────
@@ -158,6 +159,7 @@ async def startup():
 class StartSession(BaseModel):
     full_name: str
     email: str
+    test_id: Optional[int] = None
 
 
 class SubmitResult(BaseModel):
@@ -278,14 +280,39 @@ async def start_session(data: StartSession, current_user: dict = Depends(get_cur
 
     db = await get_pool()
     async with db.acquire() as conn:
+        if data.test_id:
+            if not await _can_access_test(conn, data.test_id, current_user):
+                raise HTTPException(status_code=403, detail="Bu test sizga biriktirilmagan yoki muddati kelmagan")
+            limit = await conn.fetchval(
+                """
+                SELECT COALESCE((
+                  SELECT a.attempt_limit FROM test_assignments a
+                  WHERE a.test_id=t.id AND a.center_id=$2
+                    AND (a.available_from IS NULL OR a.available_from<=NOW())
+                    AND (a.available_until IS NULL OR a.available_until>=NOW())
+                    AND (a.group_id=$3 OR EXISTS (
+                      SELECT 1 FROM school_class_students cs WHERE cs.class_id=a.class_id AND cs.student_id=$4 AND cs.left_at IS NULL
+                    ) OR (a.group_id IS NULL AND a.class_id IS NULL))
+                  ORDER BY CASE WHEN a.group_id IS NOT NULL OR a.class_id IS NOT NULL THEN 0 ELSE 1 END LIMIT 1
+                ),t.attempt_limit,1) FROM tests t WHERE t.id=$1
+                """,
+                data.test_id,current_user.get("center_id"),current_user.get("group_id"),current_user["id"]
+            )
+            attempts = await conn.fetchval(
+                "SELECT COUNT(*) FROM exam_sessions WHERE email=$1 AND test_id=$2",
+                current_user["email"].strip().lower(), data.test_id
+            )
+            if attempts >= limit:
+                raise HTTPException(status_code=409, detail=f"Urinish limitingiz tugagan ({limit})")
         row = await conn.fetchrow(
             """
-            INSERT INTO exam_sessions (full_name, email)
-            VALUES ($1, $2)
+            INSERT INTO exam_sessions (full_name, email, test_id)
+            VALUES ($1, $2, $3)
             RETURNING id, started_at
             """,
             current_user["full_name"].strip(),
-            current_user["email"].strip().lower()
+            current_user["email"].strip().lower(),
+            data.test_id
         )
     return {
         "session_id": row["id"],
@@ -334,11 +361,13 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
         ):
             raise HTTPException(status_code=404, detail="Test topilmadi yoki publish qilinmagan")
         session_row = await conn.fetchrow(
-            "SELECT id FROM exam_sessions WHERE id = $1 AND email = $2",
+            "SELECT id,test_id FROM exam_sessions WHERE id = $1 AND email = $2",
             data.session_id, user_email
         )
         if not session_row:
             raise HTTPException(status_code=403, detail="Bu sessiyaga ruxsat yo'q")
+        if data.test_id and session_row["test_id"] and data.test_id != session_row["test_id"]:
+            raise HTTPException(status_code=403, detail="Test sessiyasi mos kelmadi")
 
         result_row = await conn.fetchrow(
             """

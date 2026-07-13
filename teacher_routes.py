@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
-from datetime import datetime
+from datetime import datetime, timezone
 
 from db import get_pool
 from auth import get_current_teacher
@@ -229,6 +229,7 @@ async def request_resubmission(student_id: int, result_id: int, data: Resubmissi
     reason = data.reason.strip()
     if not reason or len(reason) > 2000:
         raise HTTPException(status_code=400, detail="Qayta topshirish sababini kiriting")
+    due_at = data.due_at.astimezone(timezone.utc).replace(tzinfo=None) if data.due_at and data.due_at.tzinfo else data.due_at
     db = await get_pool()
     async with db.acquire() as conn:
         group = await _own_active_group_or_error(conn, current_user["id"])
@@ -246,9 +247,9 @@ async def request_resubmission(student_id: int, result_id: int, data: Resubmissi
             INSERT INTO resubmission_requests(result_id,student_id,teacher_id,section,reason,due_at)
             VALUES($1,$2,$3,$4,$5,$6)
             ON CONFLICT(result_id,status) DO UPDATE SET reason=EXCLUDED.reason,due_at=EXCLUDED.due_at,created_at=NOW()
-            """, result_id, student_id, current_user["id"], row["section"], reason, data.due_at
+            """, result_id, student_id, current_user["id"], row["section"], reason, due_at
         )
-    due_text = data.due_at.strftime("%d.%m.%Y %H:%M") if data.due_at else "muddat belgilanmagan"
+    due_text = due_at.strftime("%d.%m.%Y %H:%M UTC") if due_at else "muddat belgilanmagan"
     try:
         from auth import send_email
         await send_email(row["email"], row["full_name"], "IELTS Mock — qayta topshirish",

@@ -4,6 +4,7 @@ import os
 import re
 import secrets
 import zlib
+from datetime import datetime, timezone
 from typing import Optional
 
 import jwt
@@ -57,6 +58,15 @@ class TestCardCreate(BaseModel):
     card_order: int = 100
 
 
+class TestScheduleIn(BaseModel):
+    test_id: int
+    target_type: str = "organization"
+    target_id: Optional[int] = None
+    available_from: Optional[datetime] = None
+    available_until: Optional[datetime] = None
+    attempt_limit: Optional[int] = None
+
+
 async def get_optional_user(authorization: Optional[str] = Header(None)) -> Optional[dict]:
     if not authorization or not authorization.lower().startswith("bearer "):
         return None
@@ -106,7 +116,17 @@ async def _can_access_test(conn, test_id: int, user: dict) -> bool:
         SELECT 1 FROM tests t
         WHERE t.id=$1 AND t.status='published' AND (
           t.visibility='public'
-          OR (t.center_id=$2 AND t.visibility='organization')
+          OR (t.center_id=$2 AND t.visibility='organization' AND (
+            NOT EXISTS (SELECT 1 FROM test_assignments own_a WHERE own_a.test_id=t.id AND own_a.center_id=$2)
+            OR EXISTS (
+              SELECT 1 FROM test_assignments own_a WHERE own_a.test_id=t.id AND own_a.center_id=$2
+                AND (own_a.available_from IS NULL OR own_a.available_from<=NOW())
+                AND (own_a.available_until IS NULL OR own_a.available_until>=NOW())
+                AND ((own_a.class_id IS NULL AND own_a.group_id IS NULL)
+                     OR own_a.group_id=$3
+                     OR EXISTS (SELECT 1 FROM school_class_students own_cs WHERE own_cs.class_id=own_a.class_id AND own_cs.student_id=$4 AND own_cs.left_at IS NULL))
+            )
+          ))
           OR EXISTS (
             SELECT 1 FROM test_assignments a
             WHERE a.test_id=t.id AND a.center_id=$2
@@ -148,7 +168,14 @@ async def public_test_catalog(user: Optional[dict] = Depends(get_optional_user))
             LEFT JOIN centers c ON c.id=t.center_id
             WHERE t.status IN ('published','planned') AND (
               t.visibility='public'
-              OR ($1::integer IS NOT NULL AND t.visibility='organization' AND t.center_id=$1)
+              OR ($1::integer IS NOT NULL AND t.visibility='organization' AND t.center_id=$1 AND (
+                NOT EXISTS (SELECT 1 FROM test_assignments own_a WHERE own_a.test_id=t.id AND own_a.center_id=$1)
+                OR EXISTS (SELECT 1 FROM test_assignments own_a WHERE own_a.test_id=t.id AND own_a.center_id=$1
+                  AND (own_a.available_from IS NULL OR own_a.available_from<=NOW())
+                  AND (own_a.available_until IS NULL OR own_a.available_until>=NOW())
+                  AND ((own_a.class_id IS NULL AND own_a.group_id IS NULL) OR own_a.group_id=$2
+                    OR EXISTS (SELECT 1 FROM school_class_students own_cs WHERE own_cs.class_id=own_a.class_id AND own_cs.student_id=$3 AND own_cs.left_at IS NULL)))
+              ))
               OR ($1::integer IS NOT NULL AND EXISTS (
                 SELECT 1 FROM test_assignments a
                 WHERE a.test_id=t.id AND a.center_id=$1
@@ -182,6 +209,82 @@ async def my_tests(current_user: dict = Depends(get_current_head_teacher)):
             current_user["center_id"]
         )
     return [dict(row) | {"created_at": row["created_at"].isoformat()} for row in rows]
+
+
+@router.get("/manage/schedulable")
+async def organization_schedulable_tests(current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id,title,visibility,center_id,attempt_limit
+            FROM tests WHERE status='published' AND visibility='organization' AND center_id=$1
+            ORDER BY card_order,title
+            """, current_user["center_id"]
+        )
+    return [dict(row) for row in rows]
+
+
+@router.get("/manage/schedules")
+async def organization_test_schedules(current_user: dict = Depends(get_current_head_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT a.id,a.test_id,t.title,a.group_id,g.name AS group_name,a.class_id,c.name AS class_name,
+                   a.available_from,a.available_until,a.attempt_limit,a.created_at
+            FROM test_assignments a JOIN tests t ON t.id=a.test_id
+            LEFT JOIN groups g ON g.id=a.group_id LEFT JOIN school_classes c ON c.id=a.class_id
+            WHERE a.center_id=$1 ORDER BY a.created_at DESC
+            """, current_user["center_id"]
+        )
+    return [dict(r) | {
+        "available_from": r["available_from"].isoformat() if r["available_from"] else None,
+        "available_until": r["available_until"].isoformat() if r["available_until"] else None,
+        "created_at": r["created_at"].isoformat(),
+    } for r in rows]
+
+
+@router.post("/manage/schedules")
+async def organization_schedule_test(data: TestScheduleIn, current_user: dict = Depends(get_current_head_teacher)):
+    if data.target_type not in {"organization","group","class"}:
+        raise HTTPException(status_code=400, detail="Biriktirish turi noto'g'ri")
+    if data.target_type != "organization" and not data.target_id:
+        raise HTTPException(status_code=400, detail="Guruh yoki sinfni tanlang")
+    available_from = data.available_from.astimezone(timezone.utc).replace(tzinfo=None) if data.available_from and data.available_from.tzinfo else data.available_from
+    available_until = data.available_until.astimezone(timezone.utc).replace(tzinfo=None) if data.available_until and data.available_until.tzinfo else data.available_until
+    if available_from and available_until and available_until <= available_from:
+        raise HTTPException(status_code=400, detail="Tugash vaqti boshlanish vaqtidan keyin bo'lishi kerak")
+    if data.attempt_limit is not None and not 1 <= data.attempt_limit <= 20:
+        raise HTTPException(status_code=400, detail="Urinish limiti 1–20 oralig'ida bo'lishi kerak")
+    group_id = data.target_id if data.target_type == "group" else None
+    class_id = data.target_id if data.target_type == "class" else None
+    db = await get_pool()
+    async with db.acquire() as conn:
+        async with conn.transaction():
+            test = await conn.fetchrow("SELECT id FROM tests WHERE id=$1 AND status='published' AND visibility='organization' AND center_id=$2", data.test_id, current_user["center_id"])
+            if not test: raise HTTPException(status_code=404, detail="Publish qilingan test topilmadi")
+            if group_id and not await conn.fetchval("SELECT 1 FROM groups WHERE id=$1 AND center_id=$2", group_id, current_user["center_id"]): raise HTTPException(status_code=404, detail="Guruh topilmadi")
+            if class_id and not await conn.fetchval("SELECT 1 FROM school_classes WHERE id=$1 AND center_id=$2", class_id, current_user["center_id"]): raise HTTPException(status_code=404, detail="Sinf topilmadi")
+            existing = await conn.fetchval(
+                "SELECT id FROM test_assignments WHERE test_id=$1 AND center_id=$2 AND group_id IS NOT DISTINCT FROM $3 AND class_id IS NOT DISTINCT FROM $4",
+                data.test_id,current_user["center_id"],group_id,class_id
+            )
+            if existing:
+                await conn.execute("UPDATE test_assignments SET available_from=$1,available_until=$2,attempt_limit=$3,assigned_by=$4 WHERE id=$5", available_from,available_until,data.attempt_limit,current_user["id"],existing)
+                schedule_id=existing
+            else:
+                schedule_id=await conn.fetchval("INSERT INTO test_assignments(test_id,center_id,group_id,class_id,available_from,available_until,attempt_limit,assigned_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",data.test_id,current_user["center_id"],group_id,class_id,available_from,available_until,data.attempt_limit,current_user["id"])
+    return {"id":schedule_id,"message":"Test rejalashtirildi"}
+
+
+@router.delete("/manage/schedules/{schedule_id}")
+async def delete_organization_schedule(schedule_id: int, current_user: dict = Depends(get_current_head_teacher)):
+    db=await get_pool()
+    async with db.acquire() as conn:
+        row=await conn.fetchrow("DELETE FROM test_assignments WHERE id=$1 AND center_id=$2 RETURNING id",schedule_id,current_user["center_id"])
+    if not row: raise HTTPException(status_code=404,detail="Reja topilmadi")
+    return {"message":"Reja olib tashlandi"}
 
 
 @router.post("/manage/cards")

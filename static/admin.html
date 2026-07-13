@@ -323,6 +323,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <div id="subscription-payments-empty" class="empty-state" style="display:none;">To'lovlar yo'q</div>
   </div>
   <div class="section-view" id="section-tests">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn-primary" onclick="openAdminBuilder()">Test konstruktorini ochish →</button></div>
     <div class="form-card" style="margin-bottom:20px;"><div class="form-card-head">$ test-cards --create-soon</div><div class="form-card-body">
       <form id="admin-card-form" onsubmit="adminCreateCard(event)"><div style="display:grid;grid-template-columns:2fr 3fr 1fr;gap:12px"><div><label>Karta nomi</label><input name="title" required placeholder="IELTS Mock SS 4"></div><div><label>Izoh</label><input name="description" placeholder="Yangi full mock test tayyorlanmoqda"></div><div><label>Tartib</label><input name="card_order" type="number" min="0" value="100"></div></div><button class="btn-primary" style="margin-top:12px">+ Soon karta yaratish</button></form>
     </div></div>
@@ -430,6 +431,12 @@ function switchSection(which) {
   if (which === 'centers') loadCenters();
   if (which === 'tests') { loadCenters().then(fillAdminTestCenters); loadAdminTests(); }
   if (which === 'subscriptions') loadSubscriptionPayments();
+}
+
+function openAdminBuilder() {
+  if (!currentSecret) return alert('Avval admin parolini kiriting');
+  sessionStorage.setItem('builder_admin_secret', currentSecret);
+  window.location.href = '/test-builder?admin=1';
 }
 
 let charts = {};

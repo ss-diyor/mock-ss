@@ -2,12 +2,15 @@ import base64
 import html
 import json
 import secrets
+import os
+import hmac
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+import jwt
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
-from auth import get_current_head_teacher
+from auth import JWT_ALGO, JWT_SECRET
 from db import get_pool
 
 
@@ -19,6 +22,28 @@ MEDIA_MIMES = {
     "image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "audio": {"audio/mpeg", "audio/ogg", "audio/webm", "audio/mp4", "audio/wav", "audio/x-wav"},
 }
+
+
+async def get_current_head_teacher(
+    authorization: Optional[str] = Header(None),
+    x_admin_secret: Optional[str] = Header(None, alias="X-Admin-Secret"),
+):
+    admin_secret = os.environ.get("ADMIN_SECRET", "")
+    if x_admin_secret and len(admin_secret) >= 32 and hmac.compare_digest(x_admin_secret, admin_secret):
+        return {"id": None, "center_id": None, "role": "admin", "is_admin": True}
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Kirish talab qilinadi")
+    try:
+        payload = jwt.decode(authorization.split(" ", 1)[1], JWT_SECRET, algorithms=[JWT_ALGO])
+        user_id = int(payload["sub"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token noto'g'ri")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow("SELECT id,center_id,role FROM users WHERE id=$1 AND is_suspended=FALSE", user_id)
+    if not row or row["role"] != "head_teacher" or not row["center_id"]:
+        raise HTTPException(status_code=403, detail="Faqat super-admin yoki tashkilot rahbari uchun")
+    return dict(row) | {"is_admin": False}
 
 
 class BuilderTestIn(BaseModel):
@@ -53,10 +78,13 @@ class ReorderIn(BaseModel):
 
 async def _owned_test(conn, test_id: int, user: dict, editable: bool = False):
     status_filter = " AND status IN ('draft','planned')" if editable else ""
-    row = await conn.fetchrow(
-        f"SELECT id,title,description,test_type,duration_minutes,attempt_limit,status,center_id FROM tests WHERE id=$1 AND center_id=$2{status_filter}",
-        test_id, user["center_id"]
-    )
+    if user.get("is_admin"):
+        row = await conn.fetchrow(f"SELECT id,title,description,test_type,duration_minutes,attempt_limit,status,center_id FROM tests WHERE id=$1{status_filter}", test_id)
+    else:
+        row = await conn.fetchrow(
+            f"SELECT id,title,description,test_type,duration_minutes,attempt_limit,status,center_id FROM tests WHERE id=$1 AND center_id=$2{status_filter}",
+            test_id, user["center_id"]
+        )
     if not row:
         raise HTTPException(status_code=404, detail="Test topilmadi yoki tahrirlashga yopilgan")
     return row
@@ -96,9 +124,9 @@ async def builder_tests(current_user: dict = Depends(get_current_head_teacher)):
                    COUNT(DISTINCT s.id) AS section_count,COUNT(DISTINCT q.id) AS question_count
             FROM tests t LEFT JOIN test_builder_sections s ON s.test_id=t.id
             LEFT JOIN test_builder_questions q ON q.section_id=s.id
-            WHERE t.center_id=$1 AND EXISTS(SELECT 1 FROM test_builder_sections bs WHERE bs.test_id=t.id)
+            WHERE ($1::integer IS NULL OR t.center_id=$1) AND EXISTS(SELECT 1 FROM test_builder_sections bs WHERE bs.test_id=t.id)
             GROUP BY t.id ORDER BY t.created_at DESC
-            """, current_user["center_id"]
+            """, None if current_user.get("is_admin") else current_user["center_id"]
         )
     return [dict(r) | {"created_at": r["created_at"].isoformat()} for r in rows]
 
@@ -114,9 +142,10 @@ async def create_builder_test(data: BuilderTestIn, current_user: dict = Depends(
             test_id = await conn.fetchval(
                 """
                 INSERT INTO tests(slug,title,description,test_type,visibility,center_id,duration_minutes,attempt_limit,status,created_by)
-                VALUES($1,$2,$3,$4,'organization',$5,$6,$7,'draft',$8) RETURNING id
-                """, f"builder-{current_user['center_id']}-{secrets.token_urlsafe(8).lower()}", title,
-                data.description.strip()[:1000], data.test_type.strip()[:80], current_user["center_id"],
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8,'draft',$9) RETURNING id
+                """, f"builder-{current_user.get('center_id') or 'admin'}-{secrets.token_urlsafe(8).lower()}", title,
+                data.description.strip()[:1000], data.test_type.strip()[:80],
+                "public" if current_user.get("is_admin") else "organization", current_user.get("center_id"),
                 data.duration_minutes, data.attempt_limit, current_user["id"]
             )
             for order, section in enumerate(SECTIONS):
@@ -304,7 +333,7 @@ async def duplicate_builder_test(test_id:int,current_user:dict=Depends(get_curre
       async with conn.transaction():
         source=await _owned_test(conn,test_id,current_user)
         new_id=await conn.fetchval("""INSERT INTO tests(slug,title,description,test_type,visibility,center_id,duration_minutes,difficulty,attempt_limit,status,created_by)
-          SELECT $1,title||' — nusxa',description,test_type,'organization',center_id,duration_minutes,difficulty,attempt_limit,'draft',$2 FROM tests WHERE id=$3 RETURNING id""",f"builder-{current_user['center_id']}-{secrets.token_urlsafe(8).lower()}",current_user["id"],test_id)
+          SELECT $1,title||' — nusxa',description,test_type,visibility,center_id,duration_minutes,difficulty,attempt_limit,'draft',$2 FROM tests WHERE id=$3 RETURNING id""",f"builder-{current_user.get('center_id') or 'admin'}-{secrets.token_urlsafe(8).lower()}",current_user["id"],test_id)
         section_map={}
         for s in await conn.fetch("SELECT * FROM test_builder_sections WHERE test_id=$1 ORDER BY sort_order",test_id):
             section_map[s["id"]]=await conn.fetchval("INSERT INTO test_builder_sections(test_id,section,title,instructions,passage,sort_order,settings) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",new_id,s["section"],s["title"],s["instructions"],s["passage"],s["sort_order"],s["settings"])

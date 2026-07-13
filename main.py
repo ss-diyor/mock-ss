@@ -422,6 +422,15 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
 
         await conn.execute(
             """
+            UPDATE resubmission_requests
+            SET status='submitted',replacement_result_id=$1
+            WHERE student_id=$2 AND section=$3 AND status='pending'
+            """,
+            result_row["id"], current_user["id"], data.section
+        )
+
+        await conn.execute(
+            """
             UPDATE exam_sessions
             SET sections_completed = array_append(sections_completed, $1)
             WHERE id = $2
@@ -1113,14 +1122,6 @@ async def admin_subscription_payments(status: Optional[str] = None, _: None = De
             status
         )
 
-        await conn.execute(
-            """
-            UPDATE resubmission_requests
-            SET status='submitted',replacement_result_id=$1
-            WHERE student_id=$2 AND section=$3 AND status='pending'
-            """,
-            result_row["id"], current_user["id"], data.section
-        )
     return [dict(row) | {"created_at": row["created_at"].isoformat()} for row in rows]
 
 

@@ -1,9 +1,11 @@
 import csv
 import io
 import secrets
+import openpyxl
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from db import get_pool
@@ -238,7 +240,60 @@ async def toggle_group(group_id: int, current_user: dict = Depends(get_current_h
     }
 
 
-# ─── Bulk CSV import (roster) ───────────────────────────────────────────────
+# ─── Bulk Excel/CSV import (roster) ─────────────────────────────────────────
+
+ROSTER_IMPORT_HEADERS = ("email", "full_name")
+ROSTER_IMPORT_MAX_BYTES = 5 * 1024 * 1024
+ROSTER_IMPORT_MAX_ROWS = 2000
+
+
+def _read_roster_rows(filename: str, raw: bytes) -> list[dict]:
+    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    if suffix == "csv":
+        try:
+            content = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            content = raw.decode("cp1251", errors="ignore")
+        reader = csv.DictReader(io.StringIO(content))
+        headers = [str(value or "").strip().lower() for value in (reader.fieldnames or [])]
+        if "email" not in headers:
+            raise HTTPException(status_code=400, detail="CSV faylida 'email' ustuni topilmadi")
+        return [{(key or "").strip().lower(): value for key, value in row.items()} for row in reader]
+    if suffix == "xlsx":
+        try:
+            workbook = openpyxl.load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+            sheet = workbook["Oquvchilar"] if "Oquvchilar" in workbook.sheetnames else workbook.active
+            values = sheet.iter_rows(values_only=True)
+            headers = [str(value or "").strip().lower() for value in next(values, [])]
+            if "email" not in headers:
+                raise HTTPException(status_code=400, detail="Excel faylida 'email' ustuni topilmadi")
+            return [dict(zip(headers, row)) for row in values]
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=400, detail="Excel faylini o'qib bo'lmadi")
+    raise HTTPException(status_code=400, detail="Faqat .xlsx yoki .csv fayl qabul qilinadi")
+
+
+@router.get("/groups/import-template")
+async def group_roster_import_template(current_user: dict = Depends(get_current_head_teacher)):
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Oquvchilar"
+    sheet.append(list(ROSTER_IMPORT_HEADERS))
+    sheet.append(["student@example.com", "O'quvchi Ismi"])
+    sheet.freeze_panes = "A2"
+    sheet.auto_filter.ref = "A1:B2"
+    sheet.column_dimensions["A"].width = 32
+    sheet.column_dimensions["B"].width = 28
+    payload = io.BytesIO()
+    workbook.save(payload)
+    payload.seek(0)
+    return StreamingResponse(
+        payload,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="group-students-import.xlsx"'},
+    )
 
 @router.post("/groups/{group_id}/import-students")
 async def import_students(
@@ -246,19 +301,13 @@ async def import_students(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_head_teacher)
 ):
-    if not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Faqat .csv fayl qabul qilinadi")
-
-    raw = await file.read()
-    try:
-        content = raw.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        content = raw.decode("cp1251", errors="ignore")
-
-    reader = csv.DictReader(io.StringIO(content))
-    fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
-    if "email" not in fieldnames:
-        raise HTTPException(status_code=400, detail="CSV faylida 'email' ustuni topilmadi")
+    raw = await file.read(ROSTER_IMPORT_MAX_BYTES + 1)
+    if len(raw) > ROSTER_IMPORT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Fayl hajmi 5 MB dan oshmasligi kerak")
+    rows = _read_roster_rows(file.filename or "", raw)
+    rows = [row for row in rows if any(str(value or "").strip() for value in row.values())]
+    if len(rows) > ROSTER_IMPORT_MAX_ROWS:
+        raise HTTPException(status_code=400, detail=f"Bir importda ko'pi bilan {ROSTER_IMPORT_MAX_ROWS} o'quvchi")
 
     db = await get_pool()
     async with db.acquire() as conn:
@@ -266,8 +315,8 @@ async def import_students(
 
         added, skipped, invalid = 0, 0, 0
         async with conn.transaction():
-            for raw_row in reader:
-                norm = {(k or "").strip().lower(): (v or "").strip() for k, v in raw_row.items()}
+            for raw_row in rows:
+                norm = {(k or "").strip().lower(): str(v or "").strip() for k, v in raw_row.items()}
                 email = norm.get("email", "").lower()
                 full_name = norm.get("full_name") or norm.get("full name") or None
                 if not email or "@" not in email:

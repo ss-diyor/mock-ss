@@ -101,8 +101,10 @@ def build_results_export(
     filename_prefix: str,
 ) -> StreamingResponse:
     fmt = export_format.lower().strip()
+    if fmt == "excel":
+        fmt = "xlsx"
     if fmt not in {"csv", "xlsx"}:
-        raise HTTPException(status_code=400, detail="Format faqat csv yoki xlsx bo'lishi mumkin")
+        raise HTTPException(status_code=400, detail="Format faqat csv, excel yoki xlsx bo'lishi mumkin")
 
     records = normalise_export_rows(rows)
     headers = [title for _, title in EXPORT_COLUMNS]

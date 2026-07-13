@@ -591,10 +591,11 @@ function renderGroupExpandPanel(g) {
     </div>
 
     <div>
-      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ csv --import (talabalar ro'yxati, 'email' ustuni majburiy)</div>
+      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px;">$ excel/csv --import (talabalar ro'yxati, 'email' ustuni majburiy)</div>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <input type="file" accept=".csv" id="csv-input-${g.id}" style="flex:1; min-width:180px;">
+        <input type="file" accept=".xlsx,.csv" id="csv-input-${g.id}" style="flex:1; min-width:180px;">
         <button class="btn-outline btn-sm" onclick="importCSV(${g.id}, this)">⬆ Yuklash</button>
+        <button class="btn-outline btn-sm" onclick="downloadGroupImportTemplate()">Excel shablon</button>
       </div>
       <div id="csv-result-${g.id}" style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:6px;"></div>
     </div>
@@ -759,7 +760,7 @@ function shareInviteLink(groupId) {
 async function importCSV(groupId, btnEl) {
   const fileInput = document.getElementById(`csv-input-${groupId}`);
   const resultEl = document.getElementById(`csv-result-${groupId}`);
-  if (!fileInput.files.length) { alert('CSV fayl tanlang'); return; }
+  if (!fileInput.files.length) { alert('Excel yoki CSV fayl tanlang'); return; }
 
   btnEl.disabled = true;
   btnEl.innerHTML = '<span class="spinner"></span>';
@@ -784,13 +785,31 @@ async function importCSV(groupId, btnEl) {
   }
 }
 
+async function downloadGroupImportTemplate() {
+  try {
+    const res = await fetch(`${HT_API}/groups/import-template`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+    if (!res.ok) throw new Error('Excel shablonini yuklab bo\'lmadi');
+    const blob = await res.blob(), url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url;
+    a.download = 'group-students-import.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
 async function viewRoster(groupId) {
   const box = document.getElementById(`roster-box-${groupId}`);
   box.innerHTML = `<div style="font-family:var(--mono); font-size:11px; color:var(--muted);"><span class="spinner"></span> Yuklanmoqda...</div>`;
   try {
     const rows = await apiCall(HT_API, `/groups/${groupId}/roster`);
     if (!rows.length) {
-      box.innerHTML = `<div style="font-family:var(--mono); font-size:11px; color:var(--muted);">Roster bo'sh — hali CSV import qilinmagan (guruh ochiq invite-code bilan ishlaydi)</div>`;
+      box.innerHTML = `<div style="font-family:var(--mono); font-size:11px; color:var(--muted);">Roster bo'sh — hali Excel/CSV import qilinmagan (guruh ochiq invite-code bilan ishlaydi)</div>`;
       return;
     }
     box.innerHTML = `

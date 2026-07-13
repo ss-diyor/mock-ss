@@ -545,12 +545,6 @@ async function loadStats() {
 }
 
 async function exportResults() {
-  if (!token) return;
-  window.location.href = T_API + '/export/results?format=excel&token=' + token; // Ideally handle token in query param or fetch as blob
-}
-
-// Custom export func
-async function exportResults() {
   try {
     const res = await fetch(T_API + '/export/results?format=excel', {
       headers: { 'Authorization': 'Bearer ' + token }

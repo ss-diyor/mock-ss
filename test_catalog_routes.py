@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from auth import JWT_ALGO, JWT_SECRET, get_current_head_teacher, get_current_user
 from db import get_pool
+from test_builder_routes import render_builder_section
 
 
 router = APIRouter(prefix="/api/tests", tags=["test-catalog"])
@@ -161,6 +162,9 @@ async def public_test_catalog(user: Optional[dict] = Depends(get_optional_user))
                    c.name AS organization_name, c.brand_name, c.brand_logo_url, c.brand_primary_color,
                    COALESCE((SELECT ARRAY_AGG(s.section ORDER BY s.id)
                              FROM test_html_sections s WHERE s.test_id=t.id),
+                            (SELECT ARRAY_AGG(bs.section ORDER BY bs.sort_order)
+                             FROM test_builder_sections bs WHERE bs.test_id=t.id
+                               AND EXISTS(SELECT 1 FROM test_builder_questions bq WHERE bq.section_id=bs.id)),
                             CASE WHEN t.status='planned' OR t.slug='ielts-mock-ss-1'
                                  THEN ARRAY['listening','reading','writing','speaking']::text[]
                                  ELSE ARRAY[]::text[] END) AS sections
@@ -386,7 +390,10 @@ async def admin_all_tests(_: None = Depends(require_admin)):
         rows = await conn.fetch("""
             SELECT t.id,t.slug,t.title,t.description,t.test_type,t.visibility,t.center_id,t.duration_minutes,
                    t.difficulty,t.attempt_limit,t.status,t.card_order,t.legacy_url,t.created_at,c.name AS organization_name,
-                   COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT s.section),NULL),ARRAY[]::text[]) sections,
+                   COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT s.section),NULL),
+                     (SELECT ARRAY_AGG(bs.section ORDER BY bs.sort_order) FROM test_builder_sections bs
+                       WHERE bs.test_id=t.id AND EXISTS(SELECT 1 FROM test_builder_questions bq WHERE bq.section_id=bs.id)),
+                     ARRAY[]::text[]) sections,
                    COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT a.center_id),NULL),ARRAY[]::int[]) assigned_centers
             FROM tests t LEFT JOIN centers c ON c.id=t.center_id
             LEFT JOIN test_html_sections s ON s.test_id=t.id LEFT JOIN test_assignments a ON a.test_id=t.id
@@ -537,7 +544,8 @@ async def publish_test(test_id: int, current_user: dict = Depends(get_current_he
     db = await get_pool()
     async with db.acquire() as conn:
         section_count = await conn.fetchval(
-            "SELECT COUNT(*) FROM test_html_sections WHERE test_id=$1", test_id
+            """SELECT (SELECT COUNT(*) FROM test_html_sections WHERE test_id=$1) +
+                      (SELECT COUNT(*) FROM test_builder_sections s WHERE s.test_id=$1 AND EXISTS(SELECT 1 FROM test_builder_questions q WHERE q.section_id=s.id))""", test_id
         )
         if not section_count:
             raise HTTPException(status_code=400, detail="Testsiz section fayli yo'q")
@@ -569,7 +577,13 @@ async def test_detail(test_id: int, user: Optional[dict] = Depends(get_optional_
             public = await conn.fetchval("SELECT 1 FROM tests WHERE id=$1 AND visibility='public'", test_id)
             if not public:
                 raise HTTPException(status_code=401, detail="Kirish talab qilinadi")
-        sections = await conn.fetch("SELECT section FROM test_html_sections WHERE test_id=$1 ORDER BY id", test_id)
+        sections = await conn.fetch("""
+          SELECT section FROM (
+            SELECT section FROM test_html_sections WHERE test_id=$1
+            UNION SELECT s.section FROM test_builder_sections s
+              WHERE s.test_id=$1 AND EXISTS(SELECT 1 FROM test_builder_questions q WHERE q.section_id=s.id)
+          ) available ORDER BY array_position(ARRAY['listening','reading','writing','speaking']::text[],section)
+        """, test_id)
     return dict(row) | {"sections": [item["section"] for item in sections]}
 
 
@@ -590,7 +604,11 @@ async def test_section_content(
             test_id, section
         )
     if not row:
-        raise HTTPException(status_code=404, detail="Section fayli topilmadi")
+        async with db.acquire() as conn:
+            html = await render_builder_section(conn, test_id, section)
+        if not html:
+            raise HTTPException(status_code=404, detail="Section topilmadi")
+        return {"html": html, "sha256": hashlib.sha256(html.encode()).hexdigest()}
     try:
         html_bytes = zlib.decompress(bytes(row["html_compressed"]))
         if len(html_bytes) > MAX_HTML_BYTES:

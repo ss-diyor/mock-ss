@@ -284,6 +284,51 @@ async def ensure_center_group_tables():
         await conn.execute("ALTER TABLE tests ADD COLUMN IF NOT EXISTS card_order INTEGER NOT NULL DEFAULT 100")
         await conn.execute("ALTER TABLE tests ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
         await conn.execute("CREATE INDEX IF NOT EXISTS test_assignments_center_idx ON test_assignments(center_id, test_id)")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS test_builder_sections (
+                id SERIAL PRIMARY KEY,
+                test_id INTEGER NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
+                section TEXT NOT NULL CHECK(section IN ('listening','reading','writing','speaking')),
+                title TEXT NOT NULL,
+                instructions TEXT,
+                passage TEXT,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(test_id, section)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS test_builder_media (
+                id SERIAL PRIMARY KEY,
+                test_id INTEGER NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
+                kind TEXT NOT NULL CHECK(kind IN ('audio','image')),
+                original_filename TEXT NOT NULL,
+                mime_type TEXT NOT NULL,
+                file_data BYTEA NOT NULL,
+                file_size INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS test_builder_questions (
+                id SERIAL PRIMARY KEY,
+                section_id INTEGER NOT NULL REFERENCES test_builder_sections(id) ON DELETE CASCADE,
+                question_type TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                options JSONB NOT NULL DEFAULT '[]'::jsonb,
+                correct_answer JSONB,
+                points NUMERIC NOT NULL DEFAULT 1,
+                explanation TEXT,
+                media_id INTEGER REFERENCES test_builder_media(id) ON DELETE SET NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS builder_sections_test_idx ON test_builder_sections(test_id,sort_order)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS builder_questions_section_idx ON test_builder_questions(section_id,sort_order)")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS test_upload_enabled BOOLEAN NOT NULL DEFAULT TRUE")
         await conn.execute("""
             INSERT INTO tests(slug,title,description,test_type,visibility,duration_minutes,difficulty,status,legacy_url,card_order)

@@ -29,6 +29,7 @@ from school_routes import router as school_router
 from school_staff_routes import router as school_staff_router
 from billing_routes import router as billing_router
 from test_catalog_routes import router as test_catalog_router, _can_access_test
+from test_builder_routes import router as test_builder_router
 from branding import ORGANIZATION_TYPES, branding_payload
 
 app = FastAPI(title="IELTS Mock SS")
@@ -40,6 +41,7 @@ app.include_router(school_router)
 app.include_router(school_staff_router)
 app.include_router(billing_router)
 app.include_router(test_catalog_router)
+app.include_router(test_builder_router)
 
 
 @app.middleware("http")
@@ -327,6 +329,33 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=403, detail="Emailni tasdiqlash talab qilinadi")
     if data.section not in {"listening", "reading", "writing", "speaking"}:
         raise HTTPException(status_code=400, detail="Bo'lim noto'g'ri")
+    if data.test_id and data.section in {"listening", "reading"} and data.answers is not None:
+        db_score = await get_pool()
+        async with db_score.acquire() as score_conn:
+            questions = await score_conn.fetch(
+                """
+                SELECT q.id,q.question_type,q.correct_answer,q.points
+                FROM test_builder_questions q JOIN test_builder_sections s ON s.id=q.section_id
+                WHERE s.test_id=$1 AND s.section=$2 ORDER BY q.sort_order,q.id
+                """, data.test_id,data.section
+            )
+        if questions:
+            def normal(value): return str(value if value is not None else "").strip().lower()
+            earned,total_points=0.0,0.0
+            for question in questions:
+                expected=question["correct_answer"]
+                if isinstance(expected,str):
+                    try: expected=json.loads(expected)
+                    except json.JSONDecodeError: pass
+                submitted=data.answers.get(str(question["id"]),data.answers.get(question["id"]))
+                points=float(question["points"]);total_points+=points
+                if isinstance(expected,list):
+                    left=sorted(normal(v) for v in (submitted if isinstance(submitted,list) else [submitted]))
+                    right=sorted(normal(v) for v in expected)
+                    if left==right: earned+=points
+                elif normal(submitted)==normal(expected): earned+=points
+            data.score=round(earned)
+            data.total=round(total_points)
     if data.score is not None and data.total is not None:
         if data.total <= 0 or data.score < 0 or data.score > data.total:
             raise HTTPException(status_code=400, detail="Natija qiymatlari noto'g'ri")
@@ -504,6 +533,7 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
 @app.post("/api/submit-speaking")
 async def submit_speaking(
     session_id: int = Form(...),
+    test_id: Optional[int] = Form(None),
     audio: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
@@ -536,24 +566,31 @@ async def submit_speaking(
     db = await get_pool()
     async with db.acquire() as conn:
         session_row = await conn.fetchrow(
-            "SELECT id FROM exam_sessions WHERE id = $1 AND email = $2",
+            "SELECT id,test_id FROM exam_sessions WHERE id = $1 AND email = $2",
             session_id, user_email
         )
         if not session_row:
             raise HTTPException(status_code=403, detail="Bu sessiyaga ruxsat yo'q")
+        if test_id and session_row["test_id"] and test_id != session_row["test_id"]:
+            raise HTTPException(status_code=403, detail="Test sessiyasi mos kelmadi")
 
         # Avval DB ga yozib olamiz (file_id keyinroq yangilanadi)
         result_row = await conn.fetchrow(
             """
             INSERT INTO exam_results
                 (full_name, email, section, duration_seconds, speaking_audio_data,
-                 speaking_audio_mime, speaking_audio_filename)
-            VALUES ($1, $2, 'speaking', NULL, $3, $4, $5)
+                 speaking_audio_mime, speaking_audio_filename,test_id)
+            VALUES ($1, $2, 'speaking', NULL, $3, $4, $5,$6)
             RETURNING id
             """,
-            user_name, user_email, audio_bytes, audio_mime, (audio.filename or "speaking-audio")[:180]
+            user_name, user_email, audio_bytes, audio_mime, (audio.filename or "speaking-audio")[:180],test_id
         )
         result_id = result_row["id"]
+
+        await conn.execute(
+            "UPDATE resubmission_requests SET status='submitted',replacement_result_id=$1 WHERE student_id=$2 AND section='speaking' AND status='pending'",
+            result_id,current_user["id"]
+        )
 
         await conn.execute(
             """
@@ -1917,6 +1954,10 @@ async def school_staff_page():
 @app.get("/tests")
 async def tests_page():
     return FileResponse("static/tests.html")
+
+@app.get("/test-builder")
+async def test_builder_page():
+    return FileResponse("static/test-builder.html")
 
 @app.get("/mock-mode")
 async def mock_mode_page():

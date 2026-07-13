@@ -577,14 +577,25 @@ async function loadPendingWriting() {
     let html = '';
     data.forEach(item => {
       const date = new Date(item.submitted_at).toLocaleString('uz-UZ');
+      const task1 = item.writing_task1 || '';
+      const task2 = item.writing_task2 || '';
+      const task1Words = task1.trim() ? task1.trim().split(/\s+/).length : 0;
+      const task2Words = task2.trim() ? task2.trim().split(/\s+/).length : 0;
       html += `
         <div style="border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px;">
           <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-family:var(--mono); font-size:12px;">
-            <b>${item.full_name} (${item.email})</b>
+            <b>${resultEsc(item.full_name)} (${resultEsc(item.email)})</b>
             <span style="color:var(--muted);">${date}</span>
           </div>
-          <div style="background:var(--bg); padding:12px; border-radius:6px; margin-bottom:12px; font-size:13px; max-height:150px; overflow-y:auto; white-space:pre-wrap;"><b>Task 1:</b>\n${item.writing_task1 || 'Yozilmagan'}</div>
-          <div style="background:var(--bg); padding:12px; border-radius:6px; margin-bottom:12px; font-size:13px; max-height:150px; overflow-y:auto; white-space:pre-wrap;"><b>Task 2:</b>\n${item.writing_task2 || 'Yozilmagan'}</div>
+          <div style="font:11px var(--mono);color:var(--muted);margin-bottom:10px;">${resultEsc(item.test_title || 'IELTS Writing')} · ${resultEsc(item.test_mode || 'test')}</div>
+          <details open style="background:var(--bg);padding:12px;border-radius:6px;margin-bottom:12px;">
+            <summary style="cursor:pointer;font-weight:700;">Task 1 · ${task1Words} so'z</summary>
+            <div style="font-size:13px;max-height:360px;overflow-y:auto;white-space:pre-wrap;margin-top:10px;line-height:1.6;">${task1 ? resultEsc(task1) : 'Yozilmagan'}</div>
+          </details>
+          <details open style="background:var(--bg);padding:12px;border-radius:6px;margin-bottom:12px;">
+            <summary style="cursor:pointer;font-weight:700;">Task 2 · ${task2Words} so'z</summary>
+            <div style="font-size:13px;max-height:480px;overflow-y:auto;white-space:pre-wrap;margin-top:10px;line-height:1.6;">${task2 ? resultEsc(task2) : 'Yozilmagan'}</div>
+          </details>
           
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
             <div><label>Task Achievement</label><input type="number" step="0.5" id="grade-ta-${item.id}" placeholder="0-9"></div>

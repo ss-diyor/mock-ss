@@ -265,6 +265,22 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
     if data.answers and len(json.dumps(data.answers)) > 1_000_000:
         raise HTTPException(status_code=413, detail="Javoblar hajmi juda katta")
 
+    writing_task1, writing_task2 = data.writing_task1, data.writing_task2
+    if data.section == "writing" and data.answers:
+        # Turli HTML test konstruktorlari matnni turli kalitlarda yuborishi mumkin.
+        writing_task1 = writing_task1 or next((data.answers.get(key) for key in (
+            "writing_task1", "task1", "task_1", "part1", "part_1", "answer1"
+        ) if data.answers.get(key)), None)
+        writing_task2 = writing_task2 or next((data.answers.get(key) for key in (
+            "writing_task2", "task2", "task_2", "part2", "part_2", "answer2", "essay"
+        ) if data.answers.get(key)), None)
+    writing_task1 = str(writing_task1).strip() if writing_task1 is not None else None
+    writing_task2 = str(writing_task2).strip() if writing_task2 is not None else None
+    if writing_task1 and len(writing_task1) > 100_000:
+        raise HTTPException(status_code=413, detail="Writing Task 1 matni juda katta")
+    if writing_task2 and len(writing_task2) > 100_000:
+        raise HTTPException(status_code=413, detail="Writing Task 2 matni juda katta")
+
     user_email = current_user["email"].strip().lower()
     user_name = current_user["full_name"].strip()
 
@@ -295,8 +311,8 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
             data.score,
             data.total,
             json.dumps(data.answers) if data.answers else None,
-            data.writing_task1,
-            data.writing_task2,
+            writing_task1,
+            writing_task2,
             data.duration_seconds,
             data.test_id,
             (data.test_slug or "")[:120] or None,

@@ -177,9 +177,16 @@ async def get_pending_writing(current_user: dict = Depends(get_current_teacher))
         group = await _own_active_group_or_error(conn, current_user["id"])
         rows = await conn.fetch(
             """
-            SELECT er.id, er.full_name, er.email, er.writing_task1, er.writing_task2, er.submitted_at, u.id AS student_id
+            SELECT er.id, er.full_name, er.email,
+                   COALESCE(er.writing_task1, er.answers->>'writing_task1', er.answers->>'task1',
+                            er.answers->>'task_1', er.answers->>'part1', er.answers->>'answer1') AS writing_task1,
+                   COALESCE(er.writing_task2, er.answers->>'writing_task2', er.answers->>'task2',
+                            er.answers->>'task_2', er.answers->>'part2', er.answers->>'answer2',
+                            er.answers->>'essay') AS writing_task2,
+                   er.submitted_at, u.id AS student_id, t.title AS test_title, er.test_mode
             FROM exam_results er
             JOIN users u ON u.email = er.email
+            LEFT JOIN tests t ON t.id=er.test_id
             WHERE u.group_id = $1 AND er.section = 'writing' AND er.writing_band IS NULL
             ORDER BY er.submitted_at ASC
             """,
@@ -193,6 +200,8 @@ async def get_pending_writing(current_user: dict = Depends(get_current_teacher))
             "email": r["email"],
             "writing_task1": r["writing_task1"],
             "writing_task2": r["writing_task2"],
+            "test_title": r["test_title"],
+            "test_mode": r["test_mode"],
             "submitted_at": r["submitted_at"].isoformat()
         }
         for r in rows

@@ -299,6 +299,7 @@ let token = localStorage.getItem('ielts_token');
 let currentUser = null;
 let allStudents = [];
 let feedbackTemplates = [];
+const speakingAudioUrls = new Map();
 
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -690,7 +691,9 @@ async function loadPendingSpeaking() {
     let html = '';
     data.forEach(item => {
       const date = new Date(item.submitted_at).toLocaleString('uz-UZ');
-      const telegramLink = item.telegram_file_id
+      const telegramLink = item.audio_available
+        ? `<div style="background:var(--blue-light);padding:12px;border-radius:8px;margin-bottom:12px"><audio id="sp-audio-${item.id}" controls preload="metadata" style="width:100%"></audio><div style="display:flex;gap:8px;margin-top:8px"><input id="sp-comment-${item.id}" placeholder="Joriy vaqtga izoh yozing" style="flex:1"><button class="btn-outline btn-sm" onclick="addTimedComment(${item.id})">Vaqtli izoh</button></div><div id="sp-comments-${item.id}" style="margin-top:8px"></div></div>`
+        : item.telegram_file_id
         ? `<div style="background:var(--blue-light); padding:10px 14px; border-radius:6px; margin-bottom:12px; font-size:12px; font-family:var(--mono);">
              🎤 <b>Audio Telegramda saqlangan</b> — Telegram guruhidan toping va eshiting
            </div>`
@@ -717,10 +720,25 @@ async function loadPendingSpeaking() {
       `;
     });
     body.innerHTML = html;
+    data.filter(item=>item.audio_available).forEach(item=>loadSpeakingAudio(item.id));
   } catch(e) {
     body.innerHTML = `<div class="empty-state">→ ${e.message}</div>`;
   }
 }
+
+function formatAudioTime(seconds){const value=Math.max(0,Math.floor(Number(seconds)||0));return `${String(Math.floor(value/60)).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`}
+async function loadSpeakingAudio(resultId){
+  try{
+    const res=await fetch(`${T_API}/speaking/${resultId}/audio`,{headers:{Authorization:`Bearer ${token}`}});if(!res.ok)throw new Error('Audio yuklanmadi');
+    const old=speakingAudioUrls.get(resultId);if(old)URL.revokeObjectURL(old);const url=URL.createObjectURL(await res.blob());speakingAudioUrls.set(resultId,url);document.getElementById(`sp-audio-${resultId}`).src=url;await loadTimedComments(resultId)
+  }catch(e){const box=document.getElementById(`sp-comments-${resultId}`);if(box)box.innerHTML=`<span style="color:var(--red)">${resultEsc(e.message)}</span>`}
+}
+async function loadTimedComments(resultId){
+  try{const rows=await apiCall(T_API,`/speaking/${resultId}/comments`),box=document.getElementById(`sp-comments-${resultId}`);box.innerHTML=rows.map(c=>`<div class="roster-row"><button class="btn-outline btn-sm" onclick="seekSpeaking(${resultId},${c.timestamp_seconds})">${formatAudioTime(c.timestamp_seconds)}</button><span style="flex:1">${resultEsc(c.comment)}</span><button class="btn-outline btn-sm danger" onclick="deleteTimedComment(${resultId},${c.id})">×</button></div>`).join('')||'<small style="color:var(--muted)">Vaqtli izohlar yo‘q</small>'}catch(e){console.warn(e)}
+}
+function seekSpeaking(resultId,seconds){const audio=document.getElementById(`sp-audio-${resultId}`);if(audio){audio.currentTime=seconds;audio.play().catch(()=>{})}}
+async function addTimedComment(resultId){const audio=document.getElementById(`sp-audio-${resultId}`),input=document.getElementById(`sp-comment-${resultId}`);if(!audio||!input.value.trim())return alert('Izoh yozing');try{await apiCall(T_API,`/speaking/${resultId}/comments`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp_seconds:audio.currentTime||0,comment:input.value})});input.value='';await loadTimedComments(resultId)}catch(e){alert(e.message)}}
+async function deleteTimedComment(resultId,commentId){if(!confirm('Izoh o‘chirilsinmi?'))return;try{await apiCall(T_API,`/speaking/${resultId}/comments/${commentId}`,{method:'DELETE'});await loadTimedComments(resultId)}catch(e){alert(e.message)}}
 
 async function submitSpeakingGrade(studentId, resultId) {
   const criteria=['fc','lr','ga','pr'].map(k=>parseFloat(document.getElementById(`sp-${k}-${resultId}`).value));

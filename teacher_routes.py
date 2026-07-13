@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from datetime import datetime
 
 from db import get_pool
@@ -362,6 +363,78 @@ class GradeSpeakingTeacher(BaseModel):
     pronunciation: Optional[float] = None
 
 
+class TimedCommentIn(BaseModel):
+    timestamp_seconds: float
+    comment: str
+
+
+async def _teacher_speaking_result(conn, result_id: int, teacher_id: int):
+    group = await _own_active_group_or_error(conn, teacher_id)
+    row = await conn.fetchrow(
+        """
+        SELECT er.id,er.speaking_audio_data,er.speaking_audio_mime,er.speaking_audio_filename
+        FROM exam_results er JOIN users u ON u.email=er.email
+        WHERE er.id=$1 AND u.group_id=$2 AND er.section='speaking'
+        """, result_id, group["id"]
+    )
+    return row
+
+
+@router.get("/speaking/{result_id}/audio")
+async def teacher_speaking_audio(result_id: int, current_user: dict = Depends(get_current_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await _teacher_speaking_result(conn, result_id, current_user["id"])
+    if not row or not row["speaking_audio_data"]:
+        raise HTTPException(status_code=404, detail="Audio topilmadi")
+    return Response(content=bytes(row["speaking_audio_data"]), media_type=row["speaking_audio_mime"] or "audio/ogg",
+                    headers={"Cache-Control": "private, no-store", "Content-Disposition": f'inline; filename="speaking-{result_id}"'})
+
+
+@router.get("/speaking/{result_id}/comments")
+async def teacher_speaking_comments(result_id: int, current_user: dict = Depends(get_current_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if not await _teacher_speaking_result(conn, result_id, current_user["id"]):
+            raise HTTPException(status_code=404, detail="Speaking natijasi topilmadi")
+        rows = await conn.fetch(
+            "SELECT id,timestamp_seconds,comment,created_at FROM speaking_timed_comments WHERE result_id=$1 ORDER BY timestamp_seconds,id",
+            result_id
+        )
+    return [dict(r) | {"timestamp_seconds": float(r["timestamp_seconds"]), "created_at": r["created_at"].isoformat()} for r in rows]
+
+
+@router.post("/speaking/{result_id}/comments")
+async def create_teacher_speaking_comment(result_id: int, data: TimedCommentIn, current_user: dict = Depends(get_current_teacher)):
+    comment = data.comment.strip()
+    if not comment or len(comment) > 1000 or data.timestamp_seconds < 0 or data.timestamp_seconds > 7200:
+        raise HTTPException(status_code=400, detail="Izoh yoki audio vaqti noto'g'ri")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if not await _teacher_speaking_result(conn, result_id, current_user["id"]):
+            raise HTTPException(status_code=404, detail="Speaking natijasi topilmadi")
+        row = await conn.fetchrow(
+            "INSERT INTO speaking_timed_comments(result_id,teacher_id,timestamp_seconds,comment) VALUES($1,$2,$3,$4) RETURNING id",
+            result_id, current_user["id"], round(data.timestamp_seconds, 1), comment
+        )
+    return {"id": row["id"], "message": "Vaqtli izoh saqlandi"}
+
+
+@router.delete("/speaking/{result_id}/comments/{comment_id}")
+async def delete_teacher_speaking_comment(result_id: int, comment_id: int, current_user: dict = Depends(get_current_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if not await _teacher_speaking_result(conn, result_id, current_user["id"]):
+            raise HTTPException(status_code=404, detail="Speaking natijasi topilmadi")
+        row = await conn.fetchrow(
+            "DELETE FROM speaking_timed_comments WHERE id=$1 AND result_id=$2 AND teacher_id=$3 RETURNING id",
+            comment_id, result_id, current_user["id"]
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Izoh topilmadi")
+    return {"message": "Izoh o'chirildi"}
+
+
 @router.get("/pending-speaking")
 async def get_pending_speaking(current_user: dict = Depends(get_current_teacher)):
     """O'qituvchi baholanmagan speaking audiolari ro'yxatini oladi."""
@@ -370,7 +443,8 @@ async def get_pending_speaking(current_user: dict = Depends(get_current_teacher)
         group = await _own_active_group_or_error(conn, current_user["id"])
         rows = await conn.fetch(
             """
-            SELECT er.id, er.full_name, er.email, er.speaking_telegram_file_id, er.submitted_at, u.id AS student_id
+            SELECT er.id, er.full_name, er.email, er.speaking_telegram_file_id, er.submitted_at,
+                   (er.speaking_audio_data IS NOT NULL) AS audio_available, u.id AS student_id
             FROM exam_results er
             JOIN users u ON u.email = er.email
             WHERE u.group_id = $1 AND er.section = 'speaking' AND er.speaking_band IS NULL
@@ -385,6 +459,7 @@ async def get_pending_speaking(current_user: dict = Depends(get_current_teacher)
             "full_name": r["full_name"],
             "email": r["email"],
             "telegram_file_id": r["speaking_telegram_file_id"],
+            "audio_available": r["audio_available"],
             "submitted_at": r["submitted_at"].isoformat()
         }
         for r in rows

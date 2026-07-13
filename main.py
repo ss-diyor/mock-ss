@@ -95,6 +95,9 @@ async def startup():
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_lexical_resource NUMERIC")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_grammar_accuracy NUMERIC")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_pronunciation NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_audio_data BYTEA")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_audio_mime TEXT")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_audio_filename TEXT")
 
 
         await conn.execute("""
@@ -133,6 +136,16 @@ async def startup():
                 replacement_result_id INTEGER REFERENCES exam_results(id) ON DELETE SET NULL,
                 created_at TIMESTAMP DEFAULT NOW(),
                 UNIQUE(result_id, status)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS speaking_timed_comments (
+                id SERIAL PRIMARY KEY,
+                result_id INTEGER NOT NULL REFERENCES exam_results(id) ON DELETE CASCADE,
+                teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                timestamp_seconds NUMERIC NOT NULL CHECK(timestamp_seconds >= 0),
+                comment TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
             )
         """)
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_id INTEGER REFERENCES tests(id) ON DELETE SET NULL")
@@ -469,13 +482,24 @@ async def submit_speaking(
     if not current_user.get("email_verified"):
         raise HTTPException(status_code=403, detail="Emailni tasdiqlash talab qilinadi")
 
-    # Fayl hajmini tekshirish: max 25MB (Telegram limiti)
+    # Fayl hajmi va audio turini tekshirish: max 25MB (Telegram limiti)
     MAX_SIZE = 25 * 1024 * 1024
     audio_bytes = await audio.read()
     if len(audio_bytes) > MAX_SIZE:
         raise HTTPException(status_code=413, detail="Audio fayli 25MB dan katta bo'lmasin")
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Audio fayli bo'sh")
+    allowed_audio_types = {"audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav"}
+    audio_mime = (audio.content_type or "").lower()
+    if audio_mime not in allowed_audio_types:
+        raise HTTPException(status_code=400, detail="Audio formati qo'llab-quvvatlanmaydi")
+    looks_like_audio = (
+        audio_bytes.startswith(b"OggS") or audio_bytes.startswith(b"RIFF") or
+        audio_bytes.startswith(b"ID3") or audio_bytes[:2] in {b"\xff\xfb", b"\xff\xf3", b"\xff\xf2"} or
+        audio_bytes.startswith(b"\x1aE\xdf\xa3") or b"ftyp" in audio_bytes[:32]
+    )
+    if not looks_like_audio:
+        raise HTTPException(status_code=400, detail="Audio fayl tarkibi noto'g'ri")
 
     user_email = current_user["email"].strip().lower()
     user_name = current_user["full_name"].strip()
@@ -493,11 +517,12 @@ async def submit_speaking(
         result_row = await conn.fetchrow(
             """
             INSERT INTO exam_results
-                (full_name, email, section, duration_seconds)
-            VALUES ($1, $2, 'speaking', NULL)
+                (full_name, email, section, duration_seconds, speaking_audio_data,
+                 speaking_audio_mime, speaking_audio_filename)
+            VALUES ($1, $2, 'speaking', NULL, $3, $4, $5)
             RETURNING id
             """,
-            user_name, user_email
+            user_name, user_email, audio_bytes, audio_mime, (audio.filename or "speaking-audio")[:180]
         )
         result_id = result_row["id"]
 
@@ -512,7 +537,7 @@ async def submit_speaking(
         )
 
     # Telegram guruhiga audio yuborish
-    from telegram import send_voice_to_telegram, notify_admin_new_speaking, TELEGRAM_SPEAKING_CHAT_ID
+    from telegram import send_voice_to_telegram, notify_admin_new_speaking
     caption = (
         f"🎤 <b>Speaking Audio</b>\n\n"
         f"👤 {user_name}\n"
@@ -520,7 +545,11 @@ async def submit_speaking(
         f"🆔 result_id: {result_id}"
     )
     filename = f"speaking_{result_id}_{user_email.split('@')[0]}.ogg"
-    file_id = await send_voice_to_telegram(audio_bytes, filename, caption)
+    try:
+        file_id = await send_voice_to_telegram(audio_bytes, filename, caption)
+    except Exception as exc:
+        print(f"[Speaking] Telegram yuborishda xatolik: {exc}")
+        file_id = None
 
     if file_id:
         db = await get_pool()
@@ -963,6 +992,40 @@ async def admin_toggle_subscription(center_id: int, _: None = Depends(require_ad
         "subscription_required": center["subscription_required"],
         "message": "Obuna talabi yoqildi" if center["subscription_required"] else "Obuna talabi o'chirildi",
     }
+
+
+async def _own_speaking_result(conn, result_id: int, user_id: int):
+    return await conn.fetchrow(
+        """
+        SELECT er.id,er.speaking_audio_data,er.speaking_audio_mime,er.speaking_audio_filename
+        FROM exam_results er JOIN users u ON u.email=er.email
+        WHERE er.id=$1 AND u.id=$2 AND er.section='speaking'
+        """, result_id, user_id
+    )
+
+
+@app.get("/api/student/speaking/{result_id}/audio")
+async def student_speaking_audio(result_id: int, current_user: dict = Depends(get_current_user)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await _own_speaking_result(conn, result_id, current_user["id"])
+    if not row or not row["speaking_audio_data"]:
+        raise HTTPException(status_code=404, detail="Audio topilmadi")
+    return Response(content=bytes(row["speaking_audio_data"]), media_type=row["speaking_audio_mime"] or "audio/ogg",
+                    headers={"Content-Disposition": f'inline; filename="speaking-{result_id}"'})
+
+
+@app.get("/api/student/speaking/{result_id}/comments")
+async def student_speaking_comments(result_id: int, current_user: dict = Depends(get_current_user)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if not await _own_speaking_result(conn, result_id, current_user["id"]):
+            raise HTTPException(status_code=404, detail="Speaking natijasi topilmadi")
+        rows = await conn.fetch(
+            "SELECT id,timestamp_seconds,comment,created_at FROM speaking_timed_comments WHERE result_id=$1 ORDER BY timestamp_seconds,id",
+            result_id
+        )
+    return [dict(r) | {"timestamp_seconds": float(r["timestamp_seconds"]), "created_at": r["created_at"].isoformat()} for r in rows]
 
 
 @app.get("/api/admin/subscription-payments")

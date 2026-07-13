@@ -735,12 +735,13 @@ async function loadDashboardStats() {
     }
     const sectionNames = { listening: '🎧 Listening', reading: '📖 Reading', writing: '✍️ Writing' };
     histEl.innerHTML = data.history.map(h => `
-      <div class="history-row">
+      <div class="history-row" style="flex-wrap:wrap">
         <div>
           <div class="history-section">${sectionNames[h.section] || h.section} · ${resultEsc(h.test_title || 'IELTS Mock SS')}</div>
           <div class="history-date">${new Date(h.submitted_at).toLocaleDateString('uz-UZ')}</div>
         </div>
-        <div class="history-band">${h.band !== null ? 'Band ' + h.band : (h.section === 'writing' ? 'Tekshirilmoqda' : '—')}</div>
+        <div class="history-band">${h.band !== null ? 'Band ' + h.band : (['writing','speaking'].includes(h.section) ? 'Tekshirilmoqda' : '—')}${h.section==='speaking'?`<br><button class="btn-outline" style="padding:5px 8px;margin-top:5px" onclick="loadSpeakingReview(${h.id})">Audio izohlar</button>`:''}</div>
+        ${h.section==='speaking'?`<div id="speaking-review-${h.id}" style="display:none;flex-basis:100%;padding-top:10px"></div>`:''}
       </div>
     `).join('');
   } catch (e) {
@@ -749,6 +750,14 @@ async function loadDashboardStats() {
     }
   }
 }
+
+const studentSpeakingUrls=new Map();
+async function loadSpeakingReview(resultId){
+  const box=document.getElementById(`speaking-review-${resultId}`);if(box.style.display!=='none'){box.style.display='none';return}box.style.display='block';box.innerHTML='<span class="spinner"></span>';
+  try{const [audioRes,commentsRes]=await Promise.all([fetch(`/api/student/speaking/${resultId}/audio`,{headers:{Authorization:`Bearer ${token}`}}),fetch(`/api/student/speaking/${resultId}/comments`,{headers:{Authorization:`Bearer ${token}`}})]);if(!audioRes.ok)throw new Error('Audio topilmadi');const comments=await commentsRes.json();const old=studentSpeakingUrls.get(resultId);if(old)URL.revokeObjectURL(old);const url=URL.createObjectURL(await audioRes.blob());studentSpeakingUrls.set(resultId,url);box.innerHTML=`<audio id="student-sp-audio-${resultId}" controls src="${url}" style="width:100%"></audio>`+(comments.length?comments.map(c=>`<div class="history-row"><button class="btn-outline" style="padding:5px" onclick="seekStudentSpeaking(${resultId},${c.timestamp_seconds})">${formatStudentAudioTime(c.timestamp_seconds)}</button><span style="flex:1;margin-left:8px">${resultEsc(c.comment)}</span></div>`).join(''):'<small style="color:var(--muted)">Teacher vaqtli izoh qoldirmagan</small>')}catch(e){box.innerHTML=`<span style="color:var(--red)">${resultEsc(e.message)}</span>`}
+}
+function formatStudentAudioTime(seconds){const value=Math.max(0,Math.floor(Number(seconds)||0));return `${String(Math.floor(value/60)).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`}
+function seekStudentSpeaking(resultId,seconds){const audio=document.getElementById(`student-sp-audio-${resultId}`);if(audio){audio.currentTime=seconds;audio.play().catch(()=>{})}}
 
 async function loadResubmissions() {
   try {

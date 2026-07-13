@@ -320,6 +320,11 @@ textarea { resize: vertical; min-height: 80px; }
 
     <div class="dash-stats" id="dash-stats"></div>
 
+    <div class="dash-section" id="resubmissions-section" style="display:none">
+      <div class="dash-section-head"><span>$ qayta-topshirish --tasks</span></div>
+      <div class="dash-section-body" id="resubmissions-body"></div>
+    </div>
+
     <div class="dash-section">
       <div class="dash-section-head"><span>$ bo'limlar --status</span></div>
       <div class="dash-section-body">
@@ -688,6 +693,7 @@ function copyReferral() {
 
 async function loadDashboardStats() {
   try {
+    loadResubmissions();
     const res = await fetch('/api/dashboard', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -742,6 +748,16 @@ async function loadDashboardStats() {
       logout();
     }
   }
+}
+
+async function loadResubmissions() {
+  try {
+    const res=await fetch('/api/student/resubmissions',{headers:{Authorization:`Bearer ${token}`}}),rows=await res.json();
+    const section=document.getElementById('resubmissions-section'),body=document.getElementById('resubmissions-body');
+    if(!res.ok||!rows.length){section.style.display='none';return;}
+    section.style.display='block';
+    body.innerHTML=rows.map(r=>`<div class="history-row"><div><div class="history-section">🔁 ${resultEsc(r.test_title)} · ${resultEsc(r.section)}</div><div class="history-date">${resultEsc(r.reason)}${r.due_at?' · Muddat: '+new Date(r.due_at).toLocaleString('uz-UZ'):''}</div></div><div><span class="badge ${r.status==='pending'?'warning':'success'}">${r.status==='pending'?'Qayta topshirish kerak':resultEsc(r.status)}</span><br><a href="/tests" style="color:var(--blue);font-size:12px">Testlarga o'tish</a></div></div>`).join('');
+  } catch(e) { console.warn(e); }
 }
 
 // ─── PROFILE EDIT ─────────────────────────────────────────

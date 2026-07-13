@@ -252,6 +252,7 @@ table.students-table tr.clickable:hover { background: var(--bg); }
 
     <!-- WRITING -->
     <div class="section-view" id="section-writing">
+      <div class="dash-section"><div class="dash-section-head"><span>Feedback shablonlari</span></div><div class="dash-section-body"><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="tpl-writing-title" placeholder="Shablon nomi" style="max-width:220px"><input id="tpl-writing-content" placeholder="Feedback matni" style="flex:1;min-width:260px"><button class="btn-primary btn-sm" onclick="saveFeedbackTemplate('writing')">Saqlash</button></div><div id="tpl-writing-list" style="margin-top:10px"></div></div></div>
       <div class="dash-section">
         <div class="dash-section-head"><span>Kutilayotgan Insholar</span></div>
         <div class="dash-section-body" id="pending-writing-body"></div>
@@ -260,6 +261,7 @@ table.students-table tr.clickable:hover { background: var(--bg); }
 
     <!-- SPEAKING -->
     <div class="section-view" id="section-speaking">
+      <div class="dash-section"><div class="dash-section-head"><span>Feedback shablonlari</span></div><div class="dash-section-body"><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="tpl-speaking-title" placeholder="Shablon nomi" style="max-width:220px"><input id="tpl-speaking-content" placeholder="Feedback matni" style="flex:1;min-width:260px"><button class="btn-primary btn-sm" onclick="saveFeedbackTemplate('speaking')">Saqlash</button></div><div id="tpl-speaking-list" style="margin-top:10px"></div></div></div>
       <div class="dash-section">
         <div class="dash-section-head"><span>🎤 Kutilayotgan Speaking Audiolar</span>
           <span style="font-size:11px; color:var(--muted);">Telegramdan audio eshiting va baho bering</span>
@@ -296,6 +298,7 @@ const resultEsc = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'
 let token = localStorage.getItem('ielts_token');
 let currentUser = null;
 let allStudents = [];
+let feedbackTemplates = [];
 
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -503,14 +506,14 @@ function closeModal() {
 }
 
 // ─── STATS ────────────────────────────────────────────────
-function switchSection(which) {
+async function switchSection(which) {
   ['students','stats','writing','speaking','leaderboard'].forEach(tab => {
     document.getElementById('tab-' + tab).classList.toggle('active', tab === which);
     document.getElementById('section-' + tab).classList.toggle('active', tab === which);
   });
   if (which === 'stats') loadStats();
-  if (which === 'writing') loadPendingWriting();
-  if (which === 'speaking') loadPendingSpeaking();
+  if (which === 'writing') { await loadFeedbackTemplates(); loadPendingWriting(); }
+  if (which === 'speaking') { await loadFeedbackTemplates(); loadPendingSpeaking(); }
   if (which === 'leaderboard') loadLeaderboard();
 }
 
@@ -564,6 +567,26 @@ async function exportResults() {
 }
 
 // ─── WRITING GRADING ──────────────────────────────────────
+async function loadFeedbackTemplates() {
+  try {
+    feedbackTemplates = await apiCall(T_API, '/feedback-templates');
+    ['writing','speaking'].forEach(section => {
+      const box=document.getElementById(`tpl-${section}-list`); if(!box)return;
+      const rows=feedbackTemplates.filter(t=>t.section===section);
+      box.innerHTML=rows.map(t=>`<span class="badge muted" style="margin-right:6px">${resultEsc(t.title)} <button style="border:0;background:none;cursor:pointer;color:inherit" onclick="deleteFeedbackTemplate(${t.id})">×</button></span>`).join('')||'<span style="color:var(--muted);font-size:12px">Hali shablon yo‘q</span>';
+    });
+  } catch(e) { console.warn(e); }
+}
+async function saveFeedbackTemplate(section) {
+  const title=document.getElementById(`tpl-${section}-title`),content=document.getElementById(`tpl-${section}-content`);
+  if(!title.value.trim()||!content.value.trim())return alert('Nom va feedback matnini kiriting');
+  try{await apiCall(T_API,'/feedback-templates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({section,title:title.value,content:content.value})});title.value='';content.value='';await loadFeedbackTemplates();if(section==='writing')loadPendingWriting();else loadPendingSpeaking()}catch(e){alert(e.message)}
+}
+async function deleteFeedbackTemplate(id){if(!confirm('Shablon o‘chirilsinmi?'))return;try{await apiCall(T_API,`/feedback-templates/${id}`,{method:'DELETE'});await loadFeedbackTemplates()}catch(e){alert(e.message)}}
+function templateOptions(section){return '<option value="">Feedback shabloni...</option>'+feedbackTemplates.filter(t=>t.section===section).map(t=>`<option value="${t.id}">${resultEsc(t.title)}</option>`).join('')}
+function applyFeedbackTemplate(section,resultId,select){const t=feedbackTemplates.find(x=>x.id===Number(select.value));if(!t)return;const input=document.getElementById(section==='writing'?`grade-feed-${resultId}`:`sp-feed-${resultId}`);input.value=input.value?input.value+'\n'+t.content:t.content}
+async function requestResubmission(studentId,resultId){const reason=prompt('Qayta topshirish sababi:');if(!reason)return;const due=prompt('Muddat (YYYY-MM-DD HH:MM), ixtiyoriy:')||null;try{await apiCall(T_API,`/students/${studentId}/resubmit/${resultId}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason,due_at:due?new Date(due).toISOString():null})});alert('O‘quvchiga qayta topshirish vazifasi yuborildi')}catch(e){alert(e.message)}}
+
 async function loadPendingWriting() {
   const body = document.getElementById('pending-writing-body');
   body.innerHTML = `<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>`;
@@ -604,9 +627,11 @@ async function loadPendingWriting() {
             <div><label>Grammar & Accuracy</label><input type="number" step="0.5" id="grade-ga-${item.id}" placeholder="0-9"></div>
           </div>
           
-          <div><label>Feedback</label><input type="text" id="grade-feed-${item.id}" placeholder="Xatolar va maslahatlar"></div>
+          <div><label>Feedback shabloni</label><select class="btn-outline" style="width:100%;padding:9px;margin-bottom:8px" onchange="applyFeedbackTemplate('writing',${item.id},this)">${templateOptions('writing')}</select></div>
+          <div><label>Feedback</label><textarea id="grade-feed-${item.id}" placeholder="Xatolar va maslahatlar" style="width:100%;min-height:90px"></textarea></div>
           
           <div style="margin-top:12px; display:flex; justify-content:flex-end;">
+            <button class="btn-outline btn-sm" onclick="requestResubmission(${item.student_id},${item.id})">Qayta topshirish</button>
             <button class="btn-primary btn-sm" onclick="submitGrade(${item.student_id}, ${item.id})">Baholash</button>
           </div>
         </div>
@@ -679,16 +704,14 @@ async function loadPendingSpeaking() {
             <span style="color:var(--muted);">${date}</span>
           </div>
           ${telegramLink}
-          <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
-            <div style="flex:1; min-width:140px;">
-              <label>Speaking Band (0–9)</label>
-              <input type="number" step="0.5" min="0" max="9" id="sp-band-${item.id}" placeholder="Masalan: 6.5">
-            </div>
-            <div style="flex:2; min-width:200px;">
-              <label>Izoh (ixtiyoriy)</label>
-              <input type="text" id="sp-feed-${item.id}" placeholder="Fluency, pronunciation, vocabulary...">
-            </div>
-            <button class="btn-primary btn-sm" onclick="submitSpeakingGrade(${item.student_id}, ${item.id})">Baholash</button>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">
+            <div><label>Fluency & Coherence</label><input type="number" step="0.5" min="0" max="9" id="sp-fc-${item.id}"></div>
+            <div><label>Lexical Resource</label><input type="number" step="0.5" min="0" max="9" id="sp-lr-${item.id}"></div>
+            <div><label>Grammar Accuracy</label><input type="number" step="0.5" min="0" max="9" id="sp-ga-${item.id}"></div>
+            <div><label>Pronunciation</label><input type="number" step="0.5" min="0" max="9" id="sp-pr-${item.id}"></div>
+          </div><select class="btn-outline" style="width:100%;padding:9px;margin-bottom:8px" onchange="applyFeedbackTemplate('speaking',${item.id},this)">${templateOptions('speaking')}</select>
+          <textarea id="sp-feed-${item.id}" placeholder="Fluency, pronunciation, vocabulary..." style="width:100%;min-height:80px"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn-outline btn-sm" onclick="requestResubmission(${item.student_id},${item.id})">Qayta topshirish</button><button class="btn-primary btn-sm" onclick="submitSpeakingGrade(${item.student_id}, ${item.id})">Baholash</button>
           </div>
         </div>
       `;
@@ -700,7 +723,9 @@ async function loadPendingSpeaking() {
 }
 
 async function submitSpeakingGrade(studentId, resultId) {
-  const bandVal = parseFloat(document.getElementById(`sp-band-${resultId}`).value);
+  const criteria=['fc','lr','ga','pr'].map(k=>parseFloat(document.getElementById(`sp-${k}-${resultId}`).value));
+  if(criteria.some(v=>isNaN(v)||v<0||v>9))return alert('Barcha Speaking mezonlarini 0–9 oralig‘ida baholang');
+  const bandVal=Math.round((criteria.reduce((a,b)=>a+b,0)/4)*2)/2;
   const feedVal = document.getElementById(`sp-feed-${resultId}`).value.trim();
   if (isNaN(bandVal) || bandVal < 0 || bandVal > 9) {
     alert("Band 0 dan 9 gacha bo'lishi kerak!");
@@ -710,7 +735,7 @@ async function submitSpeakingGrade(studentId, resultId) {
     await apiCall(T_API, `/students/${studentId}/grade-speaking/${resultId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ band: bandVal, feedback: feedVal || null })
+      body: JSON.stringify({ band: bandVal, feedback: feedVal || null, fluency_coherence:criteria[0], lexical_resource:criteria[1], grammar_accuracy:criteria[2], pronunciation:criteria[3] })
     });
     loadPendingSpeaking();
   } catch(e) {

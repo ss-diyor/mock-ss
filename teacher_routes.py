@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
 
 from db import get_pool
 from auth import get_current_teacher
@@ -170,6 +171,97 @@ class GradeWritingTeacher(BaseModel):
     lexical_resource: Optional[float] = None
     grammar_accuracy: Optional[float] = None
 
+
+class FeedbackTemplateIn(BaseModel):
+    section: str
+    title: str
+    content: str
+
+
+class ResubmissionIn(BaseModel):
+    reason: str
+    due_at: Optional[datetime] = None
+
+
+@router.get("/feedback-templates")
+async def list_feedback_templates(current_user: dict = Depends(get_current_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT id,section,title,content,created_at FROM feedback_templates WHERE teacher_id=$1 ORDER BY section,title",
+            current_user["id"]
+        )
+    return [dict(r) | {"created_at": r["created_at"].isoformat()} for r in rows]
+
+
+@router.post("/feedback-templates")
+async def create_feedback_template(data: FeedbackTemplateIn, current_user: dict = Depends(get_current_teacher)):
+    section, title, content = data.section.strip().lower(), data.title.strip(), data.content.strip()
+    if section not in {"writing", "speaking"}:
+        raise HTTPException(status_code=400, detail="Bo'lim noto'g'ri")
+    if not title or not content or len(title) > 80 or len(content) > 3000:
+        raise HTTPException(status_code=400, detail="Shablon nomi yoki matni noto'g'ri")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            "INSERT INTO feedback_templates(teacher_id,section,title,content) VALUES($1,$2,$3,$4) RETURNING id",
+            current_user["id"], section, title, content
+        )
+    return {"id": row["id"], "message": "Feedback shabloni saqlandi"}
+
+
+@router.delete("/feedback-templates/{template_id}")
+async def delete_feedback_template(template_id: int, current_user: dict = Depends(get_current_teacher)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            "DELETE FROM feedback_templates WHERE id=$1 AND teacher_id=$2 RETURNING id",
+            template_id, current_user["id"]
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Shablon topilmadi")
+    return {"message": "Shablon o'chirildi"}
+
+
+@router.post("/students/{student_id}/resubmit/{result_id}")
+async def request_resubmission(student_id: int, result_id: int, data: ResubmissionIn, current_user: dict = Depends(get_current_teacher)):
+    reason = data.reason.strip()
+    if not reason or len(reason) > 2000:
+        raise HTTPException(status_code=400, detail="Qayta topshirish sababini kiriting")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        group = await _own_active_group_or_error(conn, current_user["id"])
+        row = await conn.fetchrow(
+            """
+            SELECT er.id,er.section,er.email,u.full_name,u.telegram_chat_id
+            FROM exam_results er JOIN users u ON u.email=er.email
+            WHERE er.id=$1 AND u.id=$2 AND u.group_id=$3 AND er.section IN ('writing','speaking')
+            """, result_id, student_id, group["id"]
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Natija topilmadi")
+        await conn.execute(
+            """
+            INSERT INTO resubmission_requests(result_id,student_id,teacher_id,section,reason,due_at)
+            VALUES($1,$2,$3,$4,$5,$6)
+            ON CONFLICT(result_id,status) DO UPDATE SET reason=EXCLUDED.reason,due_at=EXCLUDED.due_at,created_at=NOW()
+            """, result_id, student_id, current_user["id"], row["section"], reason, data.due_at
+        )
+    due_text = data.due_at.strftime("%d.%m.%Y %H:%M") if data.due_at else "muddat belgilanmagan"
+    try:
+        from auth import send_email
+        await send_email(row["email"], row["full_name"], "IELTS Mock — qayta topshirish",
+                         f"<p><b>{row['section'].title()}</b> ishini qayta topshirishingiz so'raldi.</p><p>{reason}</p><p>Muddat: {due_text}</p>")
+    except Exception:
+        pass
+    if row["telegram_chat_id"]:
+        try:
+            from telegram import send_telegram
+            await send_telegram(row["telegram_chat_id"], f"🔁 <b>Qayta topshirish</b>\n\n{row['section'].title()}\n{reason}\nMuddat: {due_text}")
+        except Exception:
+            pass
+    return {"message": "Qayta topshirish vazifasi yuborildi"}
+
 @router.get("/pending-writing")
 async def get_pending_writing(current_user: dict = Depends(get_current_teacher)):
     db = await get_pool()
@@ -210,6 +302,13 @@ async def get_pending_writing(current_user: dict = Depends(get_current_teacher))
 
 @router.post("/students/{student_id}/grade-writing/{result_id}")
 async def grade_student_writing(student_id: int, result_id: int, data: GradeWritingTeacher, current_user: dict = Depends(get_current_teacher)):
+    criteria = [data.task_achievement, data.coherence_cohesion, data.lexical_resource, data.grammar_accuracy]
+    if any(value is not None and (value < 0 or value > 9) for value in criteria):
+        raise HTTPException(status_code=400, detail="Writing mezonlari 0–9 oralig'ida bo'lishi kerak")
+    if all(value is not None for value in criteria):
+        data.band = round((sum(criteria) / 4) * 2) / 2
+    if data.band < 0 or data.band > 9:
+        raise HTTPException(status_code=400, detail="Band 0–9 oralig'ida bo'lishi kerak")
     db = await get_pool()
     async with db.acquire() as conn:
         group = await _own_active_group_or_error(conn, current_user["id"])
@@ -242,12 +341,25 @@ async def grade_student_writing(student_id: int, result_id: int, data: GradeWrit
     except Exception:
         pass
 
+    try:
+        async with db.acquire() as conn:
+            user_row = await conn.fetchrow("SELECT telegram_chat_id FROM users WHERE email=$1", student["email"])
+        if user_row and user_row["telegram_chat_id"]:
+            from telegram import notify_user_writing_graded
+            await notify_user_writing_graded(user_row["telegram_chat_id"], student["full_name"], data.band, data.feedback)
+    except Exception:
+        pass
+
     return {"message": "Baholandi"}
 
 
 class GradeSpeakingTeacher(BaseModel):
     band: float
     feedback: Optional[str] = None
+    fluency_coherence: Optional[float] = None
+    lexical_resource: Optional[float] = None
+    grammar_accuracy: Optional[float] = None
+    pronunciation: Optional[float] = None
 
 
 @router.get("/pending-speaking")
@@ -287,6 +399,13 @@ async def grade_student_speaking(
     current_user: dict = Depends(get_current_teacher)
 ):
     """O'qituvchi speaking ni baholaydi."""
+    criteria = [data.fluency_coherence, data.lexical_resource, data.grammar_accuracy, data.pronunciation]
+    if any(value is not None and (value < 0 or value > 9) for value in criteria):
+        raise HTTPException(status_code=400, detail="Speaking mezonlari 0–9 oralig'ida bo'lishi kerak")
+    if all(value is not None for value in criteria):
+        data.band = round((sum(criteria) / 4) * 2) / 2
+    if data.band < 0 or data.band > 9:
+        raise HTTPException(status_code=400, detail="Band 0–9 oralig'ida bo'lishi kerak")
     db = await get_pool()
     async with db.acquire() as conn:
         group = await _own_active_group_or_error(conn, current_user["id"])
@@ -301,12 +420,15 @@ async def grade_student_speaking(
             """
             UPDATE exam_results
             SET speaking_band = $1, speaking_feedback = $2,
-                grader_name = $3, speaking_graded_at = NOW()
+                grader_name = $3, speaking_graded_at = NOW(),
+                speaking_fluency_coherence=$6,speaking_lexical_resource=$7,
+                speaking_grammar_accuracy=$8,speaking_pronunciation=$9
             WHERE id = $4 AND email = $5 AND section = 'speaking'
             RETURNING id
             """,
             data.band, data.feedback, current_user["full_name"],
-            result_id, student["email"]
+            result_id, student["email"], data.fluency_coherence, data.lexical_resource,
+            data.grammar_accuracy, data.pronunciation
         )
         if not row:
             raise HTTPException(status_code=404, detail="Natija topilmadi")
@@ -323,6 +445,13 @@ async def grade_student_speaking(
             )
         except Exception:
             pass
+
+    try:
+        from main import build_result_email, send_email
+        await send_email(student["email"], student["full_name"], "IELTS Mock — Speaking natijangiz baholandi",
+                         build_result_email(student["full_name"], "speaking", None, None, data.band, data.feedback))
+    except Exception:
+        pass
 
     return {"message": "Speaking baholandi"}
 

@@ -91,6 +91,11 @@ async def startup():
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_band NUMERIC")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_feedback TEXT")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_graded_at TIMESTAMP")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_fluency_coherence NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_lexical_resource NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_grammar_accuracy NUMERIC")
+        await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS speaking_pronunciation NUMERIC")
+
 
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS exam_sessions (
@@ -105,6 +110,31 @@ async def startup():
     await ensure_users_table()
     await ensure_center_group_tables()
     async with db.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS feedback_templates (
+                id SERIAL PRIMARY KEY,
+                teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                section TEXT NOT NULL CHECK(section IN ('writing','speaking')),
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS resubmission_requests (
+                id SERIAL PRIMARY KEY,
+                result_id INTEGER NOT NULL REFERENCES exam_results(id) ON DELETE CASCADE,
+                student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                section TEXT NOT NULL CHECK(section IN ('writing','speaking')),
+                reason TEXT NOT NULL,
+                due_at TIMESTAMP,
+                status TEXT NOT NULL DEFAULT 'pending',
+                replacement_result_id INTEGER REFERENCES exam_results(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(result_id, status)
+            )
+        """)
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_id INTEGER REFERENCES tests(id) ON DELETE SET NULL")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_slug TEXT")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_mode TEXT")
@@ -953,6 +983,15 @@ async def admin_subscription_payments(status: Optional[str] = None, _: None = De
             """,
             status
         )
+
+        await conn.execute(
+            """
+            UPDATE resubmission_requests
+            SET status='submitted',replacement_result_id=$1
+            WHERE student_id=$2 AND section=$3 AND status='pending'
+            """,
+            result_row["id"], current_user["id"], data.section
+        )
     return [dict(row) | {"created_at": row["created_at"].isoformat()} for row in rows]
 
 
@@ -1656,6 +1695,27 @@ async def student_leaderboard(current_user: dict = Depends(get_current_user)):
 
     my_rank = next((item["rank"] for item in data if item["email"] == current_user["email"]), None)
     return {"leaderboard": data[:20], "my_rank": my_rank, "total": len(data)}
+
+
+@app.get("/api/student/resubmissions")
+async def student_resubmissions(current_user: dict = Depends(get_current_user)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT rr.id,rr.section,rr.reason,rr.due_at,rr.status,rr.created_at,
+                   COALESCE(t.title,er.test_slug,'IELTS Mock SS') AS test_title
+            FROM resubmission_requests rr
+            JOIN exam_results er ON er.id=rr.result_id
+            LEFT JOIN tests t ON t.id=er.test_id
+            WHERE rr.student_id=$1 ORDER BY rr.created_at DESC
+            """,
+            current_user["id"]
+        )
+    return [dict(r) | {
+        "due_at": r["due_at"].isoformat() if r["due_at"] else None,
+        "created_at": r["created_at"].isoformat(),
+    } for r in rows]
 
 
 @app.get("/api/admin/grade-speaking")

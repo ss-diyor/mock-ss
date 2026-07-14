@@ -117,13 +117,6 @@ nav {
   align-items: center; gap: 70px; min-height: 610px; padding: 76px 0 68px;
 }
 .hero-copy { max-width: 660px; }
-.hero-kicker {
-  font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--blue);
-  margin-bottom: 20px; display: inline-flex; align-items: center; gap: 9px;
-  padding: 7px 11px; border: 1px solid var(--blue-mid); border-radius: 999px;
-  background: rgba(255,255,255,.75);
-}
-.hero-kicker::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
 .hero h1 {
   font-size: clamp(42px, 5.2vw, 68px); font-weight: 900; letter-spacing: -2.7px;
   line-height: 1.02; margin-bottom: 24px;
@@ -132,29 +125,26 @@ nav {
 .hero-sub { font-size: 17px; color: var(--muted); max-width: 610px; margin-bottom: 32px; line-height: 1.72; }
 .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .hero-note { margin-top: 18px; color: var(--muted); font: 500 11px var(--mono); }
-.hero-preview {
-  position: relative; background: var(--surface); border: 1px solid var(--blue-mid); border-radius: 18px;
-  padding: 18px; box-shadow: 0 30px 70px rgba(11,23,51,.12), 0 3px 0 rgba(26,86,232,.08);
-}
+.hero-preview { position: relative; }
 .hero-preview::before {
   content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%;
   right: -36px; top: -42px; background: rgba(26,86,232,.1); filter: blur(2px); z-index: -1;
 }
-.preview-top { display: flex; justify-content: space-between; align-items: center; padding: 3px 2px 16px; }
-.preview-title { font: 700 12px var(--mono); }
-.preview-live { color: var(--green); background: var(--green-light); border-radius: 999px; padding: 5px 9px; font: 700 9px var(--mono); }
-.preview-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.preview-card-head { padding: 18px; background: var(--text); color: #fff; }
-.preview-card-head small { display: block; color: #a9b9dc; font: 500 10px var(--mono); margin-bottom: 9px; }
-.preview-card-head strong { font-size: 19px; }
-.preview-parts { padding: 8px 16px; }
-.preview-part { display: grid; grid-template-columns: 38px 1fr auto; gap: 11px; align-items: center; padding: 12px 0; border-bottom: 1px solid #e5ebfb; }
-.preview-part:last-child { border-bottom: 0; }
-.preview-part-code { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; background: var(--blue-light); color: var(--blue); font: 700 11px var(--mono); }
-.preview-part strong { display: block; font-size: 13px; margin-bottom: 3px; }
-.preview-part span { color: var(--muted); font: 500 9px var(--mono); }
-.preview-check { color: var(--green); font: 700 11px var(--mono); }
-.preview-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--blue-light); color: var(--blue); font: 600 10px var(--mono); }
+.catalog-preview-card { background: var(--surface); border: 1px solid #dbe4f4; border-radius: 16px; box-shadow: 0 18px 48px rgba(11,23,51,.1); overflow: hidden; }
+.catalog-preview-body { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.catalog-preview-heading { display: flex; align-items: flex-start; gap: 12px; }
+.catalog-preview-mark { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 12px; background: linear-gradient(145deg,var(--blue-light),#fff); border: 1px solid var(--border); display: grid; place-items: center; color: var(--blue); font: 800 12px var(--mono); }
+.catalog-preview-copy { min-width: 0; flex: 1; }
+.catalog-preview-org { margin-bottom: 5px; color: var(--muted); font: 600 11px var(--mono); }
+.catalog-preview-title { font-size: 18px; font-weight: 800; }
+.catalog-preview-desc { color: var(--muted); font-size: 13px; line-height: 1.55; }
+.catalog-preview-type { align-self: flex-start; }
+.catalog-preview-sections { display: flex; flex-direction: column; border: 1px solid #dbe4f4; border-radius: 10px; overflow: hidden; background: #fbfcff; }
+.catalog-preview-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-bottom: 1px solid #e6ecf7; color: var(--text); font: 600 11px var(--mono); }
+.catalog-preview-row:last-child { border-bottom: 0; }
+.catalog-preview-dot { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; background: var(--blue-light); color: var(--blue); font-size: 9px; }
+.catalog-preview-btn { width: 100%; margin-top: 2px; padding: 12px; border: 0; border-radius: 7px; background: var(--blue); color: #fff; cursor: pointer; font: 600 12px var(--mono); }
+.catalog-preview-btn:hover { background: var(--blue-hover); }
 
 .stats-row {
   display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface);
@@ -211,7 +201,6 @@ nav {
   .hero { min-height: auto; padding: 48px 0 42px; }
   .hero h1 { font-size: 42px; letter-spacing: -1.8px; }
   .hero-sub { font-size: 15px; }
-  .hero-preview { padding: 12px; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .stat-item:nth-child(2) { border-right: 0; }
   .stat-item:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
@@ -477,7 +466,6 @@ footer a { color: var(--blue); text-decoration: none; }
   <div class="landing-shell">
     <section class="hero">
       <div class="hero-copy">
-        <p class="hero-kicker">IELTS MOCK · ONLINE PLATFORM</p>
         <h1>IELTS'ga <span>ishonch bilan</span> tayyorlaning</h1>
         <p class="hero-sub">Listening, Reading, Writing va Speaking — barcha bo'limlarni bitta platformada haqiqiy imtihon muhitiga yaqin formatda mashq qiling.</p>
         <div class="hero-actions">
@@ -488,23 +476,26 @@ footer a { color: var(--blue); text-decoration: none; }
       </div>
 
       <div class="hero-preview" aria-label="IELTS mock test ko'rinishi">
-        <div class="preview-top">
-          <span class="preview-title">$ mock --overview</span>
-          <span class="preview-live">● READY</span>
-        </div>
-        <div class="preview-card">
-          <div class="preview-card-head">
-            <small>IELTS Mock SS</small>
-            <strong>Full Mock Examination</strong>
+        <article class="catalog-preview-card">
+          <div class="catalog-preview-body">
+            <div class="catalog-preview-heading">
+              <div class="catalog-preview-mark">01</div>
+              <div class="catalog-preview-copy">
+                <div class="catalog-preview-org">IELTS Mock SS</div>
+                <div class="catalog-preview-title">IELTS Mock SS 1</div>
+              </div>
+            </div>
+            <div class="catalog-preview-desc">To'liq IELTS Academic mock test</div>
+            <span class="badge catalog-preview-type">IELTS Academic</span>
+            <div class="catalog-preview-sections">
+              <div class="catalog-preview-row"><span class="catalog-preview-dot">1</span><span>Listening</span></div>
+              <div class="catalog-preview-row"><span class="catalog-preview-dot">2</span><span>Reading</span></div>
+              <div class="catalog-preview-row"><span class="catalog-preview-dot">3</span><span>Writing</span></div>
+              <div class="catalog-preview-row"><span class="catalog-preview-dot">4</span><span>Speaking</span></div>
+            </div>
+            <button class="catalog-preview-btn" onclick="startExamFlow()">Boshlash</button>
           </div>
-          <div class="preview-parts">
-            <div class="preview-part"><div class="preview-part-code">L</div><div><strong>Listening</strong><span>Audio va savollar</span></div><div class="preview-check">01</div></div>
-            <div class="preview-part"><div class="preview-part-code">R</div><div><strong>Reading</strong><span>Akademik matnlar</span></div><div class="preview-check">02</div></div>
-            <div class="preview-part"><div class="preview-part-code">W</div><div><strong>Writing</strong><span>Task 1 va Task 2</span></div><div class="preview-check">03</div></div>
-            <div class="preview-part"><div class="preview-part-code">S</div><div><strong>Speaking</strong><span>Audio javob yozish</span></div><div class="preview-check">04</div></div>
-          </div>
-        </div>
-        <div class="preview-footer"><span>Natijalar profilingizda saqlanadi</span><span>↗</span></div>
+        </article>
       </div>
     </section>
 

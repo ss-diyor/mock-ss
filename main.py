@@ -172,6 +172,28 @@ async def startup():
             )
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS organization_applications_status_idx ON organization_applications(status, created_at DESC)")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS testimonials (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                content TEXT NOT NULL,
+                original_content TEXT NOT NULL,
+                role_snapshot TEXT NOT NULL DEFAULT 'student',
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK(status IN ('pending','published','rejected','archived')),
+                show_full_name BOOLEAN NOT NULL DEFAULT TRUE,
+                show_organization BOOLEAN NOT NULL DEFAULT TRUE,
+                show_avatar BOOLEAN NOT NULL DEFAULT TRUE,
+                featured BOOLEAN NOT NULL DEFAULT FALSE,
+                sort_order INTEGER NOT NULL DEFAULT 100,
+                admin_note TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW(),
+                reviewed_at TIMESTAMP,
+                published_at TIMESTAMP
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS testimonials_public_idx ON testimonials(status, featured DESC, sort_order, published_at DESC)")
 
 
 # ─── Models ───────────────────────────────────────────────────────────────────
@@ -196,6 +218,21 @@ class OrganizationApplicationIn(BaseModel):
 class OrganizationApplicationReviewIn(BaseModel):
     status: str
     note: Optional[str] = None
+
+
+class TestimonialSubmitIn(BaseModel):
+    content: str
+    show_full_name: bool = True
+    show_organization: bool = True
+    show_avatar: bool = True
+
+
+class TestimonialReviewIn(BaseModel):
+    status: str
+    content: Optional[str] = None
+    featured: bool = False
+    sort_order: int = 100
+    admin_note: Optional[str] = None
 
 
 class SubmitResult(BaseModel):
@@ -964,6 +1001,116 @@ async def create_organization_application(data: OrganizationApplicationIn):
     return {"ok": True, "application_id": application_id, "message": "Arizangiz qabul qilindi"}
 
 
+def testimonial_role_label(role: str, organization_type: Optional[str] = None) -> str:
+    if role == "teacher":
+        return "Ustoz"
+    if role == "head_teacher":
+        return "Maktab direktori" if organization_type == "school" else "O'quv markazi rahbari"
+    if role == "school_staff":
+        return "Maktab xodimi"
+    return "O'quvchi"
+
+
+@app.get("/api/testimonials/public")
+async def public_testimonials():
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT t.id, t.content, t.show_full_name, t.show_organization, t.show_avatar,
+                   t.featured, t.published_at, u.full_name, u.username, u.role,
+                   u.avatar_mime, c.name AS organization_name, c.organization_type
+            FROM testimonials t
+            JOIN users u ON u.id=t.user_id
+            LEFT JOIN centers c ON c.id=u.center_id
+            WHERE t.status='published'
+              AND COALESCE(u.is_suspended, FALSE)=FALSE
+              AND u.deleted_at IS NULL
+            ORDER BY t.featured DESC, t.sort_order ASC, t.published_at DESC NULLS LAST
+            LIMIT 12
+            """
+        )
+    return [
+        {
+            "id": row["id"],
+            "content": row["content"],
+            "full_name": (row["full_name"] or row["username"]) if row["show_full_name"] else "Tasdiqlangan foydalanuvchi",
+            "role": testimonial_role_label(row["role"], row["organization_type"]),
+            "organization_name": row["organization_name"] if row["show_organization"] else None,
+            "avatar_url": f"/api/auth/avatar/{row['username']}" if row["show_avatar"] and row["avatar_mime"] else None,
+            "featured": row["featured"],
+            "published_at": row["published_at"],
+        }
+        for row in rows
+    ]
+
+
+@app.get("/api/testimonials/me")
+async def my_testimonial(current_user: dict = Depends(get_current_user)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, content, original_content, status, show_full_name,
+                   show_organization, show_avatar, admin_note, created_at,
+                   updated_at, reviewed_at, published_at
+            FROM testimonials WHERE user_id=$1
+            """,
+            current_user["id"]
+        )
+    return dict(row) if row else None
+
+
+@app.post("/api/testimonials/me")
+async def submit_testimonial(data: TestimonialSubmitIn, current_user: dict = Depends(get_current_user)):
+    if not current_user.get("email_verified"):
+        raise HTTPException(status_code=403, detail="Fikr yuborish uchun emailingizni tasdiqlang")
+    content = re.sub(r"\s+", " ", data.content or "").strip()
+    if len(content) < 40:
+        raise HTTPException(status_code=400, detail="Fikr kamida 40 belgidan iborat bo'lishi kerak")
+    if len(content) > 800:
+        raise HTTPException(status_code=400, detail="Fikr 800 belgidan oshmasligi kerak")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO testimonials
+                (user_id, content, original_content, role_snapshot, show_full_name,
+                 show_organization, show_avatar)
+            VALUES ($1,$2,$2,$3,$4,$5,$6)
+            ON CONFLICT (user_id) DO UPDATE SET
+                content=EXCLUDED.content,
+                original_content=EXCLUDED.original_content,
+                role_snapshot=EXCLUDED.role_snapshot,
+                status='pending',
+                show_full_name=EXCLUDED.show_full_name,
+                show_organization=EXCLUDED.show_organization,
+                show_avatar=EXCLUDED.show_avatar,
+                featured=FALSE,
+                admin_note=NULL,
+                updated_at=NOW(),
+                reviewed_at=NULL,
+                published_at=NULL
+            RETURNING id, status, updated_at
+            """,
+            current_user["id"], content, current_user.get("role") or "student",
+            data.show_full_name, data.show_organization, data.show_avatar
+        )
+    return {**dict(row), "message": "Fikringiz moderatsiyaga yuborildi"}
+
+
+@app.delete("/api/testimonials/me")
+async def delete_my_testimonial(current_user: dict = Depends(get_current_user)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        deleted = await conn.fetchval(
+            "DELETE FROM testimonials WHERE user_id=$1 RETURNING id", current_user["id"]
+        )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Fikr topilmadi")
+    return {"ok": True}
+
+
 # ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────────────
 
 def check_admin(secret: str):
@@ -978,6 +1125,89 @@ def check_admin(secret: str):
 
 def require_admin(x_admin_secret: str = Header("", alias="X-Admin-Secret")):
     check_admin(x_admin_secret)
+
+
+@app.get("/api/admin/testimonials")
+async def admin_testimonials(status: Optional[str] = None, _: None = Depends(require_admin)):
+    if status and status not in {"pending", "published", "rejected", "archived"}:
+        raise HTTPException(status_code=400, detail="Fikr holati noto'g'ri")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT t.id, t.content, t.original_content, t.status, t.role_snapshot,
+                   t.show_full_name, t.show_organization, t.show_avatar, t.featured,
+                   t.sort_order, t.admin_note, t.created_at, t.updated_at, t.reviewed_at,
+                   t.published_at, u.id AS user_id, u.full_name, u.username, u.email,
+                   u.role, c.name AS organization_name, c.organization_type
+            FROM testimonials t
+            JOIN users u ON u.id=t.user_id
+            LEFT JOIN centers c ON c.id=u.center_id
+            WHERE ($1::text IS NULL OR t.status=$1)
+            ORDER BY (t.status='pending') DESC, t.featured DESC, t.updated_at DESC
+            LIMIT 500
+            """,
+            status
+        )
+    return [
+        {
+            **dict(row),
+            "role_label": testimonial_role_label(row["role"], row["organization_type"]),
+        }
+        for row in rows
+    ]
+
+
+@app.post("/api/admin/testimonials/{testimonial_id}/review")
+async def admin_review_testimonial(
+    testimonial_id: int,
+    data: TestimonialReviewIn,
+    _: None = Depends(require_admin)
+):
+    if data.status not in {"pending", "published", "rejected", "archived"}:
+        raise HTTPException(status_code=400, detail="Fikr holati noto'g'ri")
+    content = re.sub(r"\s+", " ", data.content or "").strip() if data.content is not None else None
+    if content is not None and not 40 <= len(content) <= 800:
+        raise HTTPException(status_code=400, detail="Fikr 40 dan 800 tagacha belgidan iborat bo'lishi kerak")
+    if not 0 <= data.sort_order <= 10000:
+        raise HTTPException(status_code=400, detail="Tartib raqami 0 dan 10000 gacha bo'lishi kerak")
+    note = (data.admin_note or "").strip() or None
+    if note and len(note) > 1500:
+        raise HTTPException(status_code=400, detail="Admin izohi juda uzun")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE testimonials SET
+                content=COALESCE($2, content),
+                status=$3,
+                featured=CASE WHEN $3='published' THEN $4 ELSE FALSE END,
+                sort_order=$5,
+                admin_note=$6,
+                updated_at=NOW(),
+                reviewed_at=CASE WHEN $3='pending' THEN NULL ELSE NOW() END,
+                published_at=CASE WHEN $3='published' THEN COALESCE(published_at, NOW()) ELSE NULL END
+            WHERE id=$1
+            RETURNING id, content, original_content, status, featured, sort_order,
+                      admin_note, updated_at, reviewed_at, published_at
+            """,
+            testimonial_id, content, data.status, data.featured, data.sort_order, note
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Fikr topilmadi")
+    return dict(row)
+
+
+@app.delete("/api/admin/testimonials/{testimonial_id}")
+async def admin_delete_testimonial(testimonial_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        deleted = await conn.fetchval(
+            "DELETE FROM testimonials WHERE id=$1 RETURNING id", testimonial_id
+        )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Fikr topilmadi")
+    return {"ok": True}
 
 
 @app.get("/api/admin/organization-applications")

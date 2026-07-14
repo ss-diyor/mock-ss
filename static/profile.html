@@ -150,6 +150,11 @@ textarea { resize: vertical; min-height: 80px; }
 .dash-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
 .dash-section-head { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); font-size: 13px; font-weight: 700; font-family: var(--mono); display: flex; justify-content: space-between; align-items: center; }
 .dash-section-body { padding: 20px; }
+.testimonial-consents { display:flex; flex-wrap:wrap; gap:10px 18px; }
+.testimonial-consents label { display:flex; align-items:center; gap:8px; margin:0; font:600 12px var(--mono); color:var(--muted); cursor:pointer; }
+.testimonial-consents input { width:16px; height:16px; accent-color:var(--blue); }
+.testimonial-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.testimonial-counter { margin-left:auto; font:600 11px var(--mono); color:var(--muted); }
 
 .history-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
 .history-row:last-child { border-bottom: none; }
@@ -364,6 +369,31 @@ textarea { resize: vertical; min-height: 80px; }
       </div>
     </div>
 
+    <div class="dash-section" id="testimonial-section">
+      <div class="dash-section-head">
+        <span>$ fikr --landing</span>
+        <span class="badge muted" id="testimonial-status">Yuborilmagan</span>
+      </div>
+      <div class="dash-section-body" style="display:flex;flex-direction:column;gap:14px;">
+        <p style="font-size:13px;color:var(--muted);line-height:1.65;">Platforma haqidagi haqiqiy tajribangizni yozing. Admin tasdiqlaganidan keyin fikringiz landing sahifada ko'rinishi mumkin.</p>
+        <div>
+          <label for="testimonial-content">Fikringiz</label>
+          <textarea id="testimonial-content" maxlength="800" rows="5" placeholder="Platforma sizga yoki tashkilotingizga qanday yordam berdi?" oninput="updateTestimonialCounter()"></textarea>
+          <div class="testimonial-counter" id="testimonial-counter">0 / 800</div>
+        </div>
+        <div class="testimonial-consents">
+          <label><input type="checkbox" id="testimonial-show-name" checked> Ismim ko'rinsin</label>
+          <label><input type="checkbox" id="testimonial-show-organization" checked> Tashkilotim ko'rinsin</label>
+          <label><input type="checkbox" id="testimonial-show-avatar" checked> Profil rasmim ko'rinsin</label>
+        </div>
+        <div id="testimonial-message" class="alert" style="display:none;"></div>
+        <div class="testimonial-actions">
+          <button class="btn-primary" id="testimonial-submit-btn" onclick="submitTestimonial()" style="width:auto;">Moderatsiyaga yuborish</button>
+          <button class="btn-outline danger" id="testimonial-delete-btn" onclick="deleteTestimonial()" style="display:none;width:auto;">Fikrni o'chirish</button>
+        </div>
+      </div>
+    </div>
+
     <div class="dash-section">
       <div class="dash-section-head"><span>$ referral --invite</span></div>
       <div class="dash-section-body">
@@ -462,7 +492,7 @@ if (teacherInviteCode) {
   localStorage.setItem('teacher_invite_code', teacherInviteCode);
 }
 
-function handlePostAuthRedirect() {
+function handlePostAuthRedirect(fromAuth = false) {
   if (!currentUser) return;
   if (redirectTarget === 'tests') {
     window.location.href = '/tests';
@@ -470,11 +500,11 @@ function handlePostAuthRedirect() {
   }
   
   // O'qituvchilarni avtomatik teacher sahifasiga yo'naltirish
-  if (currentUser.role === 'teacher') {
+  if (fromAuth && currentUser.role === 'teacher') {
     window.location.href = '/teacher';
     return;
   }
-  if (currentUser.role === 'school_staff') {
+  if (fromAuth && currentUser.role === 'school_staff') {
     window.location.href = '/school-staff';
     return;
   }
@@ -530,7 +560,7 @@ async function onTelegramAuth(user) {
       currentUser = data.user;
       renderDashboard();
       loadDashboardStats();
-      handlePostAuthRedirect();
+      handlePostAuthRedirect(true);
     }
   } catch (e) {
     errEl.textContent = '→ ' + e.message;
@@ -574,7 +604,7 @@ async function doLogin() {
     currentUser = data.user;
     renderDashboard();
     loadDashboardStats();
-    handlePostAuthRedirect();
+    handlePostAuthRedirect(true);
   } catch (e) {
     errEl.textContent = '→ ' + e.message;
     errEl.style.display = 'block';
@@ -643,7 +673,7 @@ async function doRegister() {
     currentUser = data.user;
     renderDashboard();
     loadDashboardStats();
-    handlePostAuthRedirect();
+    handlePostAuthRedirect(true);
   } catch (e) {
     errEl.textContent = '→ ' + e.message;
     errEl.style.display = 'block';
@@ -692,9 +722,106 @@ function copyReferral() {
   alert("Havola nusxalandi!");
 }
 
+const testimonialStatusMeta = {
+  pending: ["Tekshirilmoqda", "warning"],
+  published: ["Saytda ko'rinmoqda", "success"],
+  rejected: ["Rad etilgan", "muted"],
+  archived: ["Arxivlangan", "muted"]
+};
+
+function updateTestimonialCounter() {
+  const input = document.getElementById('testimonial-content');
+  document.getElementById('testimonial-counter').textContent = `${input.value.length} / 800`;
+}
+
+function setTestimonialMessage(message, kind = 'success') {
+  const box = document.getElementById('testimonial-message');
+  box.textContent = message;
+  box.className = `alert ${kind}`;
+  box.style.display = 'block';
+}
+
+async function loadMyTestimonial() {
+  if (!token) return;
+  try {
+    const res = await fetch('/api/testimonials/me', { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((data && data.detail) || "Fikr yuklanmadi");
+    const status = document.getElementById('testimonial-status');
+    if (!data) {
+      status.textContent = 'Yuborilmagan';
+      status.className = 'badge muted';
+      document.getElementById('testimonial-delete-btn').style.display = 'none';
+      return;
+    }
+    document.getElementById('testimonial-content').value = data.original_content || data.content || '';
+    document.getElementById('testimonial-show-name').checked = data.show_full_name;
+    document.getElementById('testimonial-show-organization').checked = data.show_organization;
+    document.getElementById('testimonial-show-avatar').checked = data.show_avatar;
+    const meta = testimonialStatusMeta[data.status] || [data.status, 'muted'];
+    status.textContent = meta[0];
+    status.className = `badge ${meta[1]}`;
+    document.getElementById('testimonial-delete-btn').style.display = 'inline-flex';
+    document.getElementById('testimonial-submit-btn').textContent = data.status === 'published' ? "O'zgartirib qayta yuborish" : 'Yangilab yuborish';
+    if (data.admin_note) setTestimonialMessage(`Admin izohi: ${data.admin_note}`, data.status === 'rejected' ? 'danger' : 'info');
+    updateTestimonialCounter();
+  } catch (error) {
+    setTestimonialMessage(error.message, 'danger');
+  }
+}
+
+async function submitTestimonial() {
+  const btn = document.getElementById('testimonial-submit-btn');
+  const content = document.getElementById('testimonial-content').value.trim();
+  document.getElementById('testimonial-message').style.display = 'none';
+  if (content.length < 40) return setTestimonialMessage("Fikr kamida 40 belgidan iborat bo'lishi kerak", 'danger');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Yuborilmoqda...';
+  try {
+    const res = await fetch('/api/testimonials/me', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content,
+        show_full_name: document.getElementById('testimonial-show-name').checked,
+        show_organization: document.getElementById('testimonial-show-organization').checked,
+        show_avatar: document.getElementById('testimonial-show-avatar').checked
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Fikr yuborilmadi");
+    setTestimonialMessage(data.message || 'Fikringiz moderatsiyaga yuborildi');
+    await loadMyTestimonial();
+  } catch (error) {
+    setTestimonialMessage(error.message, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Yangilab yuborish';
+  }
+}
+
+async function deleteTestimonial() {
+  if (!confirm("Fikringizni butunlay o'chirasizmi?")) return;
+  try {
+    const res = await fetch('/api/testimonials/me', { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Fikr o'chirilmadi");
+    document.getElementById('testimonial-content').value = '';
+    document.getElementById('testimonial-status').textContent = 'Yuborilmagan';
+    document.getElementById('testimonial-status').className = 'badge muted';
+    document.getElementById('testimonial-delete-btn').style.display = 'none';
+    document.getElementById('testimonial-submit-btn').textContent = 'Moderatsiyaga yuborish';
+    updateTestimonialCounter();
+    setTestimonialMessage("Fikringiz o'chirildi");
+  } catch (error) {
+    setTestimonialMessage(error.message, 'danger');
+  }
+}
+
 async function loadDashboardStats() {
   try {
     loadResubmissions();
+    loadMyTestimonial();
     const res = await fetch('/api/dashboard', {
       headers: { 'Authorization': `Bearer ${token}` }
     });

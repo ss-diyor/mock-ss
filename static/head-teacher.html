@@ -351,6 +351,28 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
             <div><label>Aloqa email</label><input id="brand-email" type="email" placeholder="info@example.uz"></div>
             <div><label>Aloqa telefoni</label><input id="brand-phone" placeholder="+998 ..."></div>
           </div>
+          <div style="margin-top:22px;padding-top:20px;border-top:1px solid var(--border);">
+            <div style="font:700 12px var(--mono);color:var(--blue);margin-bottom:14px;">$ public-directory --settings</div>
+            <div id="directory-override-notice" class="alert warning" style="display:none;margin-bottom:14px;"></div>
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;margin-bottom:14px;">
+              <input id="directory-opt-in" type="checkbox" style="width:auto;"> Tashkilotni public katalogda ko'rsatishga roziman
+            </label>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+              <div style="grid-column:1/-1"><label>Qisqa tavsif</label><textarea id="directory-description" maxlength="1200" placeholder="Tashkilotingiz haqida qisqacha..." style="min-height:90px"></textarea></div>
+              <div><label>Hudud</label><input id="directory-region" placeholder="Toshkent viloyati, Bo'stonliq tumani"></div>
+              <div><label>Manzil</label><input id="directory-address" placeholder="To'liq manzil"></div>
+              <div><label>Rasmiy sayt (HTTPS)</label><input id="directory-website" placeholder="https://..."></div>
+              <div><label>Telegram (HTTPS)</label><input id="directory-telegram" placeholder="https://t.me/..."></div>
+              <div><label>Instagram (HTTPS)</label><input id="directory-instagram" placeholder="https://instagram.com/..."></div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:16px;">
+              <label style="display:flex;align-items:center;gap:7px;text-transform:none"><input id="directory-show-email" type="checkbox" style="width:auto"> Emailni ko'rsatish</label>
+              <label style="display:flex;align-items:center;gap:7px;text-transform:none"><input id="directory-show-phone" type="checkbox" style="width:auto"> Telefonni ko'rsatish</label>
+              <label style="display:flex;align-items:center;gap:7px;text-transform:none"><input id="directory-show-address" type="checkbox" style="width:auto"> Manzilni ko'rsatish</label>
+              <label style="display:flex;align-items:center;gap:7px;text-transform:none"><input id="directory-show-statistics" type="checkbox" style="width:auto"> Statistikani ko'rsatish</label>
+              <label style="display:flex;align-items:center;gap:7px;text-transform:none"><input id="directory-show-testimonials" type="checkbox" style="width:auto"> Fikrlarni ko'rsatish</label>
+            </div>
+          </div>
           <label style="display:flex;align-items:center;gap:8px;margin-top:16px;text-transform:none;">
             <input id="brand-powered" type="checkbox" checked style="width:auto;"> “Powered by IELTS Mock SS” yozuvini ko'rsatish
           </label>
@@ -1084,6 +1106,24 @@ function fillBrandingForm(b) {
   document.getElementById('brand-email').value = b.contact_email || '';
   document.getElementById('brand-phone').value = b.contact_phone || '';
   document.getElementById('brand-powered').checked = b.show_powered_by !== false;
+  document.getElementById('directory-opt-in').checked = b.directory_opt_in === true;
+  document.getElementById('directory-description').value = b.directory_description || '';
+  document.getElementById('directory-region').value = b.directory_region || '';
+  document.getElementById('directory-address').value = b.directory_address || '';
+  document.getElementById('directory-website').value = b.directory_website_url || '';
+  document.getElementById('directory-telegram').value = b.directory_telegram_url || '';
+  document.getElementById('directory-instagram').value = b.directory_instagram_url || '';
+  document.getElementById('directory-show-email').checked = b.directory_show_email === true;
+  document.getElementById('directory-show-phone').checked = b.directory_show_phone === true;
+  document.getElementById('directory-show-address').checked = b.directory_show_address === true;
+  document.getElementById('directory-show-statistics').checked = b.directory_show_statistics === true;
+  document.getElementById('directory-show-testimonials').checked = b.directory_show_testimonials === true;
+  const notice = document.getElementById('directory-override-notice');
+  if (b.directory_admin_override === 'force_public') {
+    notice.textContent = "Super-admin tashkilotni majburiy public qilgan."; notice.style.display = 'block';
+  } else if (b.directory_admin_override === 'force_hidden') {
+    notice.textContent = "Super-admin tashkilotni public katalogdan yashirgan."; notice.style.display = 'block';
+  } else notice.style.display = 'none';
 }
 
 async function saveBranding() {
@@ -1102,6 +1142,18 @@ async function saveBranding() {
         favicon_url: document.getElementById('brand-favicon').value,
         contact_email: document.getElementById('brand-email').value,
         contact_phone: document.getElementById('brand-phone').value,
+        directory_opt_in: document.getElementById('directory-opt-in').checked,
+        directory_description: document.getElementById('directory-description').value,
+        directory_region: document.getElementById('directory-region').value,
+        directory_address: document.getElementById('directory-address').value,
+        directory_website_url: document.getElementById('directory-website').value,
+        directory_telegram_url: document.getElementById('directory-telegram').value,
+        directory_instagram_url: document.getElementById('directory-instagram').value,
+        directory_show_email: document.getElementById('directory-show-email').checked,
+        directory_show_phone: document.getElementById('directory-show-phone').checked,
+        directory_show_address: document.getElementById('directory-show-address').checked,
+        directory_show_statistics: document.getElementById('directory-show-statistics').checked,
+        directory_show_testimonials: document.getElementById('directory-show-testimonials').checked,
         show_powered_by: document.getElementById('brand-powered').checked
       })
     });

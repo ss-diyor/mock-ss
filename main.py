@@ -31,7 +31,7 @@ from school_staff_routes import router as school_staff_router
 from billing_routes import router as billing_router
 from test_catalog_routes import router as test_catalog_router, _can_access_test
 from test_builder_routes import router as test_builder_router
-from branding import ORGANIZATION_TYPES, branding_payload
+from branding import ORGANIZATION_TYPES, SLUG_RE, branding_payload
 
 app = FastAPI(title="IELTS Mock SS")
 app.include_router(feature_router)
@@ -1350,6 +1350,14 @@ class CenterCreateIn(BaseModel):
     max_students: Optional[int] = None
 
 
+class AdminDirectoryOverrideIn(BaseModel):
+    mode: str = "inherit"
+    reason: Optional[str] = None
+    slug: Optional[str] = None
+    featured: bool = False
+    sort_order: int = 100
+
+
 class AssignHeadTeacherIn(BaseModel):
     user_id: int
 
@@ -1388,6 +1396,8 @@ async def admin_list_centers(_: None = Depends(require_admin)):
             """
             SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name, c.subscription_required, c.test_upload_enabled,
                    c.brand_primary_color, c.brand_logo_url,
+                   c.directory_opt_in, c.directory_admin_override, c.directory_admin_reason,
+                   c.directory_region, c.directory_featured, c.directory_sort_order,
                    c.is_active, c.deleted_at, c.max_groups, c.max_students, c.created_at,
                    c.owner_id, owner.full_name AS owner_name, owner.email AS owner_email,
                    sub.status AS subscription_status, sub.current_period_end,
@@ -1411,6 +1421,12 @@ async def admin_list_centers(_: None = Depends(require_admin)):
             "subscription_status": r["subscription_status"],
             "subscription_period_end": r["current_period_end"].isoformat() if r["current_period_end"] else None,
             "primary_color": r["brand_primary_color"], "logo_url": r["brand_logo_url"],
+            "directory_opt_in": r["directory_opt_in"],
+            "directory_admin_override": r["directory_admin_override"],
+            "directory_admin_reason": r["directory_admin_reason"],
+            "directory_region": r["directory_region"],
+            "directory_featured": r["directory_featured"],
+            "directory_sort_order": r["directory_sort_order"],
             "is_active": r["is_active"],
             "deleted_at": r["deleted_at"].isoformat() if r["deleted_at"] else None,
             "max_groups": r["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER,
@@ -1421,6 +1437,52 @@ async def admin_list_centers(_: None = Depends(require_admin)):
         }
         for r in rows
     ]
+
+
+@app.post("/api/admin/centers/{center_id}/directory")
+async def admin_update_center_directory(
+    center_id: int,
+    data: AdminDirectoryOverrideIn,
+    _: None = Depends(require_admin)
+):
+    if data.mode not in {"inherit", "force_public", "force_hidden"}:
+        raise HTTPException(status_code=400, detail="Katalog override holati noto'g'ri")
+    reason = (data.reason or "").strip() or None
+    if data.mode != "inherit" and not reason:
+        raise HTTPException(status_code=400, detail="Admin override sababini yozing")
+    if reason and len(reason) > 500:
+        raise HTTPException(status_code=400, detail="Override sababi juda uzun")
+    slug = (data.slug or "").strip().lower() or None
+    if slug and not SLUG_RE.fullmatch(slug):
+        raise HTTPException(status_code=400, detail="Slug faqat kichik harf, raqam va tirelardan iborat bo'lishi kerak")
+    if not 0 <= data.sort_order <= 10000:
+        raise HTTPException(status_code=400, detail="Tartib raqami 0 dan 10000 gacha bo'lishi kerak")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        current_slug = await conn.fetchval("SELECT slug FROM centers WHERE id=$1", center_id)
+        if current_slug is None and not await conn.fetchval("SELECT EXISTS(SELECT 1 FROM centers WHERE id=$1)", center_id):
+            raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+        if data.mode == "force_public" and not (slug or current_slug):
+            raise HTTPException(status_code=400, detail="Public qilish uchun slug kiriting")
+        if slug:
+            duplicate = await conn.fetchval(
+                "SELECT 1 FROM centers WHERE LOWER(slug)=LOWER($1) AND id<>$2", slug, center_id
+            )
+            if duplicate:
+                raise HTTPException(status_code=409, detail="Bu public slug band qilingan")
+        row = await conn.fetchrow(
+            """
+            UPDATE centers SET
+                directory_admin_override=$2, directory_admin_reason=$3,
+                slug=COALESCE($4, slug), directory_featured=$5,
+                directory_sort_order=$6, directory_override_updated_at=NOW()
+            WHERE id=$1
+            RETURNING id, slug, directory_opt_in, directory_admin_override,
+                      directory_admin_reason, directory_featured, directory_sort_order
+            """,
+            center_id, data.mode, reason, slug, data.featured, data.sort_order
+        )
+    return dict(row)
 
 
 @app.post("/api/admin/centers/{center_id}/toggle-test-upload")
@@ -1583,6 +1645,119 @@ async def admin_review_subscription_payment(
     return {"message": "To'lov tasdiqlandi" if data.action == "approve" else "To'lov rad etildi"}
 
 
+def public_organization_payload(row: dict) -> dict:
+    show_stats = row["directory_show_statistics"] is True
+    return {
+        "id": row["id"],
+        "slug": row["slug"],
+        "name": row["brand_name"] or row["name"],
+        "organization_type": row["organization_type"],
+        "description": row["directory_description"],
+        "region": row["directory_region"],
+        "address": row["directory_address"] if row["directory_show_address"] else None,
+        "logo_url": row["brand_logo_url"],
+        "primary_color": row["brand_primary_color"] or "#1a56e8",
+        "contact_email": row["brand_contact_email"] if row["directory_show_email"] else None,
+        "contact_phone": row["brand_contact_phone"] if row["directory_show_phone"] else None,
+        "website_url": row["directory_website_url"],
+        "telegram_url": row["directory_telegram_url"],
+        "instagram_url": row["directory_instagram_url"],
+        "students_count": row["students_count"] if show_stats else None,
+        "groups_count": row["groups_count"] if show_stats else None,
+        "featured": row["directory_featured"] is True,
+        "show_testimonials": row["directory_show_testimonials"] is True,
+    }
+
+
+@app.get("/api/organizations/public")
+async def public_organizations(organization_type: Optional[str] = None, q: Optional[str] = None):
+    if organization_type and organization_type not in ORGANIZATION_TYPES:
+        raise HTTPException(status_code=400, detail="Tashkilot turi noto'g'ri")
+    search = (q or "").strip()[:100] or None
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name,
+                   c.brand_primary_color, c.brand_logo_url, c.brand_contact_email,
+                   c.brand_contact_phone, c.directory_description, c.directory_region,
+                   c.directory_address, c.directory_website_url, c.directory_telegram_url,
+                   c.directory_instagram_url, c.directory_show_email, c.directory_show_phone,
+                   c.directory_show_address, c.directory_show_statistics,
+                   c.directory_show_testimonials, c.directory_featured,
+                   COUNT(DISTINCT g.id) FILTER (WHERE g.deleted_at IS NULL) AS groups_count,
+                   COUNT(DISTINCT u.id) FILTER (WHERE u.role='student' AND u.deleted_at IS NULL) AS students_count
+            FROM centers c
+            LEFT JOIN groups g ON g.center_id=c.id
+            LEFT JOIN users u ON u.center_id=c.id
+            WHERE c.is_active=TRUE AND c.deleted_at IS NULL AND c.slug IS NOT NULL
+              AND c.directory_admin_override<>'force_hidden'
+              AND (c.directory_admin_override='force_public' OR
+                   (c.directory_admin_override='inherit' AND c.directory_opt_in=TRUE))
+              AND ($1::text IS NULL OR c.organization_type=$1)
+              AND ($2::text IS NULL OR c.name ILIKE '%' || $2 || '%' OR
+                   COALESCE(c.brand_name,'') ILIKE '%' || $2 || '%' OR
+                   COALESCE(c.directory_region,'') ILIKE '%' || $2 || '%')
+            GROUP BY c.id
+            ORDER BY c.directory_featured DESC, c.directory_sort_order ASC, c.name
+            LIMIT 200
+            """,
+            organization_type, search
+        )
+    return [public_organization_payload(dict(row)) for row in rows]
+
+
+@app.get("/api/organizations/public/{slug}")
+async def public_organization_detail(slug: str):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name,
+                   c.brand_primary_color, c.brand_logo_url, c.brand_contact_email,
+                   c.brand_contact_phone, c.directory_description, c.directory_region,
+                   c.directory_address, c.directory_website_url, c.directory_telegram_url,
+                   c.directory_instagram_url, c.directory_show_email, c.directory_show_phone,
+                   c.directory_show_address, c.directory_show_statistics,
+                   c.directory_show_testimonials, c.directory_featured,
+                   COUNT(DISTINCT g.id) FILTER (WHERE g.deleted_at IS NULL) AS groups_count,
+                   COUNT(DISTINCT u.id) FILTER (WHERE u.role='student' AND u.deleted_at IS NULL) AS students_count
+            FROM centers c
+            LEFT JOIN groups g ON g.center_id=c.id
+            LEFT JOIN users u ON u.center_id=c.id
+            WHERE LOWER(c.slug)=LOWER($1) AND c.is_active=TRUE AND c.deleted_at IS NULL
+              AND c.directory_admin_override<>'force_hidden'
+              AND (c.directory_admin_override='force_public' OR
+                   (c.directory_admin_override='inherit' AND c.directory_opt_in=TRUE))
+            GROUP BY c.id
+            """,
+            slug.strip()
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+        payload = public_organization_payload(dict(row))
+        testimonials = []
+        if row["directory_show_testimonials"]:
+            feedback_rows = await conn.fetch(
+                """
+                SELECT t.content, t.show_full_name, t.show_avatar,
+                       u.full_name, u.username, u.role, u.avatar_mime
+                FROM testimonials t JOIN users u ON u.id=t.user_id
+                WHERE u.center_id=$1 AND t.status='published' AND u.deleted_at IS NULL
+                ORDER BY t.featured DESC, t.sort_order, t.published_at DESC NULLS LAST LIMIT 6
+                """,
+                row["id"]
+            )
+            testimonials = [{
+                "content": item["content"],
+                "full_name": (item["full_name"] or item["username"]) if item["show_full_name"] else "Tasdiqlangan foydalanuvchi",
+                "role": testimonial_role_label(item["role"], row["organization_type"]),
+                "avatar_url": f"/api/auth/avatar/{item['username']}" if item["show_avatar"] and item["avatar_mime"] else None,
+            } for item in feedback_rows]
+        payload["testimonials"] = testimonials
+    return payload
+
+
 @app.get("/api/branding/{slug}")
 async def public_branding(slug: str):
     db = await get_pool()
@@ -1591,7 +1766,12 @@ async def public_branding(slug: str):
             """
             SELECT id, name, organization_type, slug, brand_name, brand_primary_color,
                    brand_secondary_color, brand_logo_url, brand_favicon_url,
-                   brand_contact_email, brand_contact_phone, show_powered_by
+                   brand_contact_email, brand_contact_phone, show_powered_by,
+                   directory_opt_in, directory_admin_override, directory_description,
+                   directory_region, directory_address, directory_website_url,
+                   directory_telegram_url, directory_instagram_url, directory_show_email,
+                   directory_show_phone, directory_show_address, directory_show_statistics,
+                   directory_show_testimonials
             FROM centers WHERE LOWER(slug)=LOWER($1) AND is_active=TRUE
             """,
             slug.strip()
@@ -2348,6 +2528,14 @@ async def school_staff_page():
 @app.get("/tests")
 async def tests_page():
     return FileResponse("static/tests.html")
+
+@app.get("/organizations")
+async def organizations_page():
+    return FileResponse("static/organizations.html")
+
+@app.get("/org/{slug}")
+async def organization_public_page(slug: str):
+    return FileResponse("static/organizations.html")
 
 @app.get("/test-builder")
 async def test_builder_page():

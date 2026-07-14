@@ -41,7 +41,12 @@ async def get_group(current_user: dict = Depends(get_current_teacher)):
             """
             SELECT id, name, organization_type, slug, brand_name, brand_primary_color,
                    brand_secondary_color, brand_logo_url, brand_favicon_url,
-                   brand_contact_email, brand_contact_phone, show_powered_by
+                   brand_contact_email, brand_contact_phone, show_powered_by,
+                   directory_opt_in, directory_admin_override, directory_description,
+                   directory_region, directory_address, directory_website_url,
+                   directory_telegram_url, directory_instagram_url, directory_show_email,
+                   directory_show_phone, directory_show_address, directory_show_statistics,
+                   directory_show_testimonials
             FROM centers WHERE id=$1
             """,
             current_user["center_id"]

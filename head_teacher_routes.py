@@ -34,7 +34,12 @@ async def get_center(current_user: dict = Depends(get_current_head_teacher)):
             """
             SELECT id, name, organization_type, slug, is_active, max_groups, max_students, created_at,
                    brand_name, brand_primary_color, brand_secondary_color, brand_logo_url,
-                   brand_favicon_url, brand_contact_email, brand_contact_phone, show_powered_by
+                   brand_favicon_url, brand_contact_email, brand_contact_phone, show_powered_by,
+                   directory_opt_in, directory_admin_override, directory_description,
+                   directory_region, directory_address, directory_website_url,
+                   directory_telegram_url, directory_instagram_url, directory_show_email,
+                   directory_show_phone, directory_show_address, directory_show_statistics,
+                   directory_show_testimonials
             FROM centers WHERE id=$1
             """,
             current_user["center_id"]
@@ -80,15 +85,30 @@ async def update_center_branding(
             UPDATE centers SET
                 brand_name=$1, slug=$2, brand_primary_color=$3, brand_secondary_color=$4,
                 brand_logo_url=$5, brand_favicon_url=$6, brand_contact_email=$7,
-                brand_contact_phone=$8, show_powered_by=$9
-            WHERE id=$10
+                brand_contact_phone=$8, show_powered_by=$9,
+                directory_opt_in=$10, directory_description=$11, directory_region=$12,
+                directory_address=$13, directory_website_url=$14, directory_telegram_url=$15,
+                directory_instagram_url=$16, directory_show_email=$17,
+                directory_show_phone=$18, directory_show_address=$19,
+                directory_show_statistics=$20, directory_show_testimonials=$21
+            WHERE id=$22
             RETURNING id, name, organization_type, slug, brand_name, brand_primary_color,
                       brand_secondary_color, brand_logo_url, brand_favicon_url,
-                      brand_contact_email, brand_contact_phone, show_powered_by
+                      brand_contact_email, brand_contact_phone, show_powered_by,
+                      directory_opt_in, directory_admin_override, directory_description,
+                      directory_region, directory_address, directory_website_url,
+                      directory_telegram_url, directory_instagram_url, directory_show_email,
+                      directory_show_phone, directory_show_address, directory_show_statistics,
+                      directory_show_testimonials
             """,
             values["brand_name"], values["slug"], values["brand_primary_color"],
             values["brand_secondary_color"], values["brand_logo_url"], values["brand_favicon_url"],
             values["brand_contact_email"], values["brand_contact_phone"], values["show_powered_by"],
+            values["directory_opt_in"], values["directory_description"], values["directory_region"],
+            values["directory_address"], values["directory_website_url"], values["directory_telegram_url"],
+            values["directory_instagram_url"], values["directory_show_email"],
+            values["directory_show_phone"], values["directory_show_address"],
+            values["directory_show_statistics"], values["directory_show_testimonials"],
             current_user["center_id"]
         )
     return {"message": "Brending saqlandi", "branding": branding_payload(row)}

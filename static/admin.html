@@ -827,6 +827,12 @@ function renderCenters() {
     const subscriptionBadge = c.subscription_required
       ? `<span class="badge" style="background:var(--amber-light);color:var(--amber);">Obuna: ${c.subscription_status || 'trial'}</span>`
       : `<span class="badge green">Obunasiz</span>`;
+    const directoryPublic = c.directory_admin_override === 'force_public' || (c.directory_admin_override === 'inherit' && c.directory_opt_in);
+    const directoryBadge = c.directory_admin_override === 'force_hidden'
+      ? `<span class="badge muted">Katalog: yashirilgan</span>`
+      : directoryPublic
+      ? `<span class="badge green">Katalog: public${c.directory_admin_override==='force_public'?' (admin)':''}</span>`
+      : `<span class="badge">Katalog: yopiq</span>`;
     const ownerHtml = c.owner_name
       ? `<span class="center-stat">👤 ${leaderLabel}: <b>${c.owner_name}</b> <span style="color:var(--muted);">(${c.owner_email})</span></span>`
       : `<span class="center-stat" style="color:var(--amber);">⚠ ${leaderLabel} tayinlanmagan</span>`;
@@ -841,6 +847,7 @@ function renderCenters() {
         <div style="display:flex;align-items:center;gap:8px;">
           ${statusBadge}
           ${subscriptionBadge}
+          ${directoryBadge}
           ${c.deleted_at ? `<button class="btn-outline btn-sm" onclick="restoreCenter(${c.id},this)">Tiklash</button><button class="btn-outline btn-sm" style="color:var(--red)" onclick="purgeCenter(${c.id})">Butunlay o'chirish</button>` : `<button class="btn-outline btn-sm" onclick="toggleCenter(${c.id}, this)">${c.is_active ? '⛔ Yopish' : '✓ Qayta ochish'}</button><button class="btn-outline btn-sm" style="color:var(--red)" onclick="trashCenter(${c.id})">Savatga</button>`}
         </div>
       </div>
@@ -852,6 +859,7 @@ function renderCenters() {
           <button class="btn-outline btn-sm" onclick="toggleCenterSubscription(${c.id}, this)">${c.subscription_required ? "Obuna talabini o'chirish" : 'Obuna talabini yoqish'}</button>
           <button class="btn-outline btn-sm" onclick="toggleTestUpload(${c.id}, this)">${c.test_upload_enabled ? "Test yuklashni o'chirish" : 'Test yuklashga ruxsat'}</button>
           <button class="btn-outline btn-sm" onclick="toggleInventory(${c.id},this)">Tarkibini boshqarish</button>
+          <button class="btn-outline btn-sm" onclick="manageCenterDirectory(${c.id})">Public katalog nazorati</button>
         </div>
         <div id="inventory-${c.id}" style="display:none;margin-top:14px"></div>
       </div>
@@ -954,6 +962,22 @@ async function toggleCenterSubscription(id, btnEl) {
 }
 
 async function toggleTestUpload(id, btnEl) { btnEl.disabled=true;try{const res=await adminFetch(`/api/admin/centers/${id}/toggle-test-upload`,{method:'POST'}),data=await res.json();if(!res.ok)throw new Error(data.detail||'Xatolik');await loadCenters()}catch(e){alert(e.message);btnEl.disabled=false} }
+
+async function manageCenterDirectory(id) {
+  const center=allCenters.find(item=>item.id===id);if(!center)return;
+  const mode=prompt("Katalog holati: inherit, force_public yoki force_hidden",center.directory_admin_override||'inherit');
+  if(mode===null)return;
+  if(!['inherit','force_public','force_hidden'].includes(mode))return alert("Holat noto'g'ri");
+  const slug=prompt("Public slug:",center.slug||'');if(slug===null)return;
+  const reason=mode==='inherit'?'':prompt("Admin override sababi (majburiy):",center.directory_admin_reason||'');
+  if(reason===null)return;
+  const featured=confirm("Tashkilotni katalogda tavsiya etilgan sifatida yuqoriga chiqarilsinmi?");
+  const order=Number(prompt("Katalog tartibi (0-10000):",center.directory_sort_order??100));
+  if(!Number.isFinite(order))return alert("Tartib raqami noto'g'ri");
+  const res=await adminFetch(`/api/admin/centers/${id}/directory`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,reason:reason||null,slug:slug||null,featured,sort_order:order})}),data=await res.json();
+  if(!res.ok)return alert(data.detail||'Katalog sozlamasi saqlanmadi');
+  await loadCenters();
+}
 
 function fillAdminTestCenters(){const el=document.getElementById('admin-test-center');if(el)el.innerHTML=allCenters.map(c=>`<option value="${c.id}">${adminEsc(c.name)}</option>`).join('')}
 function updateAdminTestCenter(){document.getElementById('admin-test-center-wrap').style.display=document.getElementById('admin-test-visibility').value==='organization'?'':'none'}

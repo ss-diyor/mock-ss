@@ -31,6 +31,23 @@ async def ensure_center_group_tables():
                 brand_favicon_url TEXT,
                 brand_contact_email TEXT,
                 brand_contact_phone TEXT,
+                directory_opt_in BOOLEAN DEFAULT FALSE,
+                directory_admin_override TEXT DEFAULT 'inherit',
+                directory_admin_reason TEXT,
+                directory_description TEXT,
+                directory_region TEXT,
+                directory_address TEXT,
+                directory_website_url TEXT,
+                directory_telegram_url TEXT,
+                directory_instagram_url TEXT,
+                directory_show_email BOOLEAN DEFAULT FALSE,
+                directory_show_phone BOOLEAN DEFAULT FALSE,
+                directory_show_address BOOLEAN DEFAULT FALSE,
+                directory_show_statistics BOOLEAN DEFAULT FALSE,
+                directory_show_testimonials BOOLEAN DEFAULT FALSE,
+                directory_featured BOOLEAN DEFAULT FALSE,
+                directory_sort_order INTEGER DEFAULT 100,
+                directory_override_updated_at TIMESTAMP,
                 show_powered_by BOOLEAN DEFAULT TRUE,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW()
@@ -45,10 +62,32 @@ async def ensure_center_group_tables():
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_favicon_url TEXT")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_contact_email TEXT")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS brand_contact_phone TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_opt_in BOOLEAN NOT NULL DEFAULT FALSE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_admin_override TEXT NOT NULL DEFAULT 'inherit'")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_admin_reason TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_description TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_region TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_address TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_website_url TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_telegram_url TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_instagram_url TEXT")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_show_email BOOLEAN NOT NULL DEFAULT FALSE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_show_phone BOOLEAN NOT NULL DEFAULT FALSE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_show_address BOOLEAN NOT NULL DEFAULT FALSE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_show_statistics BOOLEAN NOT NULL DEFAULT FALSE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_show_testimonials BOOLEAN NOT NULL DEFAULT FALSE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_featured BOOLEAN NOT NULL DEFAULT FALSE")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_sort_order INTEGER NOT NULL DEFAULT 100")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_override_updated_at TIMESTAMP")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS show_powered_by BOOLEAN DEFAULT TRUE")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS subscription_required BOOLEAN NOT NULL DEFAULT FALSE")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP")
         await conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS centers_slug_unique ON centers (LOWER(slug)) WHERE slug IS NOT NULL")
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS centers_public_directory_idx
+            ON centers (directory_featured DESC, directory_sort_order, name)
+            WHERE deleted_at IS NULL AND is_active = TRUE AND slug IS NOT NULL
+        """)
 
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS groups (

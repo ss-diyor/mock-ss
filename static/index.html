@@ -711,7 +711,7 @@ footer {
   <div class="nav-menu" id="nav-menu">
     <a class="nav-link" href="#info" onclick="closeMobileNav()">Imkoniyatlar</a>
     <a class="nav-link" href="#roles" onclick="closeMobileNav()">Kimlar uchun</a>
-    <a class="nav-link" href="#organizations" onclick="closeMobileNav()">Tashkilotlar</a>
+    <a class="nav-link" href="/organizations">Tashkilotlar</a>
     <a class="nav-link" href="/tests">Testlar</a>
     <div class="nav-mobile-profile"><a class="nav-link" id="nav-mobile-profile-link" href="/profile">Profil / Kirish</a></div>
   </div>
@@ -925,6 +925,7 @@ footer {
           </div>
           <div class="organization-actions">
             <button class="btn-primary" onclick="openOrganizationApplication()">Tashkilot sifatida boshlash →</button>
+            <a class="btn-outline" href="/organizations" style="text-decoration:none">Tashkilotlar katalogi →</a>
             <small>Ariza super-admin tomonidan ko'rib chiqiladi</small>
           </div>
         </div>
@@ -1261,8 +1262,8 @@ footer {
       <div class="footer-column">
         <h3>Tashkilotlar</h3>
         <ul class="footer-links">
-          <li><a href="/#organizations">Maktablar uchun</a></li>
-          <li><a href="/#organizations">O'quv markazlari uchun</a></li>
+          <li><a href="/organizations?type=school">Maktablar katalogi</a></li>
+          <li><a href="/organizations?type=learning_center">O'quv markazlari katalogi</a></li>
           <li><a href="/#organizations">White-label imkoniyatlari</a></li>
           <li><a href="/#organizations">Hamkorlik uchun ariza</a></li>
         </ul>

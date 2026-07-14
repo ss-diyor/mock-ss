@@ -168,6 +168,29 @@ nav {
 .catalog-preview-dot { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; background: var(--blue-light); color: var(--blue); font-size: 9px; }
 .catalog-preview-btn { width: 100%; margin-top: 2px; padding: 12px; border: 0; border-radius: 7px; background: var(--blue); color: #fff; cursor: pointer; font: 600 12px var(--mono); }
 .catalog-preview-btn:hover { background: var(--blue-hover); }
+.catalog-preview-btn:disabled { cursor: default; background: #b7c3da; }
+.mobile-deck-controls, .mobile-deck-hint { display: none; }
+@media (max-width: 700px) {
+  .test-card-stack.mobile-swipe-ready { touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; }
+  .test-card-stack.mobile-swipe-ready.is-dragging { cursor: grabbing; }
+  .mobile-swipe-ready .catalog-preview-card {
+    transform: translate3d(var(--swipe-x,0px),0,0) rotate(var(--swipe-rotation,0deg));
+    transition: transform .26s cubic-bezier(.2,.8,.2,1), opacity .22s, box-shadow .3s;
+  }
+  .mobile-swipe-ready.is-dragging .catalog-preview-card { transition: none; box-shadow: 0 26px 58px rgba(11,23,51,.16); }
+  .mobile-swipe-ready.swipe-out-left .catalog-preview-card { transform: translate3d(-118%,8px,0) rotate(-8deg); opacity: .2; }
+  .mobile-swipe-ready.swipe-out-right .catalog-preview-card { transform: translate3d(118%,8px,0) rotate(8deg); opacity: .2; }
+  .mobile-swipe-ready.swipe-in-left .catalog-preview-card { transform: translate3d(-105%,5px,0) rotate(-6deg); opacity: .15; transition: none; }
+  .mobile-swipe-ready.swipe-in-right .catalog-preview-card { transform: translate3d(105%,5px,0) rotate(6deg); opacity: .15; transition: none; }
+  .mobile-deck-controls { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 13px; }
+  .mobile-deck-arrow { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 9px; background: rgba(255,255,255,.9); color: var(--blue); cursor: pointer; font: 700 15px var(--mono); }
+  .mobile-deck-status { min-width: 94px; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .mobile-deck-counter { color: var(--muted); font: 600 9px var(--mono); }
+  .mobile-deck-dots { display: flex; gap: 5px; }
+  .mobile-deck-dot { width: 6px; height: 6px; border: 0; border-radius: 99px; background: #c4d0e8; padding: 0; transition: width .2s,background .2s; }
+  .mobile-deck-dot.active { width: 18px; background: var(--blue); }
+  .mobile-deck-hint { margin-top: 8px; display: block; color: var(--muted); text-align: center; font: 500 8px var(--mono); }
+}
 
 .trust-section { padding: 5px 0 0; }
 .trust-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
@@ -758,24 +781,30 @@ footer {
           <article class="catalog-preview-card">
             <div class="catalog-preview-body">
             <div class="catalog-preview-heading">
-              <div class="catalog-preview-mark">01</div>
+              <div class="catalog-preview-mark" id="mobile-deck-mark">01</div>
               <div class="catalog-preview-copy">
-                <div class="catalog-preview-org">IELTS Mock SS</div>
-                <div class="catalog-preview-title">IELTS Mock SS 1</div>
+                <div class="catalog-preview-org" id="mobile-deck-org">IELTS Mock SS</div>
+                <div class="catalog-preview-title" id="mobile-deck-title">IELTS Mock SS 1</div>
               </div>
             </div>
-            <div class="catalog-preview-desc">To'liq IELTS Academic mock test</div>
-            <span class="badge catalog-preview-type">IELTS Academic</span>
+            <div class="catalog-preview-desc" id="mobile-deck-description">To'liq IELTS Academic mock test</div>
+            <span class="badge catalog-preview-type" id="mobile-deck-type">IELTS Academic</span>
             <div class="catalog-preview-sections">
               <div class="catalog-preview-row"><span class="catalog-preview-dot">1</span><span>Listening</span></div>
               <div class="catalog-preview-row"><span class="catalog-preview-dot">2</span><span>Reading</span></div>
               <div class="catalog-preview-row"><span class="catalog-preview-dot">3</span><span>Writing</span></div>
               <div class="catalog-preview-row"><span class="catalog-preview-dot">4</span><span>Speaking</span></div>
             </div>
-            <button class="catalog-preview-btn" id="preview-primary-btn" onclick="startExamFlow()">Boshlash</button>
+            <button class="catalog-preview-btn" id="preview-primary-btn" onclick="handlePreviewAction()">Boshlash</button>
             </div>
           </article>
         </div>
+        <div class="mobile-deck-controls" aria-label="Mock test kartalarini almashtirish">
+          <button class="mobile-deck-arrow" type="button" onclick="moveMobileDeck(-1)" aria-label="Oldingi karta">←</button>
+          <div class="mobile-deck-status"><span class="mobile-deck-counter" id="mobile-deck-counter">1 / 4</span><div class="mobile-deck-dots" id="mobile-deck-dots" aria-hidden="true"></div></div>
+          <button class="mobile-deck-arrow" type="button" onclick="moveMobileDeck(1)" aria-label="Keyingi karta">→</button>
+        </div>
+        <p class="mobile-deck-hint">Kartalarni chapga yoki o‘ngga suring</p>
       </div>
     </section>
 
@@ -2062,6 +2091,125 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ─── LANDING MOTION ─────────────────────────────────────────────────────────
+const mobileDeckItems = [
+  { mark: '01', organization: 'IELTS Mock SS', title: 'IELTS Mock SS 1', description: "To'liq IELTS Academic mock test", type: 'IELTS Academic', available: true },
+  { mark: '02', organization: 'IELTS Mock SS', title: 'IELTS Mock SS 2', description: 'Yangi full mock test tayyorlanmoqda', type: 'IELTS Academic', available: false },
+  { mark: '20', organization: 'Cambridge IELTS', title: 'Cambridge IELTS 20', description: 'Cambridge full mock test tez orada', type: 'IELTS Academic', available: false },
+  { mark: '21', organization: 'Cambridge IELTS', title: 'Cambridge IELTS 21', description: 'Cambridge full mock test tez orada', type: 'IELTS Academic', available: false }
+];
+let mobileDeckIndex = 0;
+let mobileDeckAnimating = false;
+
+function renderMobileDeck() {
+  const item = mobileDeckItems[mobileDeckIndex];
+  const stack = document.querySelector('.test-card-stack');
+  if (!item || !stack) return;
+  document.getElementById('mobile-deck-mark').textContent = item.mark;
+  document.getElementById('mobile-deck-org').textContent = item.organization;
+  document.getElementById('mobile-deck-title').textContent = item.title;
+  document.getElementById('mobile-deck-description').textContent = item.description;
+  document.getElementById('mobile-deck-type').textContent = item.type;
+  const primaryButton = document.getElementById('preview-primary-btn');
+  primaryButton.textContent = item.available ? 'Boshlash' : 'Soon';
+  primaryButton.disabled = !item.available;
+  primaryButton.setAttribute('aria-label', item.available ? `${item.title} testini boshlash` : `${item.title} tez orada`);
+
+  document.querySelectorAll('.catalog-stack-card').forEach((card, offset) => {
+    const next = mobileDeckItems[(mobileDeckIndex + offset + 1) % mobileDeckItems.length];
+    card.querySelector('.catalog-stack-mark').textContent = next.mark;
+    card.querySelector('.catalog-stack-org').textContent = next.organization;
+    card.querySelector('.catalog-stack-title').textContent = next.title;
+    card.querySelector('.catalog-stack-soon').textContent = next.available ? 'Available' : 'Soon';
+  });
+  document.getElementById('mobile-deck-counter').textContent = `${mobileDeckIndex + 1} / ${mobileDeckItems.length}`;
+  document.getElementById('mobile-deck-dots').innerHTML = mobileDeckItems.map((_, index) => `<span class="mobile-deck-dot${index === mobileDeckIndex ? ' active' : ''}"></span>`).join('');
+}
+
+function handlePreviewAction() {
+  if (mobileDeckItems[mobileDeckIndex].available) startExamFlow();
+}
+
+function moveMobileDeck(step) {
+  const stack = document.querySelector('.test-card-stack');
+  if (!stack || mobileDeckAnimating || window.innerWidth > 700) return;
+  mobileDeckAnimating = true;
+  stack.classList.remove('is-dragging');
+  stack.style.removeProperty('--swipe-x');
+  stack.style.removeProperty('--swipe-rotation');
+  const exitClass = step > 0 ? 'swipe-out-left' : 'swipe-out-right';
+  const enterClass = step > 0 ? 'swipe-in-right' : 'swipe-in-left';
+  stack.classList.add(exitClass);
+  window.setTimeout(() => {
+    mobileDeckIndex = (mobileDeckIndex + step + mobileDeckItems.length) % mobileDeckItems.length;
+    renderMobileDeck();
+    stack.classList.remove(exitClass);
+    stack.classList.add(enterClass);
+    requestAnimationFrame(() => requestAnimationFrame(() => stack.classList.remove(enterClass)));
+    window.setTimeout(() => { mobileDeckAnimating = false; }, 280);
+  }, 220);
+}
+
+(function initMobileCardDeck() {
+  const stack = document.querySelector('.test-card-stack');
+  if (!stack) return;
+  stack.classList.add('mobile-swipe-ready');
+  renderMobileDeck();
+  let tracking = false;
+  let horizontal = false;
+  let startX = 0;
+  let startY = 0;
+  let deltaX = 0;
+  let suppressClick = false;
+
+  const resetDrag = () => {
+    tracking = false;
+    horizontal = false;
+    deltaX = 0;
+    stack.classList.remove('is-dragging');
+    stack.style.setProperty('--swipe-x', '0px');
+    stack.style.setProperty('--swipe-rotation', '0deg');
+  };
+  stack.addEventListener('pointerdown', event => {
+    if (window.innerWidth > 700 || mobileDeckAnimating || event.button !== 0) return;
+    tracking = true;
+    horizontal = false;
+    startX = event.clientX;
+    startY = event.clientY;
+    deltaX = 0;
+    if (stack.setPointerCapture) stack.setPointerCapture(event.pointerId);
+  });
+  stack.addEventListener('pointermove', event => {
+    if (!tracking) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    if (!horizontal && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) { resetDrag(); return; }
+    if (Math.abs(dx) < 5) return;
+    horizontal = true;
+    deltaX = dx;
+    event.preventDefault();
+    stack.classList.add('is-dragging');
+    const resisted = dx * (1 - Math.min(Math.abs(dx) / 900, .22));
+    stack.style.setProperty('--swipe-x', `${resisted}px`);
+    stack.style.setProperty('--swipe-rotation', `${Math.max(-7, Math.min(7, dx / 22))}deg`);
+  }, { passive: false });
+  stack.addEventListener('pointerup', () => {
+    if (!tracking) return;
+    const shouldMove = horizontal && Math.abs(deltaX) >= 52;
+    const step = deltaX < 0 ? 1 : -1;
+    if (shouldMove) {
+      suppressClick = true;
+      moveMobileDeck(step);
+    } else resetDrag();
+  });
+  stack.addEventListener('pointercancel', resetDrag);
+  stack.addEventListener('click', event => {
+    if (!suppressClick) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClick = false;
+  }, true);
+})();
+
 (function initLandingMotion() {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduceMotion) return;

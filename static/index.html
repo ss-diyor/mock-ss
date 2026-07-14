@@ -223,6 +223,44 @@ nav {
 .result-points { background: var(--surface); border: 1px solid var(--border); display: grid; gap: 10px; }
 .result-point { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 9px; background: var(--bg); font-size: 13px; font-weight: 600; }
 .result-point::before { content: '✓'; flex: 0 0 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; background: var(--green-light); color: var(--green); font: 800 11px var(--mono); }
+.roles-shell { overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: rgba(255,255,255,.92); box-shadow: 0 20px 55px rgba(11,23,51,.07); }
+.role-tabs { display: flex; gap: 7px; padding: 10px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg,#f7f9ff,#f2f6ff); }
+.role-tab { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 11px 13px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; font: 700 11px var(--mono); transition: color .25s,background .25s,border-color .25s,box-shadow .25s,transform .25s; }
+.role-tab:hover { color: var(--blue); transform: translateY(-1px); }
+.role-tab:focus-visible { outline: 2px solid rgba(26,86,232,.42); outline-offset: 2px; }
+.role-tab.active { border-color: #c7d6fb; background: #fff; color: var(--blue); box-shadow: 0 8px 20px rgba(26,86,232,.09); }
+.role-tab-code { width: 27px; height: 27px; flex: 0 0 27px; display: grid; place-items: center; border-radius: 8px; background: #eaf0ff; color: var(--blue); font-size: 9px; transition: transform .25s,background .25s; }
+.role-tab-code svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.role-tab.active .role-tab-code { background: var(--blue); color: #fff; transform: rotate(-4deg) scale(1.05); }
+.role-stage { display: grid; grid-template-columns: .92fr 1.08fr; min-height: 430px; }
+.role-stage.role-stage-enter { animation: role-stage-enter .42s cubic-bezier(.16,1,.3,1); }
+.role-copy { padding: 42px; display: flex; flex-direction: column; justify-content: center; }
+.role-kicker { margin-bottom: 12px; color: var(--blue); font: 700 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.role-copy h3 { max-width: 440px; font-size: clamp(25px,3.2vw,36px); line-height: 1.08; letter-spacing: -1.2px; }
+.role-description { margin: 15px 0 24px; max-width: 470px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.role-feature-list { display: grid; gap: 10px; }
+.role-feature { display: flex; align-items: center; gap: 11px; color: var(--text); font-size: 12px; font-weight: 600; }
+.role-feature::before { content: '✓'; width: 23px; height: 23px; flex: 0 0 23px; display: grid; place-items: center; border-radius: 7px; background: var(--green-light); color: var(--green); font: 800 9px var(--mono); }
+.role-dashboard-wrap { position: relative; overflow: hidden; min-width: 0; margin: 20px; padding: 24px; border: 1px solid var(--border); border-radius: 15px; background: var(--bg); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.9); }
+.role-dashboard-wrap::before { content: ''; position: absolute; width: 220px; height: 220px; top: -155px; right: -75px; border-radius: 50%; background: rgba(26,86,232,.08); box-shadow: 0 0 0 38px rgba(26,86,232,.025); }
+.role-dashboard { position: relative; z-index: 1; }
+.role-dashboard-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 24px; }
+.role-dashboard-label { color: var(--blue); font: 600 9px var(--mono); margin-bottom: 5px; }
+.role-dashboard-title { font-size: 17px; font-weight: 800; }
+.role-dashboard-badge { padding: 5px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--blue-light); color: var(--blue); font: 700 9px var(--mono); }
+.role-dashboard-mini-tabs { display: flex; gap: 4px; max-width: 320px; margin-bottom: 14px; padding: 4px; border-radius: 9px; background: var(--surface2); }
+.role-dashboard-mini-tabs span { flex: 1; padding: 8px; border-radius: 6px; color: var(--muted); text-align: center; font: 600 9px var(--mono); }
+.role-dashboard-mini-tabs .active { background: var(--surface); color: var(--blue); box-shadow: 0 1px 3px var(--shadow); }
+.role-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
+.role-metric { min-width: 0; padding: 16px 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); text-align: center; box-shadow: 0 7px 18px var(--shadow); }
+.role-metric-value { margin-bottom: 7px; color: var(--blue); font: 900 22px var(--mono); }
+.role-metric-label { overflow: hidden; color: var(--muted); font: 600 8px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+.role-activity { margin-top: 14px; overflow: hidden; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); }
+.role-activity-head { padding: 11px 13px; border-bottom: 1px solid var(--border); background: var(--surface2); color: var(--text); font: 700 9px var(--mono); }
+.role-activity-row { display: flex; align-items: center; gap: 10px; padding: 12px 13px; border-bottom: 1px solid var(--border); color: var(--text); font-size: 10px; }
+.role-activity-row:last-child { border-bottom: 0; }
+.role-activity-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 4px rgba(26,86,232,.1); }
+@keyframes role-stage-enter { from { opacity: .45; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 .organizations-layout { display: grid; grid-template-columns: 1.05fr .95fr; gap: 20px; align-items: stretch; }
 .organizations-copy { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
 .organizations-copy > p { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 14px 0 22px; }
@@ -310,7 +348,10 @@ nav.nav-scrolled { border-bottom-color: rgba(154,177,230,.55); box-shadow: 0 10p
   .hero-copy { max-width: 760px; }
   .hero-preview { max-width: 620px; width: 100%; }
   .landing-section-head, .landing-cta { align-items: flex-start; flex-direction: column; }
-  .result-strip { grid-template-columns: 1fr; }
+  .result-strip, .role-stage { grid-template-columns: 1fr; }
+  .role-stage { min-height: 0; }
+  .role-copy { padding: 34px; }
+  .role-dashboard-wrap { margin-top: 0; }
   .organizations-layout { grid-template-columns: 1fr; }
 }
 @media (max-width: 650px) {
@@ -322,6 +363,14 @@ nav.nav-scrolled { border-bottom-color: rgba(154,177,230,.55); box-shadow: 0 10p
   .trust-head { align-items: flex-start; flex-direction: column; gap: 10px; }
   .sections-grid, .workflow { grid-template-columns: 1fr; }
   .organization-types, .application-grid { grid-template-columns: 1fr; }
+  .role-tabs { overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
+  .role-tabs::-webkit-scrollbar { display: none; }
+  .role-tab { flex: 0 0 auto; min-width: 145px; }
+  .role-copy { padding: 28px 22px; }
+  .role-dashboard-wrap { margin: 0 12px 12px; padding: 18px; }
+  .role-metrics { gap: 6px; }
+  .role-metric { padding: 13px 9px; }
+  .role-metric-value { font-size: 18px; }
   .application-field.full { grid-column: auto; }
   .landing-section { padding-top: 68px; }
   .landing-section-head { align-items: flex-start; }
@@ -640,6 +689,7 @@ footer {
   </a>
   <div class="nav-menu" id="nav-menu">
     <a class="nav-link" href="#info" onclick="closeMobileNav()">Imkoniyatlar</a>
+    <a class="nav-link" href="#roles" onclick="closeMobileNav()">Kimlar uchun</a>
     <a class="nav-link" href="#organizations" onclick="closeMobileNav()">Tashkilotlar</a>
     <a class="nav-link" href="/tests">Testlar</a>
     <div class="nav-mobile-profile"><a class="nav-link" id="nav-mobile-profile-link" href="/profile">Profil / Kirish</a></div>
@@ -775,6 +825,46 @@ footer {
           <div class="result-point">Writing matnlari va mezonlar bo'yicha baho</div>
           <div class="result-point">Speaking audio yozuvi va teacher izohlari</div>
           <div class="result-point">Barcha urinishlar bo'yicha natijalar tarixi</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-section" id="roles" aria-labelledby="roles-title">
+      <div class="landing-section-head">
+        <div><p class="eyebrow">$ platform --roles</p><h2 id="roles-title">Har bir rol uchun kerakli imkoniyat</h2></div>
+        <p class="section-lead">O'quvchidan rahbargacha — har kim faqat o'z vazifasiga mos vositalar va ma'lumotlarni ko'radi.</p>
+      </div>
+      <div class="roles-shell">
+        <div class="role-tabs" role="tablist" aria-label="Platformadagi rollar">
+          <button class="role-tab active" type="button" role="tab" aria-selected="true" aria-controls="role-stage" data-role="student" onclick="switchLandingRole('student',this)"><span class="role-tab-code" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.7-4 2.8-6 6.5-6s5.8 2 6.5 6"/><path d="M8.5 18.5h7"/></svg></span><span>O'quvchi</span></button>
+          <button class="role-tab" type="button" role="tab" aria-selected="false" aria-controls="role-stage" data-role="teacher" onclick="switchLandingRole('teacher',this)"><span class="role-tab-code" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H4z"/><path d="M8 20l4-4 4 4M8 9h8M8 12h5"/></svg></span><span>Teacher</span></button>
+          <button class="role-tab" type="button" role="tab" aria-selected="false" aria-controls="role-stage" data-role="director" onclick="switchLandingRole('director',this)"><span class="role-tab-code" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-4 7 4v12M9 21v-5h6v5"/><path d="M8 11h.01M12 11h.01M16 11h.01"/></svg></span><span>Direktor</span></button>
+          <button class="role-tab" type="button" role="tab" aria-selected="false" aria-controls="role-stage" data-role="manager" onclick="switchLandingRole('manager',this)"><span class="role-tab-code" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 21V4h14v17M2 21h20M9 21v-4h6v4"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01"/></svg></span><span>Markaz rahbari</span></button>
+        </div>
+        <div class="role-stage" id="role-stage" role="tabpanel">
+          <div class="role-copy">
+            <p class="role-kicker" id="role-kicker">O'quvchi paneli</p>
+            <h3 id="role-title">Natijangiz doim o'zingiz bilan</h3>
+            <p class="role-description" id="role-description">Mock testlarni topshiring, har bir urinishni saqlang va teacher feedback'i orqali o'sishingizni kuzating.</p>
+            <div class="role-feature-list" id="role-feature-list">
+              <div class="role-feature">Full mock va Practice mode</div>
+              <div class="role-feature">Barcha natijalar tarixi</div>
+              <div class="role-feature">Writing va Speaking feedback</div>
+              <div class="role-feature">Telegram va email xabarlari</div>
+            </div>
+          </div>
+          <div class="role-dashboard-wrap" aria-label="Tanlangan rol paneli namunasi">
+            <div class="role-dashboard">
+              <div class="role-dashboard-head"><div><div class="role-dashboard-label">IELTS MOCK SS / DASHBOARD</div><div class="role-dashboard-title" id="role-dashboard-title">O'quvchi paneli</div></div><span class="role-dashboard-badge" id="role-dashboard-badge">STUDENT</span></div>
+              <div class="role-dashboard-mini-tabs" aria-hidden="true"><span class="active">Umumiy</span><span>Natijalar</span><span>Faoliyat</span></div>
+              <div class="role-metrics">
+                <div class="role-metric"><div class="role-metric-value" id="role-metric-value-1">6.5</div><div class="role-metric-label" id="role-metric-label-1">OVERALL BAND</div></div>
+                <div class="role-metric"><div class="role-metric-value" id="role-metric-value-2">12</div><div class="role-metric-label" id="role-metric-label-2">URINISHLAR</div></div>
+                <div class="role-metric"><div class="role-metric-value" id="role-metric-value-3">3</div><div class="role-metric-label" id="role-metric-label-3">FEEDBACK</div></div>
+              </div>
+              <div class="role-activity"><div class="role-activity-head" id="role-activity-head">So'nggi faoliyat</div><div id="role-activity-list"><div class="role-activity-row"><span class="role-activity-dot"></span><span>Reading natijasi saqlandi</span></div><div class="role-activity-row"><span class="role-activity-dot"></span><span>Writing teacher tomonidan baholandi</span></div><div class="role-activity-row"><span class="role-activity-dot"></span><span>Yangi test sizga biriktirildi</span></div></div></div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1301,6 +1391,92 @@ function closeMobileNav() {
   toggle.setAttribute('aria-label', 'Navigatsiya menyusini ochish');
 }
 
+const landingRoleProfiles = {
+  student: {
+    kicker: "O'quvchi paneli",
+    title: "Natijangiz doim o'zingiz bilan",
+    description: "Mock testlarni topshiring, har bir urinishni saqlang va teacher feedback'i orqali o'sishingizni kuzating.",
+    features: ["Full mock va Practice mode", "Barcha natijalar tarixi", "Writing va Speaking feedback", "Telegram va email xabarlari"],
+    dashboard: "O'quvchi paneli", badge: "STUDENT",
+    metrics: [["6.5","OVERALL BAND"],["12","URINISHLAR"],["3","FEEDBACK"]],
+    activityHead: "So'nggi faoliyat",
+    activities: ["Reading natijasi saqlandi", "Writing teacher tomonidan baholandi", "Yangi test sizga biriktirildi"]
+  },
+  teacher: {
+    kicker: "Teacher paneli",
+    title: "Tekshirish va feedback — bitta navbatda",
+    description: "Faqat o'zingizga biriktirilgan sinf va guruhlarni ko'ring, Writing hamda Speaking ishlarini IELTS mezonlari asosida baholang.",
+    features: ["Tekshirilmagan ishlar navbati", "IELTS band mezonlari bo'yicha baholash", "Matn va audioga izoh qoldirish", "Qayta topshirishga yuborish"],
+    dashboard: "Teacher paneli", badge: "TEACHER",
+    metrics: [["18","TEKSHIRILMAGAN"],["7","GURUHLAR"],["86%","BAHOLANGAN"]],
+    activityHead: "Tekshirish navbati",
+    activities: ["Aziza — Writing Task 2", "Javohir — Speaking Part 2", "11-A sinf — Writing Task 1"]
+  },
+  director: {
+    kicker: "Maktab direktori paneli",
+    title: "Maktab natijalari bir qarashda",
+    description: "Sinflar, fanlar, ustozlar va o'quvchilar faoliyatini boshqaring hamda maktab bo'yicha umumiy natijalarni kuzating.",
+    features: ["Sinf, fan va xodimlar boshqaruvi", "Maktab bo'yicha umumiy statistika", "Testlarni sinflarga rejalashtirish", "Excel import va eksport"],
+    dashboard: "Direktor paneli", badge: "DIRECTOR",
+    metrics: [["24","SINFLAR"],["486","O'QUVCHILAR"],["18","XODIMLAR"]],
+    activityHead: "Maktab faoliyati",
+    activities: ["11-B sinfga yangi test biriktirildi", "32 o'quvchi Excel orqali yuklandi", "Iyul natijalari eksport qilindi"]
+  },
+  manager: {
+    kicker: "O'quv markazi rahbari paneli",
+    title: "Markazingizni raqamli boshqaring",
+    description: "Guruhlar, teacher'lar, o'quvchilar, test rejalari va to'lov holatini yagona markaziy panel orqali nazorat qiling.",
+    features: ["Guruh va teacher boshqaruvi", "Testlarni guruhlarga rejalashtirish", "Natija va davomad monitoringi", "Obuna hamda branding sozlamalari"],
+    dashboard: "Markaz rahbari paneli", badge: "MANAGER",
+    metrics: [["12","GURUHLAR"],["286","O'QUVCHILAR"],["74%","O'RTACHA NATIJA"]],
+    activityHead: "Markaz faoliyati",
+    activities: ["IELTS 7+ guruhiga mock rejalashtirildi", "5 ta yangi o'quvchi qo'shildi", "Teacher hisobotlari yangilandi"]
+  }
+};
+
+function switchLandingRole(role, button) {
+  const profile = landingRoleProfiles[role];
+  const stage = document.getElementById('role-stage');
+  if (!profile || !stage) return;
+  document.querySelectorAll('.role-tab').forEach(tab => {
+    const active = tab === button;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    tab.tabIndex = active ? 0 : -1;
+  });
+  document.getElementById('role-kicker').textContent = profile.kicker;
+  document.getElementById('role-title').textContent = profile.title;
+  document.getElementById('role-description').textContent = profile.description;
+  document.getElementById('role-dashboard-title').textContent = profile.dashboard;
+  document.getElementById('role-dashboard-badge').textContent = profile.badge;
+  document.getElementById('role-activity-head').textContent = profile.activityHead;
+  const featureNodes = profile.features.map(text => {
+    const item = document.createElement('div');
+    item.className = 'role-feature';
+    item.textContent = text;
+    return item;
+  });
+  document.getElementById('role-feature-list').replaceChildren(...featureNodes);
+  profile.metrics.forEach((metric, index) => {
+    document.getElementById(`role-metric-value-${index + 1}`).textContent = metric[0];
+    document.getElementById(`role-metric-label-${index + 1}`).textContent = metric[1];
+  });
+  const activityNodes = profile.activities.map(text => {
+    const row = document.createElement('div');
+    row.className = 'role-activity-row';
+    const dot = document.createElement('span');
+    dot.className = 'role-activity-dot';
+    const label = document.createElement('span');
+    label.textContent = text;
+    row.append(dot, label);
+    return row;
+  });
+  document.getElementById('role-activity-list').replaceChildren(...activityNodes);
+  stage.classList.remove('role-stage-enter');
+  void stage.offsetWidth;
+  stage.classList.add('role-stage-enter');
+}
+
 document.addEventListener('click', event => {
   const nav = document.getElementById('site-nav');
   if (document.getElementById('nav-menu').classList.contains('open') && !nav.contains(event.target)) {
@@ -1751,7 +1927,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const revealSelector = [
     '.trust-head', '.trust-card', '.trust-note', '.landing-section-head',
     '.section-card', '.workflow-card', '.result-copy', '.result-points',
-    '.organizations-copy', '.brand-preview', '.landing-cta'
+    '.roles-shell', '.organizations-copy', '.brand-preview', '.landing-cta'
   ].join(',');
   const revealNodes = Array.from(document.querySelectorAll(revealSelector));
   revealNodes.forEach(node => {

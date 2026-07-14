@@ -184,6 +184,48 @@ nav {
 .result-points { background: var(--surface); border: 1px solid var(--border); display: grid; gap: 10px; }
 .result-point { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 9px; background: var(--bg); font-size: 13px; font-weight: 600; }
 .result-point::before { content: '✓'; flex: 0 0 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; background: var(--green-light); color: var(--green); font: 800 11px var(--mono); }
+.organizations-layout { display: grid; grid-template-columns: 1.05fr .95fr; gap: 20px; align-items: stretch; }
+.organizations-copy { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
+.organizations-copy > p { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 14px 0 22px; }
+.organization-types { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.organization-type-card { border: 1px solid #dbe4f4; background: var(--bg); border-radius: 12px; padding: 18px; }
+.organization-type-head { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
+.organization-type-code { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: var(--blue-light); color: var(--blue); font: 800 10px var(--mono); }
+.organization-type-card h3 { font-size: 14px; }
+.organization-feature { display: flex; gap: 8px; align-items: flex-start; color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 9px; }
+.organization-feature::before { content: '✓'; color: var(--green); font: 800 10px var(--mono); margin-top: 2px; }
+.organization-actions { display: flex; align-items: center; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+.organization-actions small { color: var(--muted); font: 500 10px var(--mono); }
+.brand-preview { position: relative; overflow: hidden; border-radius: 16px; padding: 26px; color: #fff; background: var(--text); box-shadow: 0 18px 48px rgba(11,23,51,.12); }
+.brand-preview::after { content: ''; position: absolute; width: 210px; height: 210px; border-radius: 50%; right: -80px; bottom: -100px; background: rgba(26,86,232,.35); }
+.brand-preview-tag { color: #88a9ff; font: 600 10px var(--mono); }
+.brand-browser { position: relative; z-index: 1; margin-top: 24px; background: #f7f9ff; color: var(--text); border-radius: 13px; overflow: hidden; box-shadow: 0 18px 35px rgba(0,0,0,.18); }
+.brand-browser-bar { height: 28px; display: flex; align-items: center; gap: 5px; padding: 0 11px; background: #e9eefb; }
+.brand-browser-dot { width: 6px; height: 6px; border-radius: 50%; background: #afbdd8; }
+.brand-panel-head { padding: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #dbe4f4; }
+.brand-panel-logo { width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center; background: var(--blue); color: #fff; font: 800 10px var(--mono); }
+.brand-panel-name strong { display: block; font-size: 12px; }
+.brand-panel-name span { color: var(--muted); font: 500 8px var(--mono); }
+.brand-panel-body { padding: 14px; display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+.brand-mini-card { padding: 12px; border: 1px solid #dbe4f4; border-radius: 8px; background: #fff; }
+.brand-mini-card strong { display: block; color: var(--blue); font: 800 16px var(--mono); }
+.brand-mini-card span { color: var(--muted); font: 500 8px var(--mono); }
+.brand-settings { position: relative; z-index: 1; display: grid; gap: 9px; margin-top: 18px; }
+.brand-setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; font: 500 10px var(--mono); color: #cad5ed; }
+.brand-setting b { color: #fff; font-weight: 600; }
+.brand-color { width: 16px; height: 16px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 3px rgba(255,255,255,.15); }
+.application-modal { position: fixed; inset: 0; z-index: 200; display: none; place-items: center; padding: 20px; background: rgba(11,23,51,.62); backdrop-filter: blur(6px); }
+.application-modal.open { display: grid; }
+.application-dialog { width: min(650px,100%); max-height: calc(100vh - 40px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 28px 80px rgba(11,23,51,.25); }
+.application-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px 24px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+.application-dialog-head h2 { font-size: 20px; margin-top: 5px; }
+.modal-close { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); cursor: pointer; font-size: 18px; }
+.application-form { padding: 24px; }
+.application-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.application-field.full { grid-column: 1/-1; }
+.application-form textarea { min-height: 86px; }
+.application-form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.application-honeypot { position: absolute !important; left: -10000px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
 .landing-cta { margin: 92px 0 84px; padding: 44px; border: 1px solid var(--blue); border-radius: 18px; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 30px; box-shadow: 0 22px 50px rgba(26,86,232,.2); }
 .landing-cta h2 { font-size: clamp(25px, 4vw, 37px); margin-bottom: 8px; letter-spacing: -1px; }
 .landing-cta p { color: #dbe5ff; font-size: 14px; }
@@ -195,6 +237,7 @@ nav {
   .hero-preview { max-width: 620px; width: 100%; }
   .landing-section-head, .landing-cta { align-items: flex-start; flex-direction: column; }
   .result-strip { grid-template-columns: 1fr; }
+  .organizations-layout { grid-template-columns: 1fr; }
 }
 @media (max-width: 650px) {
   .landing-shell { padding: 0 18px; }
@@ -205,10 +248,12 @@ nav {
   .stat-item:nth-child(2) { border-right: 0; }
   .stat-item:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
   .sections-grid, .workflow { grid-template-columns: 1fr; }
+  .organization-types, .application-grid { grid-template-columns: 1fr; }
+  .application-field.full { grid-column: auto; }
   .landing-section { padding-top: 68px; }
   .landing-section-head { align-items: flex-start; }
   .section-card { padding: 19px; }
-  .result-copy, .result-points, .landing-cta { padding: 26px; }
+  .result-copy, .result-points, .organizations-copy, .brand-preview, .landing-cta { padding: 26px; }
 }
 
 /* REGISTER */
@@ -551,10 +596,88 @@ footer a { color: var(--blue); text-decoration: none; }
       </div>
     </section>
 
+    <section class="landing-section" id="organizations">
+      <div class="landing-section-head">
+        <div><p class="eyebrow">$ organizations --platform</p><h2>Tashkilotingizni bitta platformada boshqaring</h2></div>
+        <p class="section-lead">O'quvchilar, ustozlar, sinflar, guruhlar, testlar va natijalar — barchasi yagona boshqaruv tizimida.</p>
+      </div>
+      <div class="organizations-layout">
+        <div class="organizations-copy">
+          <h2>Maktab va o'quv markazlari uchun</h2>
+          <p>Platformani tashkilotingiz jarayonlariga moslang, testlarni rejalashtiring va har bir o'quvchining natijasini kuzating.</p>
+          <div class="organization-types">
+            <article class="organization-type-card">
+              <div class="organization-type-head"><span class="organization-type-code">SCH</span><h3>Maktablar uchun</h3></div>
+              <div class="organization-feature">Sinflar, o'quvchilar va fanlar</div>
+              <div class="organization-feature">Direktor, ustoz va xodim rollari</div>
+              <div class="organization-feature">Sinf bo'yicha test va natijalar</div>
+              <div class="organization-feature">Excel import va eksport</div>
+            </article>
+            <article class="organization-type-card">
+              <div class="organization-type-head"><span class="organization-type-code">LC</span><h3>O'quv markazlari uchun</h3></div>
+              <div class="organization-feature">Guruhlar, teacher va o'quvchilar</div>
+              <div class="organization-feature">Testlarni guruhga rejalashtirish</div>
+              <div class="organization-feature">Writing va Speaking tekshiruvi</div>
+              <div class="organization-feature">Telegram va email xabarlari</div>
+            </article>
+          </div>
+          <div class="organization-actions">
+            <button class="btn-primary" onclick="openOrganizationApplication()">Tashkilot sifatida boshlash →</button>
+            <small>Ariza super-admin tomonidan ko'rib chiqiladi</small>
+          </div>
+        </div>
+
+        <div class="brand-preview">
+          <p class="brand-preview-tag">$ white-label --preview</p>
+          <div class="brand-browser">
+            <div class="brand-browser-bar"><span class="brand-browser-dot"></span><span class="brand-browser-dot"></span><span class="brand-browser-dot"></span></div>
+            <div class="brand-panel-head">
+              <div class="brand-panel-logo">LOGO</div>
+              <div class="brand-panel-name"><strong>Sizning tashkilotingiz</strong><span>Maktab yoki o'quv markaz paneli</span></div>
+            </div>
+            <div class="brand-panel-body">
+              <div class="brand-mini-card"><strong>12</strong><span>Guruh va sinflar</span></div>
+              <div class="brand-mini-card"><strong>286</strong><span>O'quvchilar</span></div>
+              <div class="brand-mini-card"><strong>18</strong><span>Teacher va xodimlar</span></div>
+              <div class="brand-mini-card"><strong>74%</strong><span>O'rtacha natija</span></div>
+            </div>
+          </div>
+          <div class="brand-settings">
+            <div class="brand-setting"><span>Brend nomi va logo</span><b>O'zingizniki</b></div>
+            <div class="brand-setting"><span>Asosiy rang</span><span class="brand-color" aria-label="Ko'k rang"></span></div>
+            <div class="brand-setting"><span>Public slug va favicon</span><b>✓</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="landing-cta">
       <div><h2>Birinchi mock testingizni boshlang</h2><p>Hisob yarating va IELTS tayyorgarligingizni bitta platformada boshqaring.</p></div>
       <button class="btn-outline" onclick="startExamFlow()">→ Hozir boshlash</button>
     </section>
+  </div>
+</div>
+
+<div class="application-modal" id="organization-application-modal" onclick="if(event.target===this)closeOrganizationApplication()">
+  <div class="application-dialog" role="dialog" aria-modal="true" aria-labelledby="application-title">
+    <div class="application-dialog-head">
+      <div><p class="eyebrow">$ organization --apply</p><h2 id="application-title">Tashkilot uchun ariza</h2></div>
+      <button class="modal-close" type="button" onclick="closeOrganizationApplication()" aria-label="Yopish">×</button>
+    </div>
+    <form class="application-form" id="organization-application-form" onsubmit="submitOrganizationApplication(event)">
+      <div class="application-grid">
+        <div class="application-field full"><label for="application-organization-name">Tashkilot nomi</label><input id="application-organization-name" name="organization_name" maxlength="160" required placeholder="Masalan: Bo'stonliq ITMA"></div>
+        <div class="application-field"><label for="application-type">Tashkilot turi</label><select id="application-type" name="organization_type" required><option value="school">Maktab</option><option value="learning_center">O'quv markazi</option></select></div>
+        <div class="application-field"><label for="application-students">Taxminiy o'quvchilar soni</label><input id="application-students" name="student_count" type="number" min="1" max="1000000" placeholder="Masalan: 300"></div>
+        <div class="application-field"><label for="application-contact-name">Mas'ul shaxs</label><input id="application-contact-name" name="contact_name" maxlength="120" required placeholder="Ism va familiya"></div>
+        <div class="application-field"><label for="application-phone">Telefon</label><input id="application-phone" name="phone" type="tel" maxlength="30" required placeholder="+998 90 123 45 67"></div>
+        <div class="application-field full"><label for="application-email">Email</label><input id="application-email" name="email" type="email" maxlength="254" required placeholder="admin@example.uz"></div>
+        <div class="application-field full"><label for="application-message">Qo'shimcha ma'lumot (ixtiyoriy)</label><textarea id="application-message" name="message" maxlength="1500" placeholder="Tashkilotingiz va ehtiyojlaringiz haqida qisqacha yozing"></textarea></div>
+        <div class="application-honeypot" aria-hidden="true"><label for="application-website">Website</label><input id="application-website" name="website" tabindex="-1" autocomplete="off"></div>
+      </div>
+      <div id="organization-application-alert" class="alert" style="display:none;margin-top:18px;margin-bottom:0"></div>
+      <div class="application-form-actions"><button class="btn-outline" type="button" onclick="closeOrganizationApplication()">Bekor qilish</button><button class="btn-primary" id="organization-application-submit" type="submit">Arizani yuborish →</button></div>
+    </form>
   </div>
 </div>
 
@@ -907,6 +1030,63 @@ function showView(id) {
 function scrollToInfo() {
   document.getElementById('info').scrollIntoView({behavior:'smooth'});
 }
+
+function openOrganizationApplication() {
+  const modal = document.getElementById('organization-application-modal');
+  const button = document.getElementById('organization-application-submit');
+  document.getElementById('organization-application-alert').style.display = 'none';
+  button.disabled = false;
+  button.textContent = 'Arizani yuborish →';
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('application-organization-name').focus(), 0);
+}
+
+function closeOrganizationApplication() {
+  document.getElementById('organization-application-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function submitOrganizationApplication(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = document.getElementById('organization-application-submit');
+  const alertBox = document.getElementById('organization-application-alert');
+  const payload = Object.fromEntries(new FormData(form));
+  payload.student_count = payload.student_count ? Number(payload.student_count) : null;
+  alertBox.style.display = 'none';
+  button.disabled = true;
+  button.textContent = 'Yuborilmoqda...';
+  try {
+    const response = await fetch('/api/organization-applications', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const raw = await response.text();
+    let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch { data = {detail: raw}; }
+    if (!response.ok) throw new Error(data.detail || 'Ariza yuborilmadi');
+    form.reset();
+    alertBox.className = 'alert success';
+    alertBox.textContent = '✓ Arizangiz qabul qilindi. Tez orada siz bilan bog\'lanamiz.';
+    alertBox.style.display = 'block';
+    button.textContent = 'Yuborildi ✓';
+    setTimeout(closeOrganizationApplication, 2200);
+  } catch (error) {
+    alertBox.className = 'alert danger';
+    alertBox.textContent = '→ ' + error.message;
+    alertBox.style.display = 'block';
+    button.disabled = false;
+    button.textContent = 'Arizani yuborish →';
+  }
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('organization-application-modal').classList.contains('open')) {
+    closeOrganizationApplication();
+  }
+});
 
 // ─── IMTIHONNI BOSHLASH ─────────────────────────────────────────────────────────
 function startExamFlow() {

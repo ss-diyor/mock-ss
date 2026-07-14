@@ -108,9 +108,9 @@ input:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26
 
 /* SECTION TABS */
 .section-tabs{display:flex;gap:4px;margin-bottom:24px;background:var(--surface2);padding:4px;
-  border-radius:9px;max-width:560px;}
+  border-radius:9px;max-width:100%;overflow-x:auto;}
 .section-tab{flex:1;padding:10px;border:none;background:transparent;border-radius:6px;
-  font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;}
+  font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
 .section-tab.active{background:var(--surface);color:var(--blue);box-shadow:0 1px 3px var(--shadow);}
 .section-view{display:none;}
 .section-view.active{display:block;}
@@ -203,6 +203,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <button class="section-tab active" id="tab-results" onclick="switchSection('results')">Natijalar</button>
     <button class="section-tab" id="tab-users" onclick="switchSection('users')">Foydalanuvchilar</button>
     <button class="section-tab" id="tab-centers" onclick="switchSection('centers')">Tashkilotlar</button>
+    <button class="section-tab" id="tab-applications" onclick="switchSection('applications')">Arizalar</button>
     <button class="section-tab" id="tab-tests" onclick="switchSection('tests')">Testlar</button>
     <button class="section-tab" id="tab-subscriptions" onclick="switchSection('subscriptions')">Obuna to'lovlari</button>
   </div>
@@ -322,6 +323,21 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <div id="subscription-payments-list"></div>
     <div id="subscription-payments-empty" class="empty-state" style="display:none;">To'lovlar yo'q</div>
   </div>
+  <div class="section-view" id="section-applications">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+      <div><div style="font-family:var(--mono);font-size:12px;color:var(--blue);">$ organizations --applications</div><div style="font-size:13px;color:var(--muted);margin-top:5px">Landing sahifadan yuborilgan maktab va o'quv markazi arizalari</div></div>
+      <button class="btn-outline btn-sm" onclick="loadOrganizationApplications()">↻ Yangilash</button>
+    </div>
+    <div class="filters" id="application-filters">
+      <button class="filter-btn active" data-application-filter="all" onclick="setApplicationFilter('all')">Hammasi</button>
+      <button class="filter-btn" data-application-filter="new" onclick="setApplicationFilter('new')">Yangi</button>
+      <button class="filter-btn" data-application-filter="contacted" onclick="setApplicationFilter('contacted')">Bog'lanilgan</button>
+      <button class="filter-btn" data-application-filter="approved" onclick="setApplicationFilter('approved')">Tasdiqlangan</button>
+      <button class="filter-btn" data-application-filter="rejected" onclick="setApplicationFilter('rejected')">Rad etilgan</button>
+    </div>
+    <div id="organization-applications-list"></div>
+    <div id="organization-applications-empty" class="empty-state" style="display:none">Arizalar yo'q</div>
+  </div>
   <div class="section-view" id="section-tests">
     <div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn-primary" onclick="openAdminBuilder()">Test konstruktorini ochish →</button></div>
     <div class="form-card" style="margin-bottom:20px;"><div class="form-card-head">$ test-cards --create-soon</div><div class="form-card-body">
@@ -416,6 +432,7 @@ function switchSection(which) {
   if (document.getElementById('tab-results')) document.getElementById('tab-results').classList.toggle('active', which === 'results');
   if (document.getElementById('tab-users')) document.getElementById('tab-users').classList.toggle('active', which === 'users');
   if (document.getElementById('tab-centers')) document.getElementById('tab-centers').classList.toggle('active', which === 'centers');
+  if (document.getElementById('tab-applications')) document.getElementById('tab-applications').classList.toggle('active', which === 'applications');
   if (document.getElementById('tab-tests')) document.getElementById('tab-tests').classList.toggle('active', which === 'tests');
   if (document.getElementById('tab-subscriptions')) document.getElementById('tab-subscriptions').classList.toggle('active', which === 'subscriptions');
 
@@ -423,12 +440,14 @@ function switchSection(which) {
   if (document.getElementById('section-results')) document.getElementById('section-results').classList.toggle('active', which === 'results');
   if (document.getElementById('section-users')) document.getElementById('section-users').classList.toggle('active', which === 'users');
   if (document.getElementById('section-centers')) document.getElementById('section-centers').classList.toggle('active', which === 'centers');
+  if (document.getElementById('section-applications')) document.getElementById('section-applications').classList.toggle('active', which === 'applications');
   if (document.getElementById('section-tests')) document.getElementById('section-tests').classList.toggle('active', which === 'tests');
   if (document.getElementById('section-subscriptions')) document.getElementById('section-subscriptions').classList.toggle('active', which === 'subscriptions');
 
   if (which === 'users') loadUsers();
   if (which === 'stats') loadStats();
   if (which === 'centers') loadCenters();
+  if (which === 'applications') loadOrganizationApplications();
   if (which === 'tests') { loadCenters().then(fillAdminTestCenters); loadAdminTests(); }
   if (which === 'subscriptions') loadSubscriptionPayments();
 }
@@ -928,6 +947,55 @@ async function adminTestStatus(id,status){const res=await adminFetch(`/api/tests
 async function adminDeleteTest(id){if(!confirm('Test butunlay o‘chirilsinmi?'))return;const res=await adminFetch(`/api/tests/admin/${id}`,{method:'DELETE'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');loadAdminTests()}
 async function adminAssignTest(id){if(!allCenters.length)await loadCenters();const names=allCenters.map(c=>`${c.id}: ${c.name}`).join('\n'),centerId=Number(prompt(`Tashkilot ID sini kiriting:\n${names}`));if(!centerId)return;const res=await adminFetch(`/api/tests/admin/${id}/assign`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({center_id:centerId})}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');loadAdminTests()}
 async function adminEditTest(id){const t=(window.adminTestRows||[]).find(x=>x.id===id);if(!t)return;const title=prompt('Test nomi:',t.title);if(title===null)return;const description=prompt('Izoh:',t.description||'');if(description===null)return;const cardOrder=Number(prompt('Karta tartibi:',t.card_order)??t.card_order),visibility=prompt('Ko‘rinishi: public yoki organization',t.visibility);if(!['public','organization'].includes(visibility))return alert('Ko‘rinish noto‘g‘ri');let centerId=t.center_id;if(visibility==='organization'){centerId=Number(prompt('Tashkilot ID:',centerId||''));if(!centerId)return}else centerId=null;const res=await adminFetch(`/api/tests/admin/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,description,test_type:t.test_type,visibility,center_id:centerId,duration_minutes:t.duration_minutes,difficulty:t.difficulty,attempt_limit:t.attempt_limit,card_order:cardOrder})}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');loadAdminTests()}
+
+let organizationApplications=[];
+let organizationApplicationFilter='all';
+const organizationApplicationLabels={new:'Yangi',contacted:"Bog'lanilgan",approved:'Tasdiqlangan',rejected:'Rad etilgan'};
+
+async function loadOrganizationApplications(){
+  const list=document.getElementById('organization-applications-list'),empty=document.getElementById('organization-applications-empty');
+  list.innerHTML='<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>';empty.style.display='none';
+  try{
+    const res=await adminFetch('/api/admin/organization-applications'),data=await res.json();
+    if(!res.ok)throw new Error(data.detail||'Arizalar yuklanmadi');
+    organizationApplications=data;renderOrganizationApplications();
+  }catch(e){list.innerHTML=`<div class="alert danger">→ ${adminEsc(e.message)}</div>`}
+}
+
+function setApplicationFilter(value){
+  organizationApplicationFilter=value;
+  document.querySelectorAll('[data-application-filter]').forEach(btn=>btn.classList.toggle('active',btn.dataset.applicationFilter===value));
+  renderOrganizationApplications();
+}
+
+function renderOrganizationApplications(){
+  const list=document.getElementById('organization-applications-list'),empty=document.getElementById('organization-applications-empty');
+  const rows=organizationApplications.filter(row=>organizationApplicationFilter==='all'||row.status===organizationApplicationFilter);
+  empty.style.display=rows.length?'none':'block';
+  list.innerHTML=rows.map(row=>`<div class="center-card"><div class="center-head"><div><div class="center-name">${adminEsc(row.organization_name)}</div><div class="center-meta">${row.organization_type==='school'?'Maktab':"O'quv markazi"} · ${new Date(row.created_at).toLocaleString('uz-UZ')}</div></div><span class="badge ${row.status==='approved'?'green':row.status==='contacted'?'amber':row.status==='rejected'?'muted':''}">${adminEsc(organizationApplicationLabels[row.status]||row.status)}</span></div><div class="center-body" style="display:block"><div class="center-stats"><span class="center-stat">Mas'ul: <b>${adminEsc(row.contact_name)}</b></span><span class="center-stat">Telefon: <b>${adminEsc(row.phone)}</b></span><span class="center-stat">Email: <b>${adminEsc(row.email)}</b></span><span class="center-stat">O'quvchilar: <b>${row.student_count??'—'}</b></span></div>${row.message?`<div class="center-meta" style="margin-top:12px;white-space:pre-wrap">${adminEsc(row.message)}</div>`:''}${row.admin_note?`<div class="alert info" style="margin:12px 0 0">Admin izohi: ${adminEsc(row.admin_note)}</div>`:''}<div class="row-actions" style="margin-top:14px"><button class="btn-outline btn-sm" onclick="reviewOrganizationApplication(${row.id},'contacted')">Bog'lanildi</button><button class="btn-primary btn-sm" onclick="reviewOrganizationApplication(${row.id},'approved')">Tasdiqlash</button><button class="btn-outline btn-sm" onclick="reviewOrganizationApplication(${row.id},'rejected')">Rad etish</button><button class="btn-outline btn-sm" onclick="createCenterFromApplication(${row.id})">Tashkilot yaratish →</button><button class="btn-outline btn-sm danger" onclick="deleteOrganizationApplication(${row.id})">O'chirish</button></div></div></div>`).join('');
+}
+
+async function reviewOrganizationApplication(id,status){
+  const note=prompt('Admin izohi (ixtiyoriy):',organizationApplications.find(row=>row.id===id)?.admin_note||'');
+  if(note===null)return;
+  const res=await adminFetch(`/api/admin/organization-applications/${id}/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,note:note||null})}),data=await res.json();
+  if(!res.ok)return alert(data.detail||'Xatolik');await loadOrganizationApplications();
+}
+
+function createCenterFromApplication(id){
+  const row=organizationApplications.find(item=>item.id===id);if(!row)return;
+  switchSection('centers');
+  document.getElementById('center-name-input').value=row.organization_name;
+  document.getElementById('center-type-input').value=row.organization_type;
+  if(row.student_count)document.getElementById('center-max-students-input').value=row.student_count;
+  document.getElementById('center-name-input').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+async function deleteOrganizationApplication(id){
+  if(!confirm("Ariza butunlay o'chirilsinmi?"))return;
+  const res=await adminFetch(`/api/admin/organization-applications/${id}`,{method:'DELETE'}),data=await res.json();
+  if(!res.ok)return alert(data.detail||'Xatolik');await loadOrganizationApplications();
+}
 
 function adminEsc(value) {
   return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));

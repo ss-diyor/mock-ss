@@ -12,6 +12,7 @@ import io
 import base64
 import csv
 import hmac
+import re
 try:
     import openpyxl
 except ImportError:
@@ -154,6 +155,23 @@ async def startup():
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_slug TEXT")
         await conn.execute("ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS test_mode TEXT")
         await conn.execute("ALTER TABLE exam_sessions ADD COLUMN IF NOT EXISTS test_id INTEGER REFERENCES tests(id) ON DELETE SET NULL")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS organization_applications (
+                id SERIAL PRIMARY KEY,
+                organization_name TEXT NOT NULL,
+                organization_type TEXT NOT NULL CHECK(organization_type IN ('learning_center','school')),
+                contact_name TEXT NOT NULL,
+                phone TEXT NOT NULL,
+                email TEXT NOT NULL,
+                student_count INTEGER,
+                message TEXT,
+                status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new','contacted','approved','rejected')),
+                admin_note TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                reviewed_at TIMESTAMP
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS organization_applications_status_idx ON organization_applications(status, created_at DESC)")
 
 
 # ─── Models ───────────────────────────────────────────────────────────────────
@@ -162,6 +180,22 @@ class StartSession(BaseModel):
     full_name: str
     email: str
     test_id: Optional[int] = None
+
+
+class OrganizationApplicationIn(BaseModel):
+    organization_name: str
+    organization_type: str
+    contact_name: str
+    phone: str
+    email: str
+    student_count: Optional[int] = None
+    message: Optional[str] = None
+    website: Optional[str] = None
+
+
+class OrganizationApplicationReviewIn(BaseModel):
+    status: str
+    note: Optional[str] = None
 
 
 class SubmitResult(BaseModel):
@@ -854,6 +888,59 @@ async def get_results_pdf(email: str, current_user: dict = Depends(get_current_u
     )
 
 
+# ─── ORGANIZATION APPLICATIONS ────────────────────────────────────────────────
+
+@app.post("/api/organization-applications")
+async def create_organization_application(data: OrganizationApplicationIn):
+    if data.website:
+        return {"ok": True, "message": "Arizangiz qabul qilindi"}
+
+    organization_name = data.organization_name.strip()
+    contact_name = data.contact_name.strip()
+    phone = data.phone.strip()
+    email = data.email.strip().lower()
+    message = (data.message or "").strip() or None
+
+    if data.organization_type not in ORGANIZATION_TYPES:
+        raise HTTPException(status_code=400, detail="Tashkilot turi noto'g'ri")
+    if not 2 <= len(organization_name) <= 160:
+        raise HTTPException(status_code=400, detail="Tashkilot nomini to'g'ri kiriting")
+    if not 2 <= len(contact_name) <= 120:
+        raise HTTPException(status_code=400, detail="Mas'ul shaxs ismini to'g'ri kiriting")
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email) or len(email) > 254:
+        raise HTTPException(status_code=400, detail="Email manzil noto'g'ri")
+    if not 7 <= len(phone) <= 30:
+        raise HTTPException(status_code=400, detail="Telefon raqamini to'g'ri kiriting")
+    if data.student_count is not None and not 1 <= data.student_count <= 1_000_000:
+        raise HTTPException(status_code=400, detail="O'quvchilar soni noto'g'ri")
+    if message and len(message) > 1500:
+        raise HTTPException(status_code=400, detail="Izoh 1500 belgidan oshmasligi kerak")
+
+    db = await get_pool()
+    async with db.acquire() as conn:
+        existing = await conn.fetchval(
+            """
+            SELECT id FROM organization_applications
+            WHERE LOWER(email)=$1 AND LOWER(organization_name)=LOWER($2)
+              AND status IN ('new','contacted') AND created_at > NOW() - INTERVAL '24 hours'
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            email, organization_name
+        )
+        if existing:
+            return {"ok": True, "application_id": existing, "message": "Arizangiz avval qabul qilingan"}
+        application_id = await conn.fetchval(
+            """
+            INSERT INTO organization_applications
+                (organization_name, organization_type, contact_name, phone, email, student_count, message)
+            VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id
+            """,
+            organization_name, data.organization_type, contact_name, phone, email,
+            data.student_count, message
+        )
+    return {"ok": True, "application_id": application_id, "message": "Arizangiz qabul qilindi"}
+
+
 # ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────────────
 
 def check_admin(secret: str):
@@ -868,6 +955,59 @@ def check_admin(secret: str):
 
 def require_admin(x_admin_secret: str = Header("", alias="X-Admin-Secret")):
     check_admin(x_admin_secret)
+
+
+@app.get("/api/admin/organization-applications")
+async def admin_organization_applications(_: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, organization_name, organization_type, contact_name, phone, email,
+                   student_count, message, status, admin_note, created_at, reviewed_at
+            FROM organization_applications ORDER BY (status='new') DESC, created_at DESC
+            LIMIT 500
+            """
+        )
+    return [dict(row) for row in rows]
+
+
+@app.post("/api/admin/organization-applications/{application_id}/review")
+async def admin_review_organization_application(
+    application_id: int,
+    data: OrganizationApplicationReviewIn,
+    _: None = Depends(require_admin)
+):
+    if data.status not in {"new", "contacted", "approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="Ariza holati noto'g'ri")
+    note = (data.note or "").strip() or None
+    if note and len(note) > 1500:
+        raise HTTPException(status_code=400, detail="Izoh juda uzun")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE organization_applications
+            SET status=$2, admin_note=$3, reviewed_at=CASE WHEN $2='new' THEN NULL ELSE NOW() END
+            WHERE id=$1 RETURNING id, status
+            """,
+            application_id, data.status, note
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Ariza topilmadi")
+    return dict(row)
+
+
+@app.delete("/api/admin/organization-applications/{application_id}")
+async def admin_delete_organization_application(application_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        deleted = await conn.fetchval(
+            "DELETE FROM organization_applications WHERE id=$1 RETURNING id", application_id
+        )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Ariza topilmadi")
+    return {"ok": True}
 
 
 @app.get("/api/admin/results")

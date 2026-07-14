@@ -225,6 +225,29 @@ class GradeWriting(BaseModel):
     grammar_accuracy: Optional[float] = None
 
 
+@app.get("/api/public/stats")
+async def public_platform_stats():
+    """Landing sahifa uchun faqat haqiqiy, shaxsiy ma'lumotsiz ko'rsatkichlar."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                (SELECT COUNT(*) FROM users
+                 WHERE role='student' AND deleted_at IS NULL) AS students,
+                (SELECT COUNT(*) FROM exam_sessions
+                 WHERE COALESCE(cardinality(sections_completed), 0) > 0) AS completed_tests,
+                (SELECT COUNT(*) FROM centers
+                 WHERE organization_type='school'
+                   AND is_active=TRUE AND deleted_at IS NULL) AS schools,
+                (SELECT COUNT(*) FROM centers
+                 WHERE organization_type='learning_center'
+                   AND is_active=TRUE AND deleted_at IS NULL) AS learning_centers
+            """
+        )
+    return dict(row)
+
+
 # ─── Email yuborish (Resend API) ───────────────────────────────────────────────
 
 async def send_email(to_email: str, to_name: str, subject: str, html_body: str):

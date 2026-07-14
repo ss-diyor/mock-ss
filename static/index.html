@@ -158,14 +158,24 @@ nav {
 .catalog-preview-btn { width: 100%; margin-top: 2px; padding: 12px; border: 0; border-radius: 7px; background: var(--blue); color: #fff; cursor: pointer; font: 600 12px var(--mono); }
 .catalog-preview-btn:hover { background: var(--blue-hover); }
 
-.stats-row {
-  display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface);
-  border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 12px 35px rgba(11,23,51,.05);
-}
-.stat-item { padding: 25px 18px; text-align: center; border-right: 1px solid var(--border); }
-.stat-item:last-child { border-right: 0; }
-.stat-num { font-size: 27px; font-weight: 900; color: var(--blue); font-family: var(--mono); }
-.stat-label { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+.trust-section { padding: 5px 0 0; }
+.trust-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.trust-head h2 { margin-top: 5px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.8px; }
+.trust-kicker { color: var(--blue); font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.trust-status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 600 10px var(--mono); white-space: nowrap; }
+.trust-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #19a55a; box-shadow: 0 0 0 4px rgba(25,165,90,.1); }
+.trust-status.unavailable::before { background: #9aa7c0; box-shadow: 0 0 0 4px rgba(154,167,192,.13); }
+.trust-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.trust-card { position: relative; min-height: 156px; padding: 20px; overflow: hidden; background: rgba(255,255,255,.9); border: 1px solid var(--border); border-radius: 15px; box-shadow: 0 12px 35px rgba(11,23,51,.045); }
+.trust-card::after { content: attr(data-index); position: absolute; right: 13px; bottom: -12px; color: rgba(26,86,232,.055); font: 900 62px var(--mono); line-height: 1; }
+.trust-icon { width: 36px; height: 36px; margin-bottom: 21px; display: grid; place-items: center; border: 1px solid #cbd9fb; border-radius: 10px; background: var(--blue-light); color: var(--blue); }
+.trust-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.trust-value { position: relative; z-index: 1; min-height: 36px; color: var(--text); font: 900 30px var(--mono); letter-spacing: -1.2px; }
+.trust-value.loading { color: #aab6cf; animation: trust-pulse 1.1s ease-in-out infinite alternate; }
+.trust-label { position: relative; z-index: 1; margin-top: 4px; color: var(--muted); font: 600 10px var(--mono); }
+.trust-note { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--muted); font: 500 10px var(--mono); }
+.trust-note::before { content: '✓'; width: 17px; height: 17px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: #eaf8f0; color: #16874b; font-weight: 800; }
+@keyframes trust-pulse { from { opacity: .42; } to { opacity: 1; } }
 .landing-section { padding: 92px 0 0; }
 .landing-section-head { display: flex; justify-content: space-between; align-items: end; gap: 30px; margin-bottom: 30px; }
 .eyebrow { color: var(--blue); font: 600 11px var(--mono); margin-bottom: 10px; }
@@ -262,9 +272,8 @@ nav {
   .hero { min-height: auto; padding: 42px 0 38px; gap: 34px; }
   .hero h1 { font-size: clamp(34px, 11vw, 42px); letter-spacing: -1.6px; }
   .hero-sub { font-size: 15px; }
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
-  .stat-item:nth-child(2) { border-right: 0; }
-  .stat-item:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .trust-grid { grid-template-columns: repeat(2, 1fr); }
+  .trust-head { align-items: flex-start; flex-direction: column; gap: 10px; }
   .sections-grid, .workflow { grid-template-columns: 1fr; }
   .organization-types, .application-grid { grid-template-columns: 1fr; }
   .application-field.full { grid-column: auto; }
@@ -294,8 +303,9 @@ nav {
   .hero-actions button { width: 100%; }
   .hero-note { font-size: 9px; line-height: 1.7; }
   .catalog-preview-body { padding: 17px; }
-  .stat-item { padding: 20px 10px; }
-  .stat-num { font-size: 23px; }
+  .trust-card { min-height: 146px; padding: 17px; }
+  .trust-value { font-size: 26px; }
+  .trust-label { font-size: 9px; }
   .landing-section h2 { font-size: 27px; }
   .section-card { grid-template-columns: 1fr; gap: 13px; }
   .organization-actions { align-items: stretch; flex-direction: column; }
@@ -602,12 +612,31 @@ footer a { color: var(--blue); text-decoration: none; }
       </div>
     </section>
 
-    <div class="stats-row" aria-label="Platforma imkoniyatlari">
-      <div class="stat-item"><div class="stat-num">4</div><div class="stat-label">$ IELTS bo'limi</div></div>
-      <div class="stat-item"><div class="stat-num">2</div><div class="stat-label">$ test rejimi</div></div>
-      <div class="stat-item"><div class="stat-num">9.0</div><div class="stat-label">$ maksimal band</div></div>
-      <div class="stat-item"><div class="stat-num">24/7</div><div class="stat-label">$ online kirish</div></div>
-    </div>
+    <section class="trust-section" aria-labelledby="trust-title">
+      <div class="trust-head">
+        <div><p class="trust-kicker">$ platform --live</p><h2 id="trust-title">Ishonch ko'rsatkichlari</h2></div>
+        <span class="trust-status" id="trust-status">Haqiqiy ma'lumotlar</span>
+      </div>
+      <div class="trust-grid" id="trust-grid" aria-live="polite">
+        <article class="trust-card" data-index="01">
+          <div class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></div>
+          <div class="trust-value loading" id="stat-students">—</div><div class="trust-label">Ro'yxatdan o'tgan o'quvchilar</div>
+        </article>
+        <article class="trust-card" data-index="02">
+          <div class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+          <div class="trust-value loading" id="stat-tests">—</div><div class="trust-label">Ishlangan testlar</div>
+        </article>
+        <article class="trust-card" data-index="03">
+          <div class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-4 7 4v12M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01"/></svg></div>
+          <div class="trust-value loading" id="stat-schools">—</div><div class="trust-label">Faol maktablar</div>
+        </article>
+        <article class="trust-card" data-index="04">
+          <div class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 21V10l8-5 8 5v11M8 21v-7h8v7M2 10l10-7 10 7"/></svg></div>
+          <div class="trust-value loading" id="stat-centers">—</div><div class="trust-label">Faol o'quv markazlari</div>
+        </article>
+      </div>
+      <p class="trust-note">Ko'rsatkichlar ma'lumotlar bazasidagi haqiqiy faoliyat asosida avtomatik yangilanadi.</p>
+    </section>
 
     <section class="landing-section" id="info">
       <div class="landing-section-head">
@@ -1059,6 +1088,31 @@ async function checkAuthStatus() {
   maybeAutoStartExam();
 }
 checkAuthStatus();
+
+async function loadPublicStats() {
+  const fields = {
+    students: document.getElementById('stat-students'),
+    completed_tests: document.getElementById('stat-tests'),
+    schools: document.getElementById('stat-schools'),
+    learning_centers: document.getElementById('stat-centers')
+  };
+  try {
+    const response = await fetch('/api/public/stats');
+    if (!response.ok) throw new Error('Statistika yuklanmadi');
+    const data = await response.json();
+    const formatter = new Intl.NumberFormat('uz-UZ');
+    Object.entries(fields).forEach(([key, element]) => {
+      element.textContent = Number.isFinite(Number(data[key])) ? formatter.format(Number(data[key])) : '—';
+      element.classList.remove('loading');
+    });
+  } catch (error) {
+    Object.values(fields).forEach(element => element.classList.remove('loading'));
+    const status = document.getElementById('trust-status');
+    status.textContent = "Ma'lumot vaqtincha mavjud emas";
+    status.classList.add('unavailable');
+  }
+}
+loadPublicStats();
 
 // ─── BOSH TUGMA HOLATI ───────────────────────────────────────────────────────────
 function updateStartButton() {

@@ -772,7 +772,7 @@ footer {
               <div class="catalog-preview-row"><span class="catalog-preview-dot">3</span><span>Writing</span></div>
               <div class="catalog-preview-row"><span class="catalog-preview-dot">4</span><span>Speaking</span></div>
             </div>
-            <button class="catalog-preview-btn" onclick="startExamFlow()">Boshlash</button>
+            <button class="catalog-preview-btn" id="preview-primary-btn" onclick="startExamFlow()">Boshlash</button>
             </div>
           </article>
         </div>
@@ -954,8 +954,8 @@ footer {
     </section>
 
     <section class="landing-cta">
-      <div><h2>Birinchi mock testingizni boshlang</h2><p>Hisob yarating va IELTS tayyorgarligingizni bitta platformada boshqaring.</p></div>
-      <button class="btn-outline" onclick="startExamFlow()">→ Hozir boshlash</button>
+      <div><h2 id="smart-cta-title">Birinchi mock testingizni boshlang</h2><p id="smart-cta-description">Hisob yarating va IELTS tayyorgarligingizni bitta platformada boshqaring.</p></div>
+      <button class="btn-outline" id="smart-cta-btn" onclick="startExamFlow()">→ Hozir boshlash</button>
     </section>
   </div>
 </div>
@@ -1325,7 +1325,7 @@ async function checkAuthStatus() {
       dashboardText = `🏫 Xodim Panel`;
     } else if (authUser.role === 'head_teacher') {
       dashboardLink = '/head-teacher';
-      dashboardText = `🏢 Dashboard`;
+      dashboardText = authUser.organization_type === 'school' ? `🏫 Direktor paneli` : `🏢 Markaz paneli`;
     }
 
     document.getElementById('nav-right').innerHTML = `
@@ -1443,16 +1443,65 @@ async function loadPublicTestimonials() {
 loadPublicTestimonials();
 
 // ─── BOSH TUGMA HOLATI ───────────────────────────────────────────────────────────
-function updateStartButton() {
-  const btn = document.getElementById('start-exam-btn');
-  if (!btn) return;
-  if (authUser && authUser.email_verified) {
-    btn.textContent = '→ Imtihonni boshlash';
-  } else if (authUser) {
-    btn.textContent = '→ Emailni tasdiqlash';
-  } else {
-    btn.textContent = "→ Ro'yxatdan o'tish";
+function getSmartOnboarding() {
+  if (!authUser) return {
+    target: '/register', heroLabel: "→ Ro'yxatdan o'tish", previewLabel: 'Boshlash',
+    ctaTitle: 'Birinchi mock testingizni boshlang',
+    ctaDescription: 'Hisob yarating va IELTS tayyorgarligingizni bitta platformada boshqaring.',
+    ctaLabel: '→ Hozir boshlash'
+  };
+  if (authUser.role === 'teacher') return {
+    target: '/teacher', heroLabel: '→ Tekshirish navbatini ochish', previewLabel: 'Teacher panelini ochish',
+    ctaTitle: 'Tekshirilmagan ishlarni baholang',
+    ctaDescription: "Writing va Speaking javoblarini IELTS mezonlari asosida tekshiring va o'quvchilarga feedback yuboring.",
+    ctaLabel: '→ Tekshirish navbati'
+  };
+  if (authUser.role === 'school_staff') return {
+    target: '/school-staff', heroLabel: '→ Xodimlar panelini ochish', previewLabel: 'Xodimlar paneli',
+    ctaTitle: 'Maktab jarayonlarini davom ettiring',
+    ctaDescription: "Sizga biriktirilgan sinf, o'quvchi va maktab vazifalarini boshqaring.",
+    ctaLabel: '→ Xodimlar paneli'
+  };
+  if (authUser.role === 'head_teacher') {
+    const isSchool = authUser.organization_type === 'school';
+    return {
+      target: '/head-teacher',
+      heroLabel: isSchool ? '→ Direktor panelini ochish' : '→ Markaz panelini ochish',
+      previewLabel: isSchool ? 'Direktor paneli' : 'Markaz paneli',
+      ctaTitle: isSchool ? 'Maktabingiz natijalarini boshqaring' : 'Markazingiz faoliyatini boshqaring',
+      ctaDescription: isSchool
+        ? "Sinflar, ustozlar, o'quvchilar va test natijalarini yagona panelda kuzating."
+        : "Guruhlar, teacher'lar, o'quvchilar va test rejalarini yagona panelda boshqaring.",
+      ctaLabel: isSchool ? '→ Direktor paneli' : '→ Markaz paneli'
+    };
   }
+  if (!authUser.email_verified) return {
+    target: '/profile?redirect=exam', heroLabel: '→ Emailni tasdiqlash', previewLabel: 'Emailni tasdiqlash',
+    ctaTitle: 'Imtihondan oldin emailingizni tasdiqlang',
+    ctaDescription: 'Natijalaringiz xavfsiz saqlanishi uchun emailingizni tasdiqlashni yakunlang.',
+    ctaLabel: '→ Tasdiqlash'
+  };
+  return {
+    target: '/tests', heroLabel: '→ Imtihonni boshlash', previewLabel: 'Testlarni ochish',
+    ctaTitle: 'Keyingi mock testingizni boshlang',
+    ctaDescription: "Mock testni Full mock yoki Practice rejimida topshiring va natijangizni profilingizda saqlang.",
+    ctaLabel: '→ Testlarni ochish'
+  };
+}
+
+function updateStartButton() {
+  const onboarding = getSmartOnboarding();
+  const fields = {
+    'start-exam-btn': onboarding.heroLabel,
+    'preview-primary-btn': onboarding.previewLabel,
+    'smart-cta-title': onboarding.ctaTitle,
+    'smart-cta-description': onboarding.ctaDescription,
+    'smart-cta-btn': onboarding.ctaLabel
+  };
+  Object.entries(fields).forEach(([id, text]) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = text;
+  });
 }
 
 // ─── /profile'DAN QAYTGANDA AVTOMATIK BOSHLASH ──────────────────────────────────
@@ -1649,15 +1698,7 @@ document.addEventListener('keydown', event => {
 
 // ─── IMTIHONNI BOSHLASH ─────────────────────────────────────────────────────────
 function startExamFlow() {
-  if (authUser && authUser.email_verified) {
-    window.location.href = '/tests';
-    return;
-  }
-  if (authUser) {
-    window.location.href = '/profile?redirect=exam';
-    return;
-  }
-  window.location.href = '/register';
+  window.location.href = getSmartOnboarding().target;
 }
 
 async function startSessionFor(name, email) {

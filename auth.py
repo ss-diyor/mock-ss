@@ -334,11 +334,14 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
     async with db.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT id, username, email, full_name, bio, email_verified, is_suspended,
-                   telegram_chat_id, referral_code, referral_count,
-                   role, group_id, center_id,
-                   (avatar_mime IS NOT NULL) AS has_avatar
-            FROM users WHERE id=$1
+            SELECT u.id, u.username, u.email, u.full_name, u.bio, u.email_verified, u.is_suspended,
+                   u.telegram_chat_id, u.referral_code, u.referral_count,
+                   u.role, u.group_id, u.center_id,
+                   (u.avatar_mime IS NOT NULL) AS has_avatar,
+                   c.name AS organization_name, c.organization_type
+            FROM users u
+            LEFT JOIN centers c ON c.id=u.center_id
+            WHERE u.id=$1
             """,
             user_id
         )
@@ -375,7 +378,10 @@ def public_profile(row: dict) -> dict:
         "telegram_chat_id": row.get("telegram_chat_id"),
         "referral_code": row.get("referral_code"),
         "referral_count": row.get("referral_count", 0),
-        "role": row.get("role", "student")
+        "role": row.get("role", "student"),
+        "center_id": row.get("center_id"),
+        "organization_name": row.get("organization_name"),
+        "organization_type": row.get("organization_type")
     }
 
 

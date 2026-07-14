@@ -356,6 +356,37 @@ nav {
 .faq-item.open .faq-answer { grid-template-rows: 1fr; }
 .faq-item.open .faq-answer p { padding-bottom: 22px; opacity: 1; transform: translateY(0); }
 .faq-empty { padding: 42px 20px; color: var(--muted); text-align: center; font: 600 11px var(--mono); }
+.band-calculator-widget { position: fixed; right: 26px; bottom: 24px; z-index: 120; }
+.band-calculator-fab { position: relative; width: 64px; height: 64px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; background: linear-gradient(145deg,#3475ff,#164bcf); color: #fff; cursor: pointer; box-shadow: 0 16px 35px rgba(26,86,232,.32),inset 0 1px 0 rgba(255,255,255,.38); transition: transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s; }
+.band-calculator-fab:hover { transform: translateY(-4px) scale(1.04); box-shadow: 0 21px 42px rgba(26,86,232,.4),inset 0 1px 0 rgba(255,255,255,.4); }
+.band-calculator-fab:focus-visible { outline: 3px solid rgba(26,86,232,.28); outline-offset: 4px; }
+.band-calculator-fab::before { content: 'Band Calculator'; position: absolute; right: 74px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,.96); color: var(--text); box-shadow: 0 8px 24px rgba(11,23,51,.1); font: 700 9px var(--mono); white-space: nowrap; opacity: 0; transform: translateX(8px); pointer-events: none; transition: opacity .2s,transform .2s; }
+.band-calculator-fab:hover::before, .band-calculator-fab:focus-visible::before { opacity: 1; transform: translateX(0); }
+.band-calculator-fab svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+.band-calculator-widget.open .band-calculator-fab svg { transform: rotate(-8deg) scale(.92); }
+.band-calculator-panel { position: absolute; right: 0; bottom: 80px; width: min(370px,calc(100vw - 32px)); overflow: hidden; border: 1px solid #c8d7f8; border-radius: 18px; background: rgba(255,255,255,.96); box-shadow: 0 26px 70px rgba(11,23,51,.2); backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); opacity: 0; visibility: hidden; transform: translateY(18px) scale(.92); transform-origin: bottom right; pointer-events: none; transition: opacity .25s,visibility .25s,transform .38s cubic-bezier(.16,1,.3,1); }
+.band-calculator-widget.open .band-calculator-panel { opacity: 1; visibility: visible; transform: translateY(0) scale(1); pointer-events: auto; }
+.band-calc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 20px 20px 16px; border-bottom: 1px solid var(--border); background: linear-gradient(145deg,#f8faff,#eef4ff); }
+.band-calc-kicker { margin-bottom: 5px; color: var(--blue); font: 700 9px var(--mono); text-transform: uppercase; }
+.band-calc-head h2 { font-size: 19px; letter-spacing: -.35px; }
+.band-calc-close { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 32px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--muted); cursor: pointer; font-size: 18px; transition: color .2s,border-color .2s,transform .2s; }
+.band-calc-close:hover { color: var(--text); border-color: #aec4f7; transform: rotate(6deg); }
+.band-calc-body { padding: 20px; }
+.band-calc-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 5px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface2); }
+.band-calc-tab { padding: 10px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; font: 700 10px var(--mono); transition: background .2s,color .2s,box-shadow .2s; }
+.band-calc-tab.active { background: #fff; color: var(--blue); box-shadow: 0 4px 12px rgba(11,23,51,.08); }
+.band-calc-score-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 18px 0 10px; }
+.band-calc-score-head label { color: var(--text); font-size: 12px; font-weight: 750; }
+.band-calc-raw { color: var(--blue); font: 800 16px var(--mono); }
+.band-calc-score-control { display: grid; grid-template-columns: 36px minmax(0,1fr) 36px; align-items: center; gap: 9px; }
+.band-calc-step { width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--blue); cursor: pointer; font: 700 18px var(--mono); transition: border-color .2s,background .2s; }
+.band-calc-step:hover { border-color: #adc3f7; background: var(--blue-light); }
+.band-calc-range { width: 100%; accent-color: var(--blue); cursor: pointer; }
+.band-calc-result { margin-top: 18px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 18px; overflow: hidden; border-radius: 13px; background: linear-gradient(135deg,#164bcf,#3475ff); color: #fff; box-shadow: 0 14px 30px rgba(26,86,232,.22); }
+.band-calc-result-label { display: block; margin-bottom: 5px; color: #dce7ff; font: 600 9px var(--mono); text-transform: uppercase; }
+.band-calc-result-copy strong { font-size: 14px; }
+.band-calc-band { min-width: 70px; text-align: right; font: 900 38px var(--mono); letter-spacing: -2px; }
+.band-calc-note { margin-top: 13px; color: var(--muted); font-size: 10px; line-height: 1.55; }
 .application-modal { position: fixed; inset: 0; z-index: 200; display: none; place-items: center; padding: 20px; background: rgba(11,23,51,.62); backdrop-filter: blur(6px); }
 .application-modal.open { display: grid; }
 .application-dialog { width: min(650px,100%); max-height: calc(100vh - 40px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 28px 80px rgba(11,23,51,.25); }
@@ -486,6 +517,11 @@ nav.nav-scrolled { border-bottom-color: rgba(154,177,230,.55); box-shadow: 0 10p
   .faq-toggle { grid-column:2; grid-row:1 / span 2; }
   .faq-answer p { padding-left:0; padding-right:38px; }
   .brand-panel-body { grid-template-columns: 1fr; }
+  .band-calculator-widget { right: 14px; bottom: max(14px,env(safe-area-inset-bottom)); }
+  .band-calculator-fab { width: 58px; height: 58px; }
+  .band-calculator-fab::before { display: none; }
+  .band-calculator-panel { right: -2px; bottom: 70px; width: calc(100vw - 24px); }
+  .band-calc-head, .band-calc-body { padding: 17px; }
 }
 
 /* REGISTER */
@@ -1033,6 +1069,35 @@ footer {
       <div><h2 id="smart-cta-title">Birinchi mock testingizni boshlang</h2><p id="smart-cta-description">Hisob yarating va IELTS tayyorgarligingizni bitta platformada boshqaring.</p></div>
       <button class="btn-outline" id="smart-cta-btn" onclick="startExamFlow()">→ Hozir boshlash</button>
     </section>
+  </div>
+
+  <div class="band-calculator-widget" id="band-calculator-widget">
+    <div class="band-calculator-panel" id="band-calculator-panel" role="dialog" aria-modal="false" aria-labelledby="band-calculator-title" aria-hidden="true">
+      <div class="band-calc-head">
+        <div><p class="band-calc-kicker">$ score --estimate</p><h2 id="band-calculator-title">IELTS Band Calculator</h2></div>
+        <button class="band-calc-close" type="button" onclick="closeBandCalculator()" aria-label="Calculatorni yopish">×</button>
+      </div>
+      <div class="band-calc-body">
+        <div class="band-calc-tabs" role="group" aria-label="IELTS bo'limi">
+          <button class="band-calc-tab active" id="band-mode-listening" type="button" onclick="setBandMode('listening')">Listening</button>
+          <button class="band-calc-tab" id="band-mode-reading" type="button" onclick="setBandMode('reading')">Reading Academic</button>
+        </div>
+        <div class="band-calc-score-head"><label for="band-calc-score">To'g'ri javoblar</label><output class="band-calc-raw" id="band-calc-raw" for="band-calc-score">30 / 40</output></div>
+        <div class="band-calc-score-control">
+          <button class="band-calc-step" type="button" onclick="adjustBandScore(-1)" aria-label="Javoblar sonini kamaytirish">−</button>
+          <input class="band-calc-range" id="band-calc-score" type="range" min="0" max="40" value="30" step="1" oninput="calculateEstimatedBand()">
+          <button class="band-calc-step" type="button" onclick="adjustBandScore(1)" aria-label="Javoblar sonini oshirish">+</button>
+        </div>
+        <div class="band-calc-result" aria-live="polite">
+          <div class="band-calc-result-copy"><span class="band-calc-result-label">Taxminiy natija</span><strong id="band-calc-result-name">Listening band</strong></div>
+          <output class="band-calc-band" id="band-calc-band">7.0</output>
+        </div>
+        <p class="band-calc-note">Bu taxminiy konversiya. Aniq band test variantining rasmiy baholash jadvaliga qarab biroz farq qilishi mumkin.</p>
+      </div>
+    </div>
+    <button class="band-calculator-fab" id="band-calculator-fab" type="button" onclick="toggleBandCalculator()" aria-label="IELTS Band Calculatorni ochish" aria-controls="band-calculator-panel" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="3"/><path d="M8 6.5h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 18.5h.01M12 18.5h4"/></svg>
+    </button>
   </div>
 </div>
 
@@ -1892,10 +1957,70 @@ async function submitOrganizationApplication(event) {
   }
 }
 
+let bandCalculatorMode = 'listening';
+const bandScoreTables = {
+  listening: [[39,9],[37,8.5],[35,8],[32,7.5],[30,7],[26,6.5],[23,6],[18,5.5],[16,5],[13,4.5],[11,4],[8,3.5],[6,3],[4,2.5],[2,2],[1,1],[0,0]],
+  reading: [[39,9],[37,8.5],[35,8],[33,7.5],[30,7],[27,6.5],[23,6],[19,5.5],[15,5],[13,4.5],[10,4],[8,3.5],[6,3],[4,2.5],[2,2],[1,1],[0,0]]
+};
+
+function toggleBandCalculator() {
+  const widget = document.getElementById('band-calculator-widget');
+  if (widget.classList.contains('open')) closeBandCalculator();
+  else openBandCalculator();
+}
+
+function openBandCalculator() {
+  const widget = document.getElementById('band-calculator-widget');
+  const panel = document.getElementById('band-calculator-panel');
+  const button = document.getElementById('band-calculator-fab');
+  widget.classList.add('open');
+  panel.setAttribute('aria-hidden', 'false');
+  button.setAttribute('aria-expanded', 'true');
+  calculateEstimatedBand();
+  setTimeout(() => document.getElementById('band-calc-score').focus({ preventScroll: true }), 180);
+}
+
+function closeBandCalculator() {
+  const widget = document.getElementById('band-calculator-widget');
+  if (!widget) return;
+  widget.classList.remove('open');
+  document.getElementById('band-calculator-panel').setAttribute('aria-hidden', 'true');
+  document.getElementById('band-calculator-fab').setAttribute('aria-expanded', 'false');
+}
+
+function setBandMode(mode) {
+  bandCalculatorMode = mode === 'reading' ? 'reading' : 'listening';
+  document.getElementById('band-mode-listening').classList.toggle('active', bandCalculatorMode === 'listening');
+  document.getElementById('band-mode-reading').classList.toggle('active', bandCalculatorMode === 'reading');
+  calculateEstimatedBand();
+}
+
+function adjustBandScore(change) {
+  const input = document.getElementById('band-calc-score');
+  input.value = Math.max(0, Math.min(40, Number(input.value) + change));
+  calculateEstimatedBand();
+}
+
+function calculateEstimatedBand() {
+  const input = document.getElementById('band-calc-score');
+  const score = Math.max(0, Math.min(40, Number(input.value) || 0));
+  const match = bandScoreTables[bandCalculatorMode].find(([minimum]) => score >= minimum);
+  const band = match ? match[1] : 0;
+  document.getElementById('band-calc-raw').textContent = `${score} / 40`;
+  document.getElementById('band-calc-band').textContent = Number(band).toFixed(1);
+  document.getElementById('band-calc-result-name').textContent = bandCalculatorMode === 'reading' ? 'Reading Academic band' : 'Listening band';
+}
+
+document.addEventListener('pointerdown', event => {
+  const widget = document.getElementById('band-calculator-widget');
+  if (widget && widget.classList.contains('open') && !widget.contains(event.target)) closeBandCalculator();
+});
+
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && document.getElementById('organization-application-modal').classList.contains('open')) {
     closeOrganizationApplication();
   }
+  if (event.key === 'Escape') closeBandCalculator();
   if (event.key === 'Escape') closeMobileNav();
 });
 

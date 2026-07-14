@@ -123,14 +123,37 @@ nav {
 .liquid-word.is-liquid-active { filter: drop-shadow(0 6px 13px rgba(38,89,200,.11)); }
 .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .hero-note { margin-top: 18px; color: var(--muted); font: 500 11px var(--mono); }
-.hero-preview { position: relative; }
+.hero-preview { position: relative; perspective: 1300px; }
 .hero-preview::before {
   content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%;
   right: -36px; top: -42px; background: rgba(26,86,232,.1); filter: blur(2px); z-index: -1;
 }
-.catalog-preview-card { position: relative; background: var(--surface); border: 1px solid #dbe4f4; border-radius: 16px; box-shadow: 0 18px 48px rgba(11,23,51,.1); overflow: hidden; transform: perspective(1100px) rotateX(var(--card-rx,0deg)) rotateY(var(--card-ry,0deg)) translateZ(0); transform-style: preserve-3d; transition: transform .22s ease-out, box-shadow .3s, border-color .3s; will-change: transform; }
+.test-card-stack { position: relative; isolation: isolate; padding: 62px 42px 8px 4px; }
+.catalog-stack-card { position: absolute; z-index: var(--stack-z); inset: 62px 42px 8px 4px; overflow: hidden; border: 1px solid #cbd9fb; border-radius: 16px; background: linear-gradient(145deg,rgba(255,255,255,.98),rgba(239,244,255,.97)); box-shadow: 0 14px 38px rgba(11,23,51,.08); transform: translate3d(var(--stack-x),var(--stack-y),0) scale(var(--stack-scale)) rotate(var(--stack-rotate)); transform-origin: 50% 95%; transition: transform .58s cubic-bezier(.16,1,.3,1),border-color .35s,box-shadow .35s,filter .35s; will-change: transform; }
+.catalog-stack-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(112deg,transparent 26%,rgba(255,255,255,.82) 47%,transparent 66%); transform: translateX(-120%); transition: transform .8s ease; }
+.catalog-stack-card:nth-child(1) { --stack-z: 3; --stack-x: 8px; --stack-y: -10px; --stack-scale: .985; --stack-rotate: .35deg; }
+.catalog-stack-card:nth-child(2) { --stack-z: 2; --stack-x: 17px; --stack-y: -18px; --stack-scale: .965; --stack-rotate: .8deg; }
+.catalog-stack-card:nth-child(3) { --stack-z: 1; --stack-x: 27px; --stack-y: -26px; --stack-scale: .945; --stack-rotate: 1.25deg; }
+.catalog-stack-head { display: flex; align-items: center; gap: 11px; padding: 17px 18px; }
+.catalog-stack-mark { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border: 1px solid #c7d7ff; border-radius: 10px; background: rgba(239,244,255,.92); color: var(--blue); font: 800 10px var(--mono); }
+.catalog-stack-copy { min-width: 0; flex: 1; }
+.catalog-stack-org { margin-bottom: 3px; color: var(--muted); font: 600 9px var(--mono); }
+.catalog-stack-title { overflow: hidden; color: var(--text); font-size: 14px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-stack-soon { padding: 4px 7px; border: 1px solid #f0d69b; border-radius: 6px; background: #fff9e9; color: #b26a00; font: 700 8px var(--mono); text-transform: uppercase; }
+.catalog-stack-lines { display: grid; gap: 8px; padding: 2px 18px 18px; }
+.catalog-stack-lines span { height: 7px; border-radius: 99px; background: #e6edfb; }
+.catalog-stack-lines span:first-child { width: 74%; }
+.catalog-stack-lines span:last-child { width: 48%; }
+.catalog-preview-card { position: relative; z-index: 4; background: var(--surface); border: 1px solid #dbe4f4; border-radius: 16px; box-shadow: 0 18px 48px rgba(11,23,51,.1); overflow: hidden; transform: perspective(1100px) rotateX(var(--card-rx,0deg)) rotateY(var(--card-ry,0deg)) translateZ(0); transform-style: preserve-3d; transition: transform .22s ease-out, box-shadow .3s, border-color .3s; will-change: transform; }
 .catalog-preview-card::after { content: ''; position: absolute; inset: -50% -70%; pointer-events: none; background: linear-gradient(105deg,transparent 40%,rgba(255,255,255,.75) 50%,transparent 60%); transform: translateX(-55%) rotate(8deg); animation: preview-shine 5.5s ease-in-out infinite; }
 .catalog-preview-card:hover { border-color: #b8cbfb; box-shadow: 0 28px 68px rgba(11,23,51,.16),0 0 0 1px rgba(26,86,232,.06); }
+@media (hover: hover) and (pointer: fine) {
+  .test-card-stack:hover .catalog-stack-card { border-color: #afc6ff; box-shadow: 0 22px 48px rgba(11,23,51,.13); }
+  .test-card-stack:hover .catalog-stack-card::after { transform: translateX(120%); }
+  .test-card-stack:hover .catalog-stack-card:nth-child(1) { transform: translate3d(-28px,-49px,0) scale(.98) rotate(-1.8deg); }
+  .test-card-stack:hover .catalog-stack-card:nth-child(2) { transform: translate3d(19px,-73px,0) scale(.95) rotate(.9deg); }
+  .test-card-stack:hover .catalog-stack-card:nth-child(3) { transform: translate3d(61px,-96px,0) scale(.915) rotate(2.7deg); }
+}
 .catalog-preview-body { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
 .catalog-preview-heading { display: flex; align-items: flex-start; gap: 12px; }
 .catalog-preview-mark { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 12px; background: linear-gradient(145deg,var(--blue-light),#fff); border: 1px solid var(--border); display: grid; place-items: center; color: var(--blue); font: 800 12px var(--mono); }
@@ -326,6 +349,14 @@ nav.nav-scrolled { border-bottom-color: rgba(154,177,230,.55); box-shadow: 0 10p
   .hero-actions button { width: 100%; }
   .hero-note { font-size: 9px; line-height: 1.7; }
   .catalog-preview-body { padding: 17px; }
+  .test-card-stack { padding: 38px 9px 4px 0; }
+  .catalog-stack-card { inset: 38px 9px 4px 0; }
+  .catalog-stack-card:nth-child(1) { --stack-x: 3px; --stack-y: -7px; --stack-scale: .985; --stack-rotate: .2deg; }
+  .catalog-stack-card:nth-child(2) { --stack-x: 6px; --stack-y: -14px; --stack-scale: .97; --stack-rotate: .45deg; }
+  .catalog-stack-card:nth-child(3) { --stack-x: 9px; --stack-y: -21px; --stack-scale: .955; --stack-rotate: .7deg; }
+  .catalog-stack-head { padding: 13px 14px; }
+  .catalog-stack-mark { width: 30px; height: 30px; flex-basis: 30px; }
+  .catalog-stack-title { font-size: 12px; }
   .trust-card { min-height: 146px; padding: 17px; }
   .trust-value { font-size: 26px; }
   .trust-label { font-size: 9px; }
@@ -639,9 +670,22 @@ footer {
         <p class="hero-note">$ natijalar saqlanadi · teacher feedback · full mock va practice</p>
       </div>
 
-      <div class="hero-preview" aria-label="IELTS mock test ko'rinishi">
-        <article class="catalog-preview-card">
-          <div class="catalog-preview-body">
+      <div class="hero-preview" aria-label="IELTS mock testlar to'plami">
+        <div class="test-card-stack">
+          <article class="catalog-stack-card" aria-hidden="true">
+            <div class="catalog-stack-head"><span class="catalog-stack-mark">02</span><div class="catalog-stack-copy"><div class="catalog-stack-org">IELTS Mock SS</div><div class="catalog-stack-title">IELTS Mock SS 2</div></div><span class="catalog-stack-soon">Soon</span></div>
+            <div class="catalog-stack-lines"><span></span><span></span></div>
+          </article>
+          <article class="catalog-stack-card" aria-hidden="true">
+            <div class="catalog-stack-head"><span class="catalog-stack-mark">20</span><div class="catalog-stack-copy"><div class="catalog-stack-org">Cambridge IELTS</div><div class="catalog-stack-title">Cambridge IELTS 20</div></div><span class="catalog-stack-soon">Soon</span></div>
+            <div class="catalog-stack-lines"><span></span><span></span></div>
+          </article>
+          <article class="catalog-stack-card" aria-hidden="true">
+            <div class="catalog-stack-head"><span class="catalog-stack-mark">21</span><div class="catalog-stack-copy"><div class="catalog-stack-org">Cambridge IELTS</div><div class="catalog-stack-title">Cambridge IELTS 21</div></div><span class="catalog-stack-soon">Soon</span></div>
+            <div class="catalog-stack-lines"><span></span><span></span></div>
+          </article>
+          <article class="catalog-preview-card">
+            <div class="catalog-preview-body">
             <div class="catalog-preview-heading">
               <div class="catalog-preview-mark">01</div>
               <div class="catalog-preview-copy">
@@ -658,8 +702,9 @@ footer {
               <div class="catalog-preview-row"><span class="catalog-preview-dot">4</span><span>Speaking</span></div>
             </div>
             <button class="catalog-preview-btn" onclick="startExamFlow()">Boshlash</button>
-          </div>
-        </article>
+            </div>
+          </article>
+        </div>
       </div>
     </section>
 

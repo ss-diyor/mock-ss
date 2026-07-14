@@ -874,7 +874,15 @@ function scrollToInfo() {
 
 // ─── IMTIHONNI BOSHLASH ─────────────────────────────────────────────────────────
 function startExamFlow() {
-  window.location.href = '/tests';
+  if (authUser && authUser.email_verified) {
+    window.location.href = '/tests';
+    return;
+  }
+  if (authUser) {
+    window.location.href = '/profile?redirect=exam';
+    return;
+  }
+  window.location.href = '/register';
 }
 
 async function startSessionFor(name, email) {

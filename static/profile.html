@@ -452,6 +452,7 @@ let currentUser = null;
 const redirectTarget = new URLSearchParams(window.location.search).get('redirect');
 
 const urlParams = new URLSearchParams(window.location.search);
+const wantsRegistration = window.location.pathname === '/register' || urlParams.get('mode') === 'register';
 if (urlParams.has('ref')) {
   localStorage.setItem('referral_code', urlParams.get('ref'));
 }
@@ -995,6 +996,9 @@ function logout() {
 
   if (!token) {
     showView('view-auth');
+    if (wantsRegistration) {
+      switchTab('register');
+    }
     if (redirectTarget === 'exam') {
       const hint = document.createElement('div');
       hint.className = 'alert info';

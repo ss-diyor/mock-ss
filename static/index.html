@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IELTS Mock Exam — ielts.sultanov.space</title>
-<meta name="description" content="IELTS Listening, Reading va Writing bo'limlari bo'yicha bepul online mock imtihon">
+<meta name="description" content="IELTS Listening, Reading, Writing va Speaking bo'limlari uchun professional online mock imtihon platformasi">
 <meta name="robots" content="index, follow">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -111,59 +111,116 @@ nav {
 .view.active { display: block; }
 
 /* LANDING */
+.landing-shell { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
 .hero {
-  max-width: 860px; margin: 0 auto;
-  padding: 80px 24px 60px;
-  text-align: center;
+  display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+  align-items: center; gap: 70px; min-height: 610px; padding: 76px 0 68px;
 }
+.hero-copy { max-width: 660px; }
 .hero-kicker {
-  font-family: var(--mono); font-size: 12px; color: var(--blue);
-  margin-bottom: 16px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--blue);
+  margin-bottom: 20px; display: inline-flex; align-items: center; gap: 9px;
+  padding: 7px 11px; border: 1px solid var(--blue-mid); border-radius: 999px;
+  background: rgba(255,255,255,.75);
 }
+.hero-kicker::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
 .hero h1 {
-  font-size: clamp(36px, 6vw, 60px);
-  font-weight: 900; letter-spacing: -1.5px;
-  line-height: 1.1; margin-bottom: 20px;
+  font-size: clamp(42px, 5.2vw, 68px); font-weight: 900; letter-spacing: -2.7px;
+  line-height: 1.02; margin-bottom: 24px;
 }
 .hero h1 span { color: var(--blue); }
-.hero-sub {
-  font-size: 17px; color: var(--muted); max-width: 520px;
-  margin: 0 auto 36px; line-height: 1.65;
+.hero-sub { font-size: 17px; color: var(--muted); max-width: 610px; margin-bottom: 32px; line-height: 1.72; }
+.hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hero-note { margin-top: 18px; color: var(--muted); font: 500 11px var(--mono); }
+.hero-preview {
+  position: relative; background: var(--surface); border: 1px solid var(--blue-mid); border-radius: 18px;
+  padding: 18px; box-shadow: 0 30px 70px rgba(11,23,51,.12), 0 3px 0 rgba(26,86,232,.08);
 }
-.hero-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.hero-preview::before {
+  content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%;
+  right: -36px; top: -42px; background: rgba(26,86,232,.1); filter: blur(2px); z-index: -1;
+}
+.preview-top { display: flex; justify-content: space-between; align-items: center; padding: 3px 2px 16px; }
+.preview-title { font: 700 12px var(--mono); }
+.preview-live { color: var(--green); background: var(--green-light); border-radius: 999px; padding: 5px 9px; font: 700 9px var(--mono); }
+.preview-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.preview-card-head { padding: 18px; background: var(--text); color: #fff; }
+.preview-card-head small { display: block; color: #a9b9dc; font: 500 10px var(--mono); margin-bottom: 9px; }
+.preview-card-head strong { font-size: 19px; }
+.preview-parts { padding: 8px 16px; }
+.preview-part { display: grid; grid-template-columns: 38px 1fr auto; gap: 11px; align-items: center; padding: 12px 0; border-bottom: 1px solid #e5ebfb; }
+.preview-part:last-child { border-bottom: 0; }
+.preview-part-code { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; background: var(--blue-light); color: var(--blue); font: 700 11px var(--mono); }
+.preview-part strong { display: block; font-size: 13px; margin-bottom: 3px; }
+.preview-part span { color: var(--muted); font: 500 9px var(--mono); }
+.preview-check { color: var(--green); font: 700 11px var(--mono); }
+.preview-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--blue-light); color: var(--blue); font: 600 10px var(--mono); }
 
 .stats-row {
-  display: flex; justify-content: center; gap: 32px; flex-wrap: wrap;
-  padding: 32px 24px;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  position: relative; z-index: 1;
+  display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 12px 35px rgba(11,23,51,.05);
 }
-.stat-item { text-align: center; }
-.stat-num { font-size: 28px; font-weight: 900; color: var(--blue); font-family: var(--mono); }
-.stat-label { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
-
-.sections-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px; max-width: 920px; margin: 60px auto; padding: 0 24px;
-}
+.stat-item { padding: 25px 18px; text-align: center; border-right: 1px solid var(--border); }
+.stat-item:last-child { border-right: 0; }
+.stat-num { font-size: 27px; font-weight: 900; color: var(--blue); font-family: var(--mono); }
+.stat-label { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+.landing-section { padding: 92px 0 0; }
+.landing-section-head { display: flex; justify-content: space-between; align-items: end; gap: 30px; margin-bottom: 30px; }
+.eyebrow { color: var(--blue); font: 600 11px var(--mono); margin-bottom: 10px; }
+.landing-section h2 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -1.3px; line-height: 1.12; }
+.section-lead { max-width: 520px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.sections-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .section-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden; cursor: pointer;
-  transition: all 0.2s ease;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px;
+  display: grid; grid-template-columns: auto 1fr; gap: 18px; transition: transform .2s, border-color .2s, box-shadow .2s;
 }
-.section-card:hover {
-  border-color: var(--blue); transform: translateY(-2px);
-  box-shadow: 0 8px 24px var(--shadow);
+.section-card:hover { border-color: var(--blue); transform: translateY(-3px); box-shadow: 0 14px 34px rgba(11,23,51,.07); }
+.section-code { width: 47px; height: 47px; display: grid; place-items: center; border-radius: 11px; background: var(--blue-light); color: var(--blue); font: 800 13px var(--mono); }
+.section-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 1px 0 9px; }
+.section-card-head-title { font-size: 16px; font-weight: 800; }
+.section-card-body p { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 14px; }
+.section-meta { display: flex; gap: 7px; flex-wrap: wrap; }
+.workflow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; counter-reset: steps; }
+.workflow-card { position: relative; background: rgba(255,255,255,.82); border: 1px solid var(--border); border-radius: 14px; padding: 26px; }
+.workflow-num { color: var(--blue); font: 800 12px var(--mono); margin-bottom: 24px; }
+.workflow-card h3 { font-size: 17px; margin-bottom: 9px; }
+.workflow-card p { color: var(--muted); font-size: 13px; line-height: 1.65; }
+.result-strip { display: grid; grid-template-columns: 1.05fr .95fr; gap: 20px; align-items: stretch; }
+.result-copy, .result-points { border-radius: 16px; padding: 34px; }
+.result-copy { background: var(--text); color: #fff; }
+.result-copy .eyebrow { color: #88a9ff; }
+.result-copy h2 { margin-bottom: 16px; }
+.result-copy p { color: #b9c5df; font-size: 14px; line-height: 1.75; }
+.result-points { background: var(--surface); border: 1px solid var(--border); display: grid; gap: 10px; }
+.result-point { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 9px; background: var(--bg); font-size: 13px; font-weight: 600; }
+.result-point::before { content: '✓'; flex: 0 0 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; background: var(--green-light); color: var(--green); font: 800 11px var(--mono); }
+.landing-cta { margin: 92px 0 84px; padding: 44px; border: 1px solid var(--blue); border-radius: 18px; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 30px; box-shadow: 0 22px 50px rgba(26,86,232,.2); }
+.landing-cta h2 { font-size: clamp(25px, 4vw, 37px); margin-bottom: 8px; letter-spacing: -1px; }
+.landing-cta p { color: #dbe5ff; font-size: 14px; }
+.landing-cta .btn-outline { background: #fff; color: var(--blue); border-color: #fff; white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; gap: 44px; padding-top: 58px; }
+  .hero-copy { max-width: 760px; }
+  .hero-preview { max-width: 620px; width: 100%; }
+  .landing-section-head, .landing-cta { align-items: flex-start; flex-direction: column; }
+  .result-strip { grid-template-columns: 1fr; }
 }
-.section-card-head {
-  padding: 14px 20px; border-bottom: 1px solid var(--border);
-  background: var(--surface2); display: flex; align-items: center; justify-content: space-between;
+@media (max-width: 650px) {
+  .landing-shell { padding: 0 18px; }
+  .hero { min-height: auto; padding: 48px 0 42px; }
+  .hero h1 { font-size: 42px; letter-spacing: -1.8px; }
+  .hero-sub { font-size: 15px; }
+  .hero-preview { padding: 12px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .stat-item:nth-child(2) { border-right: 0; }
+  .stat-item:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .sections-grid, .workflow { grid-template-columns: 1fr; }
+  .landing-section { padding-top: 68px; }
+  .landing-section-head { align-items: flex-start; }
+  .section-card { padding: 19px; }
+  .result-copy, .result-points, .landing-cta { padding: 26px; }
 }
-.section-card-head-title { font-size: 13px; font-weight: 700; font-family: var(--mono); }
-.section-card-body { padding: 20px; }
-.section-card-body p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
-.section-meta { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* REGISTER */
 .register-wrap {
@@ -417,94 +474,96 @@ footer a { color: var(--blue); text-decoration: none; }
      VIEW 1: LANDING
 ═══════════════════════════════════════════════════════ -->
 <div class="view active" id="view-landing">
-  <div class="hero">
-    <p class="hero-kicker">
-      <span style="font-family:var(--mono);">$ ielts --mock</span>
-    </p>
-    <h1>IELTS <span>Mock Imtihon</span><br>Online Platformasi</h1>
-    <p class="hero-sub">
-      Haqiqiy IELTS formatida Listening, Reading va Writing bo'limlari. 
-      Faqat ism-familyangiz va emailingiz kifoya.
-    </p>
-    <div class="hero-actions">
-      <button class="btn-primary" onclick="startExamFlow()" id="start-exam-btn" style="font-size:14px; padding:14px 28px;">
-        → Ro'yxatdan o'tish
-      </button>
-      <button class="btn-outline" onclick="scrollToInfo()">Batafsil</button>
-    </div>
-  </div>
-
-  <div class="stats-row">
-    <div class="stat-item">
-      <div class="stat-num">3</div>
-      <div class="stat-label">$ bo'lim</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">80+</div>
-      <div class="stat-label">$ savol</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">2:45</div>
-      <div class="stat-label">$ soat</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">9.0</div>
-      <div class="stat-label">$ max band</div>
-    </div>
-  </div>
-
-  <div class="sections-grid" id="info">
-    <div class="section-card">
-      <div class="section-card-head">
-        <span class="section-card-head-title">🎧 Listening</span>
-        <span class="badge">30 daqiqa</span>
+  <div class="landing-shell">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="hero-kicker">IELTS MOCK · ONLINE PLATFORM</p>
+        <h1>IELTS'ga <span>ishonch bilan</span> tayyorlaning</h1>
+        <p class="hero-sub">Listening, Reading, Writing va Speaking — barcha bo'limlarni bitta platformada haqiqiy imtihon muhitiga yaqin formatda mashq qiling.</p>
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="startExamFlow()" id="start-exam-btn" style="font-size:14px; padding:14px 28px;">→ Ro'yxatdan o'tish</button>
+          <button class="btn-outline" onclick="scrollToInfo()" style="font-size:13px; padding:13px 22px;">Platformani ko'rish</button>
+        </div>
+        <p class="hero-note">$ natijalar saqlanadi · teacher feedback · full mock va practice</p>
       </div>
-      <div class="section-card-body">
-        <p>Audio yozuvlarni eshiting va 40 ta savolga javob bering. 4 ta qism: ikkita suhbat, ikkita ma'ruza.</p>
-        <div class="section-meta">
-          <span class="badge muted">40 savol</span>
-          <span class="badge muted">Audio</span>
+
+      <div class="hero-preview" aria-label="IELTS mock test ko'rinishi">
+        <div class="preview-top">
+          <span class="preview-title">$ mock --overview</span>
+          <span class="preview-live">● READY</span>
+        </div>
+        <div class="preview-card">
+          <div class="preview-card-head">
+            <small>IELTS Mock SS</small>
+            <strong>Full Mock Examination</strong>
+          </div>
+          <div class="preview-parts">
+            <div class="preview-part"><div class="preview-part-code">L</div><div><strong>Listening</strong><span>Audio va savollar</span></div><div class="preview-check">01</div></div>
+            <div class="preview-part"><div class="preview-part-code">R</div><div><strong>Reading</strong><span>Akademik matnlar</span></div><div class="preview-check">02</div></div>
+            <div class="preview-part"><div class="preview-part-code">W</div><div><strong>Writing</strong><span>Task 1 va Task 2</span></div><div class="preview-check">03</div></div>
+            <div class="preview-part"><div class="preview-part-code">S</div><div><strong>Speaking</strong><span>Audio javob yozish</span></div><div class="preview-check">04</div></div>
+          </div>
+        </div>
+        <div class="preview-footer"><span>Natijalar profilingizda saqlanadi</span><span>↗</span></div>
+      </div>
+    </section>
+
+    <div class="stats-row" aria-label="Platforma imkoniyatlari">
+      <div class="stat-item"><div class="stat-num">4</div><div class="stat-label">$ IELTS bo'limi</div></div>
+      <div class="stat-item"><div class="stat-num">2</div><div class="stat-label">$ test rejimi</div></div>
+      <div class="stat-item"><div class="stat-num">9.0</div><div class="stat-label">$ maksimal band</div></div>
+      <div class="stat-item"><div class="stat-num">24/7</div><div class="stat-label">$ online kirish</div></div>
+    </div>
+
+    <section class="landing-section" id="info">
+      <div class="landing-section-head">
+        <div><p class="eyebrow">$ sections --all</p><h2>To'liq IELTS tajribasi</h2></div>
+        <p class="section-lead">Har bir bo'lim uchun mos topshiriqlar, vaqt nazorati va natijalarni saqlash tizimi mavjud.</p>
+      </div>
+      <div class="sections-grid">
+        <article class="section-card">
+          <div class="section-code">L</div><div><div class="section-card-head"><span class="section-card-head-title">Listening</span><span class="badge">Audio</span></div><div class="section-card-body"><p>Audio materiallarni tinglang va turli formatdagi savollarga belgilangan vaqt ichida javob bering.</p><div class="section-meta"><span class="badge muted">Avtomatik natija</span><span class="badge muted">Taymer</span></div></div></div>
+        </article>
+        <article class="section-card">
+          <div class="section-code">R</div><div><div class="section-card-head"><span class="section-card-head-title">Reading</span><span class="badge">Academic</span></div><div class="section-card-body"><p>Akademik matnlar bilan ishlang, javoblaringizni tekshiring va natijangizni darhol oling.</p><div class="section-meta"><span class="badge muted">Avtomatik tekshiruv</span><span class="badge muted">Band score</span></div></div></div>
+        </article>
+        <article class="section-card">
+          <div class="section-code">W</div><div><div class="section-card-head"><span class="section-card-head-title">Writing</span><span class="badge">Task 1 · Task 2</span></div><div class="section-card-body"><p>Matningizni platformada yozing. Teacher IELTS mezonlari bo'yicha baholaydi va batafsil feedback beradi.</p><div class="section-meta"><span class="badge muted">Teacher feedback</span><span class="badge muted">Band mezonlari</span></div></div></div>
+        </article>
+        <article class="section-card">
+          <div class="section-code">S</div><div><div class="section-card-head"><span class="section-card-head-title">Speaking</span><span class="badge">Audio record</span></div><div class="section-card-body"><p>Speaking savollariga audio javob yozing. Teacher yozuvni tinglab, izoh va IELTS band bahosini beradi.</p><div class="section-meta"><span class="badge muted">Audio javob</span><span class="badge muted">Teacher bahosi</span></div></div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-section">
+      <div class="landing-section-head">
+        <div><p class="eyebrow">$ workflow --simple</p><h2>Uch qadamda boshlang</h2></div>
+        <p class="section-lead">Ortiqcha murakkabliksiz hisob yarating, testni tanlang va natijalaringizni kuzating.</p>
+      </div>
+      <div class="workflow">
+        <article class="workflow-card"><div class="workflow-num">01 / ACCOUNT</div><h3>Hisob yarating</h3><p>Ro'yxatdan o'ting va shaxsiy profilingiz orqali testlar katalogiga kiring.</p></article>
+        <article class="workflow-card"><div class="workflow-num">02 / EXAM</div><h3>Rejimni tanlang</h3><p>Full mock orqali barcha bo'limlarni yoki Practice orqali kerakli bo'limni ishlang.</p></article>
+        <article class="workflow-card"><div class="workflow-num">03 / RESULT</div><h3>Natijani tahlil qiling</h3><p>Natijalar tarixini ko'ring, teacher feedback'ini oling va o'sishingizni kuzating.</p></article>
+      </div>
+    </section>
+
+    <section class="landing-section">
+      <div class="result-strip">
+        <div class="result-copy"><p class="eyebrow">$ progress --track</p><h2>Har bir urinish — aniq natija</h2><p>Test topshirish bilan jarayon tugamaydi. Natijalar profilga saqlanadi, Writing va Speaking javoblari teacher tomonidan baholanadi.</p></div>
+        <div class="result-points">
+          <div class="result-point">Listening va Reading uchun tezkor natija</div>
+          <div class="result-point">Writing matnlari va mezonlar bo'yicha baho</div>
+          <div class="result-point">Speaking audio yozuvi va teacher izohlari</div>
+          <div class="result-point">Barcha urinishlar bo'yicha natijalar tarixi</div>
         </div>
       </div>
-    </div>
-    <div class="section-card">
-      <div class="section-card-head">
-        <span class="section-card-head-title">📖 Reading</span>
-        <span class="badge">60 daqiqa</span>
-      </div>
-      <div class="section-card-body">
-        <p>3 ta akademik matnni o'qing va 40 ta savolga javob bering. True/False/NG, MCQ va boshqa formatlar.</p>
-        <div class="section-meta">
-          <span class="badge muted">40 savol</span>
-          <span class="badge muted">3 ta matn</span>
-        </div>
-      </div>
-    </div>
-    <div class="section-card">
-      <div class="section-card-head">
-        <span class="section-card-head-title">✍️ Writing</span>
-        <span class="badge">60 daqiqa</span>
-      </div>
-      <div class="section-card-body">
-        <p>Task 1: grafik/diagramma tavsifi (150 so'z). Task 2: muammo yechimi essay (250 so'z).</p>
-        <div class="section-meta">
-          <span class="badge muted">2 ta topshiriq</span>
-          <span class="badge muted">400+ so'z</span>
-        </div>
-      </div>
-    </div>
-  </div>
+    </section>
 
-  <div style="max-width:700px; margin:0 auto 80px; padding:0 24px;">
-    <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px;">$ qoidalar</p>
-    <h2 style="font-size:24px; font-weight:800; letter-spacing:-0.5px; margin-bottom:20px;">Imtihon haqida</h2>
-    <ul class="instruction-list">
-      <li>Har bir bo'limni alohida topshirishingiz mumkin — bir vaqtda hammasi shart emas</li>
-      <li>Natijalar avtomatik saqlanadi va band score hisoblanadi</li>
-      <li>Listening uchun quloqchin tavsiya etiladi</li>
-      <li>Writing natijasi admin tomonidan tekshiriladi va email orqali yuboriladi</li>
-      <li>Sahifani yopmang — imtihon davomida taymer to'xtamaydi</li>
-    </ul>
+    <section class="landing-cta">
+      <div><h2>Birinchi mock testingizni boshlang</h2><p>Hisob yarating va IELTS tayyorgarligingizni bitta platformada boshqaring.</p></div>
+      <button class="btn-outline" onclick="startExamFlow()">→ Hozir boshlash</button>
+    </section>
   </div>
 </div>
 

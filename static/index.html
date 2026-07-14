@@ -335,15 +335,6 @@ audio { flex: 1; }
 .badge.amber  { background: var(--amber-light); color: var(--amber); }
 .badge.muted  { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
 
-/* STATUS DOT */
-.status-dot {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: var(--mono); font-size: 12px;
-  border: 1px solid var(--border); background: var(--surface);
-  padding: 7px 14px; border-radius: 6px; color: var(--muted);
-}
-.dot { width: 8px; height: 8px; background: var(--blue); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
-
 /* FOOTER */
 footer {
   border-top: 1px solid var(--border); padding: 20px 48px;
@@ -380,7 +371,6 @@ footer a { color: var(--blue); text-decoration: none; }
 .alert.success { background: var(--green-light); color: var(--green); border-color: #bbf7d0; }
 
 /* ANIMATIONS */
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 @keyframes spin  { to { transform: rotate(360deg); } }
 .spinner { width: 22px; height: 22px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 
@@ -420,10 +410,6 @@ footer a { color: var(--blue); text-decoration: none; }
   </div>
   <div class="nav-right" id="nav-right">
     <a href="/profile" class="btn-outline" style="font-size:12px; padding:8px 16px; text-decoration:none;">👤 Profil</a>
-    <div class="status-dot">
-      <div class="dot"></div>
-      Hello
-    </div>
   </div>
 </nav>
 
@@ -907,11 +893,6 @@ async function startSessionFor(name, email) {
 
   document.getElementById('welcome-name').textContent =
     `Salom, ${name}! Qaysi bo'limdan boshlashni xohlaysiz?`;
-
-  if (!authUser) {
-    document.getElementById('nav-right').innerHTML =
-      `<div class="status-dot"><div class="dot"></div>${name}</div>`;
-  }
 
   showView('view-sections');
 }

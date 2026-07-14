@@ -1,50 +1,124 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Tashkilotlar katalogi — IELTS Mock SS</title>
-<style>
-:root{--blue:#1a56e8;--blue2:#1044c4;--ink:#0b1733;--muted:#647392;--bg:#f5f8ff;--surface:#fff;--soft:#eef3ff;--border:#cddafb;--green:#159957;--mono:'Courier New',monospace;--sans:Inter,Arial,sans-serif}*{box-sizing:border-box;margin:0;padding:0}body{min-height:100vh;color:var(--ink);font-family:var(--sans);background-color:var(--bg);background-image:linear-gradient(rgba(26,86,232,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(26,86,232,.055) 1px,transparent 1px);background-size:36px 36px}a{text-decoration:none;color:inherit}nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:14px max(20px,calc((100vw - 1180px)/2));border-bottom:1px solid var(--border);background:rgba(245,248,255,.94);backdrop-filter:blur(14px)}.brand{display:flex;align-items:center;gap:11px;font:800 13px var(--mono)}.brand img{width:43px;height:43px;object-fit:contain}.nav-links{display:flex;gap:8px}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:10px 16px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--ink);cursor:pointer;font:700 11px var(--mono)}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.btn:hover{transform:translateY(-1px)}main{width:min(1180px,calc(100% - 36px));margin:0 auto;padding:62px 0 90px}.eyebrow{margin-bottom:10px;color:var(--blue);font:700 11px var(--mono)}h1{max-width:800px;font-size:clamp(36px,6vw,62px);line-height:.98;letter-spacing:-2.5px}.lead{max-width:680px;margin-top:18px;color:var(--muted);font-size:15px;line-height:1.75}.toolbar{display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:12px;margin:34px 0 24px;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.9)}input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:9px;background:var(--bg);outline:none;font-size:14px}input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,86,232,.1)}.filters{display:flex;gap:7px}.filter.active{border-color:var(--blue);background:var(--blue);color:#fff}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.card{position:relative;display:flex;min-height:310px;flex-direction:column;padding:23px;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.96);box-shadow:0 14px 36px rgba(11,23,51,.055);transition:.25s}.card:hover{transform:translateY(-5px);border-color:#a9c1fb;box-shadow:0 22px 48px rgba(11,23,51,.1)}.card.featured:before{content:'Tavsiya etilgan';position:absolute;right:18px;top:18px;padding:5px 8px;border-radius:6px;background:#fff5d9;color:#946200;font:700 8px var(--mono)}.logo{width:60px;height:60px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:var(--soft);color:var(--blue);font:900 18px var(--mono)}.logo img{width:100%;height:100%;object-fit:contain}.type{margin:18px 0 7px;color:var(--blue);font:700 9px var(--mono);text-transform:uppercase}.card h2{font-size:19px;line-height:1.25}.region{margin-top:8px;color:var(--muted);font:600 10px var(--mono)}.description{display:-webkit-box;margin:16px 0 20px;overflow:hidden;color:var(--muted);font-size:13px;line-height:1.65;-webkit-line-clamp:3;-webkit-box-orient:vertical}.stats{display:flex;gap:8px;margin-top:auto}.stat{padding:7px 9px;border-radius:7px;background:var(--soft);color:var(--muted);font:700 9px var(--mono)}.card .btn{width:100%;margin-top:16px}.empty{padding:55px 20px;border:1px dashed var(--border);border-radius:15px;background:rgba(255,255,255,.65);color:var(--muted);text-align:center;font:600 12px var(--mono);grid-column:1/-1}.detail{display:none}.detail.visible{display:block}.catalog.hidden{display:none}.back{margin-bottom:25px}.hero-card{position:relative;overflow:hidden;padding:38px;border:1px solid var(--border);border-radius:20px;background:#fff;box-shadow:0 22px 60px rgba(11,23,51,.08)}.hero-card:after{content:'';position:absolute;width:280px;height:280px;right:-120px;top:-140px;border-radius:50%;background:var(--org-primary,#1a56e8);opacity:.1}.org-head{position:relative;z-index:1;display:flex;align-items:center;gap:20px}.org-head .logo{width:82px;height:82px;flex:0 0 82px}.org-title h1{font-size:clamp(30px,5vw,52px)}.org-type{margin-bottom:8px;color:var(--org-primary,var(--blue));font:700 10px var(--mono);text-transform:uppercase}.detail-layout{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;margin-top:18px}.panel{padding:26px;border:1px solid var(--border);border-radius:15px;background:#fff}.panel h2{margin-bottom:14px;font-size:18px}.panel p{color:var(--muted);font-size:14px;line-height:1.8}.contact-list{display:grid;gap:9px}.contact{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-radius:9px;background:var(--soft);font:600 11px var(--mono)}.detail-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}.detail-stat{padding:17px;border:1px solid var(--border);border-radius:11px;text-align:center}.detail-stat b{display:block;color:var(--org-primary,var(--blue));font:900 24px var(--mono)}.detail-stat span{color:var(--muted);font:600 9px var(--mono)}.socials{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.testimonials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.quote{padding:18px;border:1px solid var(--border);border-radius:12px;background:var(--bg)}.quote p{font-size:13px;line-height:1.7}.quote b{display:block;margin-top:12px;font-size:11px}.quote small{color:var(--muted);font:600 9px var(--mono)}footer{padding:25px;text-align:center;color:var(--muted);font:600 10px var(--mono)}@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.detail-layout{grid-template-columns:1fr}}@media(max-width:620px){nav{padding:10px 14px}.brand span{display:none}.nav-links .btn:first-child{display:none}main{width:min(100% - 24px,1180px);padding-top:38px}h1{letter-spacing:-1.5px}.toolbar{grid-template-columns:1fr}.filters{overflow-x:auto}.grid{grid-template-columns:1fr}.hero-card{padding:24px}.org-head{align-items:flex-start;flex-direction:column}.detail-stats,.testimonials{grid-template-columns:1fr}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tashkilotlar katalogi — IELTS Mock SS</title>
+  <meta name="description" content="IELTS Mock SS platformasidagi maktab va o'quv markazlari katalogi">
+  <link rel="icon" type="image/png" href="/static/assets/site-logo-sd.png">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/organizations.css">
 </head>
 <body>
-<nav><a class="brand" href="/"><img src="/static/assets/site-logo-sd.png" alt=""><span>IELTS Mock SS</span></a><div class="nav-links"><a class="btn" href="/">Bosh sahifa</a><a class="btn primary" href="/profile">Profil / Kirish</a></div></nav>
-<main>
-  <section class="catalog" id="catalog-view">
-    <p class="eyebrow">$ organizations --directory</p><h1>Maktab va o'quv markazlari katalogi</h1>
-    <p class="lead">Platformadan foydalanayotgan va public ko'rinishga ruxsat berilgan tashkilotlarni toping.</p>
-    <div class="toolbar"><input id="search" placeholder="Nom yoki hudud bo'yicha qidirish..." oninput="scheduleLoad()"><div class="filters"><button class="btn filter active" data-type="" onclick="setType('',this)">Barchasi</button><button class="btn filter" data-type="school" onclick="setType('school',this)">Maktablar</button><button class="btn filter" data-type="learning_center" onclick="setType('learning_center',this)">O'quv markazlari</button></div></div>
-    <div class="grid" id="organization-grid"><div class="empty">Yuklanmoqda...</div></div>
-  </section>
-  <section class="detail" id="detail-view"><a class="btn back" href="/organizations">← Katalogga qaytish</a><div id="organization-detail"><div class="empty">Yuklanmoqda...</div></div></section>
-</main>
-<footer>© 2026 IELTS Mock SS · Faqat public ko'rinishga chiqarilgan tashkilotlar</footer>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-logo" href="/" aria-label="IELTS Mock SS bosh sahifa">
+        <span class="nav-logo-icon"><img src="/static/assets/site-logo-sd.png" alt="IELTS Mock SS"></span>
+        <span class="nav-logo-text"><strong>IELTS Mock SS</strong><small>ielts.sultanov.space</small></span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/">Bosh sahifa</a>
+        <a class="nav-link active" href="/organizations">Tashkilotlar</a>
+        <a class="nav-link" href="/tests">Testlar</a>
+      </div>
+      <a class="button button-primary nav-profile" href="/profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/></svg>
+        Profil / Kirish
+      </a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="catalog" id="catalog-view">
+      <header class="catalog-hero">
+        <div>
+          <p class="eyebrow">$ organizations --directory</p>
+          <h1>Maktab va o'quv markazlari katalogi</h1>
+          <p class="lead">IELTS Mock SS platformasidan foydalanayotgan maktab va o'quv markazlarini toping, ular haqida batafsil ma'lumot oling.</p>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <span class="hero-art-building"><svg viewBox="0 0 24 24"><path d="M5 21V3h14v18M2 21h20M9 7h.01M15 7h.01M9 11h.01M15 11h.01M9 15h.01M15 15h.01M10 21v-3h4v3"/></svg></span>
+          <span class="hero-art-dot dot-one"></span><span class="hero-art-dot dot-two"></span>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <label class="search-box" for="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="search" placeholder="Nom yoki hudud bo'yicha qidirish..." oninput="scheduleLoad()">
+        </label>
+        <div class="filters" role="group" aria-label="Tashkilot turi">
+          <button class="filter active" data-type="" onclick="setType('',this)">Barchasi</button>
+          <button class="filter" data-type="school" onclick="setType('school',this)">Maktablar</button>
+          <button class="filter" data-type="learning_center" onclick="setType('learning_center',this)">O'quv markazlari</button>
+        </div>
+      </div>
+
+      <div class="catalog-summary"><span id="catalog-count">Tashkilotlar yuklanmoqda...</span><span class="verified-note"><i></i> Public profillar</span></div>
+      <div class="organization-grid" id="organization-grid"><div class="empty-state">Yuklanmoqda...</div></div>
+    </section>
+
+    <section class="detail" id="detail-view">
+      <a class="button button-secondary back-button" href="/organizations">← Katalogga qaytish</a>
+      <div id="organization-detail"><div class="empty-state">Yuklanmoqda...</div></div>
+    </section>
+  </main>
+
+  <footer><span>© 2026 IELTS Mock SS</span><span>Public tashkilotlar katalogi</span></footer>
+
 <script>
 const esc=value=>String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
 let currentType='',timer;
 const initials=name=>String(name||'T').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
-function logoHtml(row){return `<div class="logo" style="color:${esc(row.primary_color||'#1a56e8')}">${row.logo_url?`<img src="${esc(row.logo_url)}" alt="${esc(row.name)} logosi" onerror="this.remove()">`:esc(initials(row.name))}</div>`}
+const typeLabel=row=>row.organization_type==='school'?'Maktab':"O'quv markazi";
+const typeIcon=row=>row.organization_type==='school'
+  ? '<svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-4 7 4v12M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01"/></svg>'
+  : '<svg viewBox="0 0 24 24"><path d="M5 21V3h14v18M2 21h20M9 7h.01M15 7h.01M9 11h.01M15 11h.01M10 21v-4h4v4"/></svg>';
+
+function logoHtml(row,size='card'){
+  const image=row.logo_url?`<img src="${esc(row.logo_url)}" alt="${esc(row.name)} logosi" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span hidden>${esc(initials(row.name))}</span>`:`<span>${esc(initials(row.name))}</span>`;
+  return `<div class="organization-logo ${size==='detail'?'logo-detail':'card'}" style="--brand:${esc(row.primary_color||'#1a56e8')}">${image}</div>`;
+}
 function setType(type,button){currentType=type;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x===button));loadOrganizations()}
 function scheduleLoad(){clearTimeout(timer);timer=setTimeout(loadOrganizations,280)}
+
 async function loadOrganizations(){
- const grid=document.getElementById('organization-grid'),q=document.getElementById('search').value.trim();grid.innerHTML='<div class="empty">Yuklanmoqda...</div>';
- try{const params=new URLSearchParams();if(currentType)params.set('organization_type',currentType);if(q)params.set('q',q);const res=await fetch('/api/organizations/public?'+params),rows=await res.json();if(!res.ok)throw new Error(rows.detail||'Katalog yuklanmadi');
- grid.innerHTML=rows.length?rows.map(row=>`<article class="card ${row.featured?'featured':''}">${logoHtml(row)}<div class="type">${row.organization_type==='school'?'Maktab':"O'quv markazi"}</div><h2>${esc(row.name)}</h2><div class="region">${esc(row.region||'Hudud ko’rsatilmagan')}</div><p class="description">${esc(row.description||'Tashkilot haqida ma’lumot tez orada qo‘shiladi.')}</p>${row.students_count!==null||row.groups_count!==null?`<div class="stats">${row.students_count!==null?`<span class="stat">${row.students_count} o'quvchi</span>`:''}${row.groups_count!==null?`<span class="stat">${row.groups_count} ${row.organization_type==='school'?'sinf/guruh':'guruh'}</span>`:''}</div>`:''}<a class="btn primary" href="/org/${encodeURIComponent(row.slug)}">Batafsil →</a></article>`).join(''):'<div class="empty">Mos tashkilot topilmadi</div>';
- }catch(e){grid.innerHTML=`<div class="empty">→ ${esc(e.message)}</div>`}
+  const grid=document.getElementById('organization-grid'),count=document.getElementById('catalog-count'),q=document.getElementById('search').value.trim();
+  grid.innerHTML='<div class="empty-state">Yuklanmoqda...</div>';count.textContent='Tashkilotlar yuklanmoqda...';
+  try{
+    const params=new URLSearchParams();if(currentType)params.set('organization_type',currentType);if(q)params.set('q',q);
+    const res=await fetch('/api/organizations/public?'+params),rows=await res.json();if(!res.ok)throw new Error(rows.detail||'Katalog yuklanmadi');
+    count.textContent=`${rows.length} ta tashkilot topildi`;
+    grid.innerHTML=rows.length?rows.map(row=>`<article class="organization-card ${row.featured?'featured':''}">
+      <div class="card-top">${logoHtml(row)}<span class="type-badge">${typeIcon(row)}${typeLabel(row)}</span></div>
+      <div class="card-copy"><h2>${esc(row.name)}</h2><div class="region"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>${esc(row.region||'Hudud ko‘rsatilmagan')}</div><p>${esc(row.description||'Tashkilot haqida ma’lumot tez orada qo‘shiladi.')}</p></div>
+      ${row.students_count!==null||row.groups_count!==null?`<div class="card-stats">${row.students_count!==null?`<span><b>${row.students_count}</b> o'quvchi</span>`:''}${row.groups_count!==null?`<span><b>${row.groups_count}</b> ${row.organization_type==='school'?'sinf / guruh':'guruh'}</span>`:''}</div>`:'<div class="card-spacer"></div>'}
+      <a class="button button-primary card-button" href="/org/${encodeURIComponent(row.slug)}">Tashkilotni ko‘rish <span>→</span></a>
+    </article>`).join(''):'<div class="empty-state"><b>Mos tashkilot topilmadi</b><span>Qidiruv yoki filtrni o‘zgartirib ko‘ring.</span></div>';
+  }catch(e){count.textContent='Katalogni yuklab bo‘lmadi';grid.innerHTML=`<div class="empty-state"><b>Ma’lumot yuklanmadi</b><span>${esc(e.message)}</span></div>`}
 }
-function contactLink(label,value,href){return value?`<a class="contact" href="${esc(href)}"><span>${label}</span><b>${esc(value)}</b></a>`:''}
+
+function contactLink(icon,label,value,href){return value?`<a class="contact-row" href="${esc(href)}"><span class="contact-icon">${icon}</span><span><small>${label}</small><b>${esc(value)}</b></span><i>↗</i></a>`:''}
 async function loadDetail(slug){
- document.getElementById('catalog-view').classList.add('hidden');document.getElementById('detail-view').classList.add('visible');const box=document.getElementById('organization-detail');
- try{const res=await fetch('/api/organizations/public/'+encodeURIComponent(slug)),row=await res.json();if(!res.ok)throw new Error(row.detail||'Tashkilot topilmadi');document.title=`${row.name} — IELTS Mock SS`;document.documentElement.style.setProperty('--org-primary',row.primary_color||'#1a56e8');
- const stats=row.students_count!==null||row.groups_count!==null?`<div class="detail-stats">${row.students_count!==null?`<div class="detail-stat"><b>${row.students_count}</b><span>O'QUVCHILAR</span></div>`:''}${row.groups_count!==null?`<div class="detail-stat"><b>${row.groups_count}</b><span>GURUH / SINFLAR</span></div>`:''}</div>`:'';
- const contacts=contactLink('Telefon',row.contact_phone,'tel:'+row.contact_phone)+contactLink('Email',row.contact_email,'mailto:'+row.contact_email)+contactLink('Manzil',row.address,'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(row.address));
- const socials=[['Rasmiy sayt',row.website_url],['Telegram',row.telegram_url],['Instagram',row.instagram_url]].filter(x=>x[1]).map(x=>`<a class="btn" target="_blank" rel="noopener" href="${esc(x[1])}">${x[0]} ↗</a>`).join('');
- const quotes=(row.testimonials||[]).length?`<div class="panel" style="margin-top:18px"><h2>Tasdiqlangan fikrlar</h2><div class="testimonials">${row.testimonials.map(x=>`<div class="quote"><p>“${esc(x.content)}”</p><b>${esc(x.full_name)}</b><small>${esc(x.role)}</small></div>`).join('')}</div></div>`:'';
- box.innerHTML=`<div class="hero-card"><div class="org-head">${logoHtml(row)}<div class="org-title"><div class="org-type">${row.organization_type==='school'?'Maktab':"O'quv markazi"}${row.region?' · '+esc(row.region):''}</div><h1>${esc(row.name)}</h1></div></div></div><div class="detail-layout"><div class="panel"><h2>Tashkilot haqida</h2><p>${esc(row.description||'Tashkilot haqida ma’lumot hali kiritilmagan.')}</p>${stats}${socials?`<div class="socials">${socials}</div>`:''}</div><aside class="panel"><h2>Bog'lanish</h2><div class="contact-list">${contacts||'<p>Public aloqa ma’lumotlari ko‘rsatilmagan.</p>'}</div><a class="btn primary" style="width:100%;margin-top:16px" href="/profile">Profil / Kirish →</a></aside></div>${quotes}`;
- }catch(e){box.innerHTML=`<div class="empty">→ ${esc(e.message)}<br><br><a class="btn" href="/organizations">Katalogga qaytish</a></div>`}
+  document.getElementById('catalog-view').classList.add('hidden');document.getElementById('detail-view').classList.add('visible');const box=document.getElementById('organization-detail');
+  try{
+    const res=await fetch('/api/organizations/public/'+encodeURIComponent(slug)),row=await res.json();if(!res.ok)throw new Error(row.detail||'Tashkilot topilmadi');
+    document.title=`${row.name} — IELTS Mock SS`;document.documentElement.style.setProperty('--org-primary',row.primary_color||'#1a56e8');
+    const stats=row.students_count!==null||row.groups_count!==null?`<div class="detail-stats">${row.students_count!==null?`<div><b>${row.students_count}</b><span>O'quvchilar</span></div>`:''}${row.groups_count!==null?`<div><b>${row.groups_count}</b><span>Guruh / sinflar</span></div>`:''}</div>`:'';
+    const phoneIcon='<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3 5.2 2 2 0 0 1 5 3h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.4 2.1L9 11a16 16 0 0 0 4 4l1.4-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>';
+    const mailIcon='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+    const mapIcon='<svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+    const contacts=contactLink(phoneIcon,'Telefon',row.contact_phone,'tel:'+row.contact_phone)+contactLink(mailIcon,'Email',row.contact_email,'mailto:'+row.contact_email)+contactLink(mapIcon,'Manzil',row.address,'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(row.address));
+    const socials=[['Rasmiy sayt',row.website_url],['Telegram',row.telegram_url],['Instagram',row.instagram_url]].filter(x=>x[1]).map(x=>`<a class="button button-secondary" target="_blank" rel="noopener" href="${esc(x[1])}">${x[0]} ↗</a>`).join('');
+    const quotes=(row.testimonials||[]).length?`<section class="detail-panel testimonials-panel"><div class="section-label">$ feedback --published</div><h2>Tasdiqlangan fikrlar</h2><div class="testimonials">${row.testimonials.map(x=>`<article class="quote"><p>“${esc(x.content)}”</p><b>${esc(x.full_name)}</b><small>${esc(x.role)}</small></article>`).join('')}</div></section>`:'';
+    box.innerHTML=`<section class="organization-hero"><div class="organization-identity">${logoHtml(row,'detail')}<div><span class="type-badge">${typeIcon(row)}${typeLabel(row)}</span><h1>${esc(row.name)}</h1>${row.region?`<p>${esc(row.region)}</p>`:''}</div></div><div class="hero-watermark">${typeIcon(row)}</div></section>
+      <div class="detail-layout"><section class="detail-panel about-panel"><div class="section-label">$ organization --about</div><h2>Tashkilot haqida</h2><p class="about-copy">${esc(row.description||'Tashkilot haqida ma’lumot hali kiritilmagan.')}</p>${stats}${socials?`<div class="social-links">${socials}</div>`:''}</section>
+      <aside class="detail-panel contact-panel"><div class="section-label">$ contact --public</div><h2>Bog'lanish</h2><div class="contact-list">${contacts||'<div class="no-contact">Public aloqa ma’lumotlari ko‘rsatilmagan.</div>'}</div><a class="button button-primary profile-button" href="/profile">Profil / Kirish →</a></aside></div>${quotes}`;
+  }catch(e){box.innerHTML=`<div class="empty-state"><b>${esc(e.message)}</b><a class="button button-secondary" href="/organizations">Katalogga qaytish</a></div>`}
 }
-const match=decodeURIComponent(location.pathname).match(/^\/org\/([^/]+)\/?$/);if(match)loadDetail(match[1]);else{const initialType=new URLSearchParams(location.search).get('type');if(['school','learning_center'].includes(initialType)){currentType=initialType;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.type===initialType))}loadOrganizations()}
+
+const match=decodeURIComponent(location.pathname).match(/^\/org\/([^/]+)\/?$/);
+if(match)loadDetail(match[1]);else{const initialType=new URLSearchParams(location.search).get('type');if(['school','learning_center'].includes(initialType)){currentType=initialType;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.type===initialType))}loadOrganizations()}
 </script>
-<script src="/static/site-logo.js"></script>
-</body></html>
+</body>
+</html>

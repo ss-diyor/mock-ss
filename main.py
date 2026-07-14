@@ -194,6 +194,36 @@ async def startup():
             )
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS testimonials_public_idx ON testimonials(status, featured DESC, sort_order, published_at DESC)")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS faqs (
+                id SERIAL PRIMARY KEY,
+                category TEXT NOT NULL CHECK(category IN ('tests','results','subscription','organizations')),
+                question TEXT NOT NULL UNIQUE,
+                answer TEXT NOT NULL,
+                is_published BOOLEAN NOT NULL DEFAULT TRUE,
+                sort_order INTEGER NOT NULL DEFAULT 100,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS faqs_public_idx ON faqs(is_published, sort_order, id)")
+        default_faqs = [
+            ("tests", "Testlarni qanday boshlayman?", "Ro'yxatdan o'ting yoki profilingizga kiring, Testlar sahifasidan kerakli mock testni tanlang va Full mock yoki Practice rejimini boshlang.", 10),
+            ("tests", "Full mock va Practice rejimlari o'rtasidagi farq nima?", "Full mock Listening, Reading, Writing va Speaking bo'limlarini ketma-ket topshiradi. Practice rejimida esa faqat kerakli bo'limni tanlaysiz.", 20),
+            ("results", "Natijalarim qayerda saqlanadi?", "Barcha yakunlangan urinishlar profilingizdagi Natijalar bo'limida saqlanadi. Tashkilotga ulangan bo'lsangiz, vakolatli ustoz va rahbarlar ham natijalarni ko'ra oladi.", 30),
+            ("results", "Writing va Speaking natijasi qachon chiqadi?", "Bu bo'limlar teacher tomonidan IELTS mezonlari asosida tekshiriladi. Baholash tugagach natija profilingizda ko'rinadi va sozlangan bo'lsa Telegram hamda email xabari yuboriladi.", 40),
+            ("subscription", "Obuna kimlar uchun talab qilinadi?", "Obuna maktab yoki o'quv markazi uchun super-admin tomonidan alohida yoqiladi. Obuna yoqilmagan tashkilot platformadan belgilangan shartlarda davom etadi.", 50),
+            ("subscription", "Obuna to'lovi qanday tasdiqlanadi?", "Ko'rsatilgan karta raqamiga to'lov qilinadi va chek tashkilot rahbari paneli orqali yuboriladi. Super-admin tekshirgach obuna faollashadi.", 60),
+            ("organizations", "Maktab yoki o'quv markazini qanday ulash mumkin?", "Landing sahifadagi Tashkilot sifatida boshlash formasini yuboring. Super-admin arizani ko'rib chiqib, mas'ul shaxs bilan bog'lanadi va tashkilot panelini yaratadi.", 70),
+            ("organizations", "White-label imkoniyati nima beradi?", "Tashkilot o'z nomi, logosi, ranglari, faviconi, aloqa ma'lumotlari va public slugidan foydalanishi mumkin. Asosiy platforma funksiyalari o'zgarmaydi.", 80),
+        ]
+        await conn.executemany(
+            """
+            INSERT INTO faqs(category, question, answer, is_published, sort_order)
+            VALUES ($1,$2,$3,TRUE,$4) ON CONFLICT(question) DO NOTHING
+            """,
+            default_faqs
+        )
 
 
 # ─── Models ───────────────────────────────────────────────────────────────────
@@ -233,6 +263,32 @@ class TestimonialReviewIn(BaseModel):
     featured: bool = False
     sort_order: int = 100
     admin_note: Optional[str] = None
+
+
+class FaqUpsertIn(BaseModel):
+    category: str
+    question: str
+    answer: str
+    is_published: bool = True
+    sort_order: int = 100
+
+
+FAQ_CATEGORIES = {"tests", "results", "subscription", "organizations"}
+
+
+def validate_faq(data: FaqUpsertIn) -> tuple[str, str, str, bool, int]:
+    category = (data.category or "").strip().lower()
+    question = re.sub(r"\s+", " ", data.question or "").strip()
+    answer = re.sub(r"\s+", " ", data.answer or "").strip()
+    if category not in FAQ_CATEGORIES:
+        raise HTTPException(status_code=400, detail="FAQ kategoriyasi noto'g'ri")
+    if not 10 <= len(question) <= 300:
+        raise HTTPException(status_code=400, detail="Savol 10 dan 300 tagacha belgidan iborat bo'lishi kerak")
+    if not 20 <= len(answer) <= 3000:
+        raise HTTPException(status_code=400, detail="Javob 20 dan 3000 tagacha belgidan iborat bo'lishi kerak")
+    if not 0 <= data.sort_order <= 10000:
+        raise HTTPException(status_code=400, detail="Tartib raqami 0 dan 10000 gacha bo'lishi kerak")
+    return category, question, answer, data.is_published, data.sort_order
 
 
 class SubmitResult(BaseModel):
@@ -1045,6 +1101,21 @@ async def public_testimonials():
     ]
 
 
+@app.get("/api/faqs/public")
+async def public_faqs():
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, category, question, answer
+            FROM faqs WHERE is_published=TRUE
+            ORDER BY sort_order ASC, id ASC
+            LIMIT 100
+            """
+        )
+    return [dict(row) for row in rows]
+
+
 @app.get("/api/testimonials/me")
 async def my_testimonial(current_user: dict = Depends(get_current_user)):
     db = await get_pool()
@@ -1125,6 +1196,73 @@ def check_admin(secret: str):
 
 def require_admin(x_admin_secret: str = Header("", alias="X-Admin-Secret")):
     check_admin(x_admin_secret)
+
+
+@app.get("/api/admin/faqs")
+async def admin_faqs(_: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, category, question, answer, is_published, sort_order,
+                   created_at, updated_at
+            FROM faqs ORDER BY sort_order ASC, id ASC
+            """
+        )
+    return [dict(row) for row in rows]
+
+
+@app.post("/api/admin/faqs")
+async def admin_create_faq(data: FaqUpsertIn, _: None = Depends(require_admin)):
+    category, question, answer, is_published, sort_order = validate_faq(data)
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if await conn.fetchval("SELECT 1 FROM faqs WHERE LOWER(question)=LOWER($1)", question):
+            raise HTTPException(status_code=409, detail="Bu savol allaqachon mavjud")
+        row = await conn.fetchrow(
+            """
+            INSERT INTO faqs(category, question, answer, is_published, sort_order)
+            VALUES ($1,$2,$3,$4,$5)
+            RETURNING id, category, question, answer, is_published, sort_order,
+                      created_at, updated_at
+            """,
+            category, question, answer, is_published, sort_order
+        )
+    return dict(row)
+
+
+@app.put("/api/admin/faqs/{faq_id}")
+async def admin_update_faq(faq_id: int, data: FaqUpsertIn, _: None = Depends(require_admin)):
+    category, question, answer, is_published, sort_order = validate_faq(data)
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if await conn.fetchval(
+            "SELECT 1 FROM faqs WHERE LOWER(question)=LOWER($1) AND id<>$2", question, faq_id
+        ):
+            raise HTTPException(status_code=409, detail="Bu savol allaqachon mavjud")
+        row = await conn.fetchrow(
+            """
+            UPDATE faqs SET category=$2, question=$3, answer=$4,
+                is_published=$5, sort_order=$6, updated_at=NOW()
+            WHERE id=$1
+            RETURNING id, category, question, answer, is_published, sort_order,
+                      created_at, updated_at
+            """,
+            faq_id, category, question, answer, is_published, sort_order
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="FAQ topilmadi")
+    return dict(row)
+
+
+@app.delete("/api/admin/faqs/{faq_id}")
+async def admin_delete_faq(faq_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        deleted = await conn.fetchval("DELETE FROM faqs WHERE id=$1 RETURNING id", faq_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="FAQ topilmadi")
+    return {"ok": True}
 
 
 @app.get("/api/admin/testimonials")

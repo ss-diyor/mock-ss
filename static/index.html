@@ -334,6 +334,26 @@ nav {
 .brand-setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; font: 500 10px var(--mono); color: #cad5ed; }
 .brand-setting b { color: #fff; font-weight: 600; }
 .brand-color { width: 16px; height: 16px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 3px rgba(255,255,255,.15); }
+.faq-shell { overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: rgba(255,255,255,.92); box-shadow: 0 20px 55px rgba(11,23,51,.06); }
+.faq-filters { display: flex; gap: 7px; padding: 10px; overflow-x: auto; border-bottom: 1px solid var(--border); background: linear-gradient(180deg,#f7f9ff,#f2f6ff); scrollbar-width: none; }
+.faq-filters::-webkit-scrollbar { display: none; }
+.faq-filter { flex: 0 0 auto; padding: 10px 13px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; font: 700 10px var(--mono); transition: color .2s,background .2s,border-color .2s,box-shadow .2s; }
+.faq-filter:hover { color: var(--blue); }
+.faq-filter.active { border-color: #c7d6fb; background: #fff; color: var(--blue); box-shadow: 0 7px 18px rgba(26,86,232,.08); }
+.faq-list { padding: 8px 22px; }
+.faq-item { border-bottom: 1px solid #e2e9f7; }
+.faq-item:last-child { border-bottom: 0; }
+.faq-question { width: 100%; padding: 20px 2px; display: grid; grid-template-columns:auto minmax(0,1fr) auto; align-items: center; gap: 13px; border: 0; background: transparent; color: var(--text); cursor: pointer; text-align: left; }
+.faq-category-code { min-width: 78px; padding: 6px 8px; border-radius: 7px; background: var(--blue-light); color: var(--blue); text-align: center; font: 700 8px var(--mono); text-transform: uppercase; }
+.faq-question-text { font-size: 14px; font-weight: 750; line-height: 1.45; }
+.faq-toggle { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--blue); font: 500 19px var(--mono); transition: transform .25s,background .25s,color .25s; }
+.faq-item.open .faq-toggle { transform: rotate(45deg); background: var(--blue); color: #fff; }
+.faq-answer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .32s cubic-bezier(.2,.8,.2,1); }
+.faq-answer-inner { min-height: 0; overflow: hidden; }
+.faq-answer p { max-width: 880px; padding: 0 45px 0 93px; color: var(--muted); font-size: 13px; line-height: 1.75; opacity: 0; transform: translateY(-5px); transition: opacity .22s,transform .3s,padding .3s; }
+.faq-item.open .faq-answer { grid-template-rows: 1fr; }
+.faq-item.open .faq-answer p { padding-bottom: 22px; opacity: 1; transform: translateY(0); }
+.faq-empty { padding: 42px 20px; color: var(--muted); text-align: center; font: 600 11px var(--mono); }
 .application-modal { position: fixed; inset: 0; z-index: 200; display: none; place-items: center; padding: 20px; background: rgba(11,23,51,.62); backdrop-filter: blur(6px); }
 .application-modal.open { display: grid; }
 .application-dialog { width: min(650px,100%); max-height: calc(100vh - 40px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 28px 80px rgba(11,23,51,.25); }
@@ -457,6 +477,12 @@ nav.nav-scrolled { border-bottom-color: rgba(154,177,230,.55); box-shadow: 0 10p
   .section-card { grid-template-columns: 1fr; gap: 13px; }
   .organization-actions { align-items: stretch; flex-direction: column; }
   .organization-actions .btn-primary { width: 100%; }
+  .faq-list { padding: 4px 16px; }
+  .faq-question { grid-template-columns:minmax(0,1fr) auto; gap: 10px; padding: 17px 0; }
+  .faq-category-code { grid-column:1; grid-row:1; justify-self:start; min-width:0; }
+  .faq-question-text { grid-column:1; grid-row:2; font-size:13px; }
+  .faq-toggle { grid-column:2; grid-row:1 / span 2; }
+  .faq-answer p { padding-left:0; padding-right:38px; }
   .brand-panel-body { grid-template-columns: 1fr; }
 }
 
@@ -736,6 +762,7 @@ footer {
     <a class="nav-link" href="#roles" onclick="closeMobileNav()">Kimlar uchun</a>
     <a class="nav-link" href="/organizations">Tashkilotlar</a>
     <a class="nav-link" href="/tests">Testlar</a>
+    <a class="nav-link" href="#faq" onclick="closeMobileNav()">FAQ</a>
     <div class="nav-mobile-profile"><a class="nav-link" id="nav-mobile-profile-link" href="/profile">Profil / Kirish</a></div>
   </div>
   <div class="nav-controls">
@@ -980,6 +1007,23 @@ footer {
             <div class="brand-setting"><span>Public slug va favicon</span><b>✓</b></div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="landing-section" id="faq" aria-labelledby="faq-title">
+      <div class="landing-section-head">
+        <div><p class="eyebrow">$ help --faq</p><h2 id="faq-title">Tez-tez beriladigan savollar</h2></div>
+        <p class="section-lead">Testlar, natijalar, obuna va tashkilotni platformaga ulash bo'yicha qisqa va aniq javoblar.</p>
+      </div>
+      <div class="faq-shell">
+        <div class="faq-filters" role="group" aria-label="FAQ kategoriyalari">
+          <button class="faq-filter active" type="button" onclick="setFaqCategory('', this)">Barchasi</button>
+          <button class="faq-filter" type="button" onclick="setFaqCategory('tests', this)">Testlar</button>
+          <button class="faq-filter" type="button" onclick="setFaqCategory('results', this)">Natijalar</button>
+          <button class="faq-filter" type="button" onclick="setFaqCategory('subscription', this)">Obuna</button>
+          <button class="faq-filter" type="button" onclick="setFaqCategory('organizations', this)">Maktab va markazlar</button>
+        </div>
+        <div class="faq-list" id="faq-list" aria-live="polite"><div class="faq-empty">Savollar yuklanmoqda...</div></div>
       </div>
     </section>
 
@@ -1284,6 +1328,7 @@ footer {
         <ul class="footer-links">
           <li><a href="/#info">Imkoniyatlar</a></li>
           <li><a href="/tests">Mock testlar</a></li>
+          <li><a href="/#faq">FAQ</a></li>
           <li><a href="/register">Ro'yxatdan o'tish</a></li>
           <li><a href="/profile">Profil / Kirish</a></li>
         </ul>
@@ -1472,6 +1517,96 @@ async function loadPublicTestimonials() {
   }
 }
 loadPublicTestimonials();
+
+const faqCategoryLabels = { tests: 'TESTLAR', results: 'NATIJALAR', subscription: 'OBUNA', organizations: 'TASHKILOTLAR' };
+let publicFaqs = [];
+let activeFaqCategory = '';
+
+function setFaqCategory(category, button) {
+  activeFaqCategory = category;
+  document.querySelectorAll('.faq-filter').forEach(item => item.classList.toggle('active', item === button));
+  renderPublicFaqs();
+}
+
+function toggleFaqItem(item, button) {
+  const shouldOpen = !item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(openItem => {
+    openItem.classList.remove('open');
+    const openButton = openItem.querySelector('.faq-question');
+    if (openButton) openButton.setAttribute('aria-expanded', 'false');
+  });
+  item.classList.toggle('open', shouldOpen);
+  button.setAttribute('aria-expanded', String(shouldOpen));
+}
+
+function renderPublicFaqs() {
+  const list = document.getElementById('faq-list');
+  if (!list) return;
+  const rows = activeFaqCategory ? publicFaqs.filter(row => row.category === activeFaqCategory) : publicFaqs;
+  list.replaceChildren();
+  if (!rows.length) {
+    const empty = document.createElement('div');
+    empty.className = 'faq-empty';
+    empty.textContent = "Bu kategoriyada hozircha savol yo'q.";
+    list.appendChild(empty);
+    return;
+  }
+  rows.forEach((row, index) => {
+    const item = document.createElement('article');
+    item.className = 'faq-item';
+    const button = document.createElement('button');
+    button.className = 'faq-question';
+    button.type = 'button';
+    const answerId = `faq-answer-${row.id}`;
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-controls', answerId);
+
+    const category = document.createElement('span');
+    category.className = 'faq-category-code';
+    category.textContent = faqCategoryLabels[row.category] || 'FAQ';
+    const question = document.createElement('span');
+    question.className = 'faq-question-text';
+    question.textContent = row.question;
+    const toggle = document.createElement('span');
+    toggle.className = 'faq-toggle';
+    toggle.setAttribute('aria-hidden', 'true');
+    toggle.textContent = '+';
+    button.append(category, question, toggle);
+
+    const answer = document.createElement('div');
+    answer.className = 'faq-answer';
+    answer.id = answerId;
+    const answerInner = document.createElement('div');
+    answerInner.className = 'faq-answer-inner';
+    const answerText = document.createElement('p');
+    answerText.textContent = row.answer;
+    answerInner.appendChild(answerText);
+    answer.appendChild(answerInner);
+    button.addEventListener('click', () => toggleFaqItem(item, button));
+    item.append(button, answer);
+    list.appendChild(item);
+    if (index === 0) toggleFaqItem(item, button);
+  });
+}
+
+async function loadPublicFaqs() {
+  const list = document.getElementById('faq-list');
+  if (!list) return;
+  try {
+    const response = await fetch('/api/faqs/public');
+    const rows = await response.json();
+    if (!response.ok || !Array.isArray(rows)) throw new Error('FAQ yuklanmadi');
+    publicFaqs = rows;
+    renderPublicFaqs();
+  } catch (_) {
+    list.replaceChildren();
+    const empty = document.createElement('div');
+    empty.className = 'faq-empty';
+    empty.textContent = "Savol-javoblarni hozir yuklab bo'lmadi.";
+    list.appendChild(empty);
+  }
+}
+loadPublicFaqs();
 
 // ─── BOSH TUGMA HOLATI ───────────────────────────────────────────────────────────
 function getSmartOnboarding() {
@@ -2219,7 +2354,7 @@ function moveMobileDeck(step) {
   const revealSelector = [
     '.trust-head', '.trust-card', '.trust-note', '.landing-section-head',
     '.section-card', '.workflow-card', '.result-copy', '.result-points',
-    '.roles-shell', '.organizations-copy', '.brand-preview', '.landing-cta'
+    '.roles-shell', '.organizations-copy', '.brand-preview', '.faq-shell', '.landing-cta'
   ].join(',');
   const revealNodes = Array.from(document.querySelectorAll(revealSelector));
   revealNodes.forEach(node => {

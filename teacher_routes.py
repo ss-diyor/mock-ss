@@ -252,7 +252,7 @@ async def request_resubmission(student_id: int, result_id: int, data: Resubmissi
     due_text = due_at.strftime("%d.%m.%Y %H:%M UTC") if due_at else "muddat belgilanmagan"
     try:
         from auth import send_email
-        await send_email(row["email"], row["full_name"], "IELTS Mock — qayta topshirish",
+        await send_email(row["email"], row["full_name"], "IELTS Mock SS — qayta topshirish",
                          f"<p><b>{row['section'].title()}</b> ishini qayta topshirishingiz so'raldi.</p><p>{reason}</p><p>Muddat: {due_text}</p>")
     except Exception:
         pass
@@ -339,7 +339,7 @@ async def grade_student_writing(student_id: int, result_id: int, data: GradeWrit
     try:
         from main import build_result_email, send_email
         html = build_result_email(student["full_name"], "writing", None, None, data.band, data.feedback)
-        await send_email(student["email"], student["full_name"], "IELTS Mock — Writing natijangiz baholandi", html)
+        await send_email(student["email"], student["full_name"], "IELTS Mock SS — Writing natijangiz baholandi", html)
     except Exception:
         pass
 
@@ -524,7 +524,7 @@ async def grade_student_speaking(
 
     try:
         from main import build_result_email, send_email
-        await send_email(student["email"], student["full_name"], "IELTS Mock — Speaking natijangiz baholandi",
+        await send_email(student["email"], student["full_name"], "IELTS Mock SS — Speaking natijangiz baholandi",
                          build_result_email(student["full_name"], "speaking", None, None, data.band, data.feedback))
     except Exception:
         pass

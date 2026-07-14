@@ -53,40 +53,16 @@ body::before {
   z-index: 0;
 }
 
-/* DEMO MARQUEE BANNER */
-.demo-marquee {
-  position: relative; z-index: 60;
-  overflow: hidden;
-  background: var(--amber-light);
-  border-bottom: 2px solid var(--amber);
-  padding: 10px 0;
-}
-.demo-marquee-track {
-  display: flex;
-  width: max-content;
-  animation: demo-marquee-scroll 22s linear infinite;
-}
-.demo-marquee-item {
-  display: flex;
-  align-items: center;
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--amber);
-  white-space: nowrap;
-  padding: 0 40px;
-}
-.demo-marquee-item::before {
-  content: '⚠';
-  margin-right: 10px;
-}
-@keyframes demo-marquee-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .demo-marquee-track { animation: none; }
-}
+/* DEMO BANNER */
+.demo-banner { position: relative; z-index: 60; border-bottom: 1px solid #ead9ad; background: linear-gradient(90deg,#fff9e9 0%,#fffdf7 55%,#f7f9ff 100%); }
+.demo-banner-inner { max-width: 1180px; min-height: 42px; margin: 0 auto; padding: 7px 28px; display: flex; align-items: center; gap: 12px; }
+.demo-banner-badge { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; padding: 5px 9px; border: 1px solid #e7c86e; border-radius: 999px; background: #fff4cd; color: #805a00; font: 800 9px var(--mono); letter-spacing: .05em; text-transform: uppercase; }
+.demo-banner-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #d99700; box-shadow: 0 0 0 3px rgba(217,151,0,.12); }
+.demo-banner-text { margin: 0; color: #66552e; font: 600 11px var(--mono); line-height: 1.45; }
+.demo-banner-close { width: 28px; height: 28px; margin-left: auto; display: grid; place-items: center; flex: 0 0 28px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #8f7a4e; cursor: pointer; transition: color .2s, background .2s, border-color .2s; }
+.demo-banner-close:hover { border-color: #ead9ad; background: rgba(255,255,255,.8); color: var(--text); }
+.demo-banner-close:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.demo-banner-close svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
 
 /* NAV */
 nav {
@@ -212,7 +188,8 @@ nav {
 .organization-types { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .organization-type-card { border: 1px solid #dbe4f4; background: var(--bg); border-radius: 12px; padding: 18px; }
 .organization-type-head { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
-.organization-type-code { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: var(--blue-light); color: var(--blue); font: 800 10px var(--mono); }
+.organization-type-code { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 34px; border-radius: 9px; background: var(--blue-light); color: var(--blue); }
+.organization-type-code svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .organization-type-card h3 { font-size: 14px; }
 .organization-feature { display: flex; gap: 8px; align-items: flex-start; color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 9px; }
 .organization-feature::before { content: '✓'; color: var(--green); font: 800 10px var(--mono); margin-top: 2px; }
@@ -485,13 +462,33 @@ audio { flex: 1; }
 
 /* FOOTER */
 footer {
-  border-top: 1px solid var(--border); padding: 20px 48px;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-wrap: wrap; gap: 8px;
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
-  position: relative; z-index: 1;
+  position: relative; z-index: 1; margin-top: 18px;
+  background: #08142f; color: #fff;
 }
-footer a { color: var(--blue); text-decoration: none; }
+.footer-shell { max-width: 1180px; margin: 0 auto; padding: 58px 28px 24px; }
+.footer-main { display: grid; grid-template-columns: minmax(250px,1.45fr) repeat(3,minmax(140px,.75fr)); gap: 48px; padding-bottom: 46px; }
+.footer-brand { max-width: 330px; }
+.footer-brand-row { display: flex; align-items: center; gap: 13px; margin-bottom: 17px; color: #fff; text-decoration: none; }
+.footer-logo { width: 48px; height: 48px; flex: 0 0 48px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; background: #fff; }
+.footer-logo img { width: 100%; height: 100%; object-fit: contain; transform: scale(1.58); }
+.footer-brand-name { display: block; font: 800 14px var(--mono); letter-spacing: -.2px; }
+.footer-brand-domain { display: block; margin-top: 4px; color: #8fa2ca; font: 500 10px var(--mono); }
+.footer-description { color: #aebbd5; font-size: 13px; line-height: 1.75; }
+.footer-sections { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.footer-section-tag { padding: 6px 8px; border: 1px solid rgba(143,162,202,.2); border-radius: 6px; color: #9fb0d1; font: 600 9px var(--mono); }
+.footer-column h3 { margin: 4px 0 17px; color: #fff; font: 700 11px var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.footer-links { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.footer-links a { color: #aebbd5; text-decoration: none; font-size: 12px; transition: color .2s, transform .2s; display: inline-flex; align-items: center; gap: 7px; }
+.footer-links a:hover { color: #fff; transform: translateX(3px); }
+.footer-links a::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #376ff0; flex: 0 0 auto; }
+.footer-contact { display: flex; flex-direction: column; gap: 13px; }
+.footer-contact-item { display: flex; align-items: center; gap: 7px; color: #aebbd5; font-size: 12px; line-height: 1.55; }
+.footer-contact-item::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #376ff0; flex: 0 0 auto; }
+.footer-contact a { color: inherit; text-decoration: none; overflow-wrap: anywhere; }
+.footer-contact a:hover { color: #fff; }
+.footer-bottom { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding-top: 22px; border-top: 1px solid rgba(143,162,202,.17); color: #7f91b6; font: 500 10px var(--mono); }
+.footer-bottom-note { display: inline-flex; align-items: center; gap: 7px; }
+.footer-bottom-note::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #2ec875; box-shadow: 0 0 0 4px rgba(46,200,117,.09); }
 
 /* PROGRESS BAR */
 .progress-bar { height: 3px; background: var(--border); margin-bottom: 28px; border-radius: 2px; }
@@ -524,11 +521,20 @@ footer a { color: var(--blue); text-decoration: none; }
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
+  .demo-banner-inner { padding: 7px 14px; gap: 9px; }
+  .demo-banner-text { font-size: 10px; }
   nav { padding: 14px 16px; }
   .reading-layout { grid-template-columns: 1fr; }
   .passage-card { position: static; }
-  footer { padding: 16px; flex-direction: column; align-items: flex-start; }
+  .footer-shell { padding: 44px 20px 22px; }
+  .footer-main { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 36px 28px; padding-bottom: 36px; }
+  .footer-brand { max-width: none; grid-column: 1 / -1; }
   .sections-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .footer-main { grid-template-columns: 1fr; gap: 31px; }
+  .footer-brand { grid-column: auto; }
+  .footer-bottom { align-items: flex-start; flex-direction: column; line-height: 1.6; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -537,22 +543,21 @@ footer a { color: var(--blue); text-decoration: none; }
 </head>
 <body>
 
-<!-- DEMO MARQUEE BANNER -->
-<div class="demo-marquee">
-  <div class="demo-marquee-track">
-    <span class="demo-marquee-item">Test rejimida ishlamoqda, savollar shunchaki namunaviy. Haqiqiy imtihon formatidagi savollar hali qo'shilmagan.</span>
-    <span class="demo-marquee-item">Test rejimida ishlamoqda, savollar shunchaki namunaviy. Haqiqiy imtihon formatidagi savollar hali qo'shilmagan.</span>
-    <span class="demo-marquee-item">Test rejimida ishlamoqda, savollar shunchaki namunaviy. Haqiqiy imtihon formatidagi savollar hali qo'shilmagan.</span>
-    <span class="demo-marquee-item">Test rejimida ishlamoqda, savollar shunchaki namunaviy. Haqiqiy imtihon formatidagi savollar hali qo'shilmagan.</span>
+<!-- DEMO BANNER -->
+<div class="demo-banner" id="demo-banner" role="status">
+  <div class="demo-banner-inner">
+    <span class="demo-banner-badge">Demo versiya</span>
+    <p class="demo-banner-text">Test savollari hozircha namunaviy.</p>
+    <button class="demo-banner-close" type="button" aria-label="Demo xabarini yopish" onclick="this.closest('.demo-banner').remove()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
 </div>
 
 <!-- NAV -->
 <nav id="site-nav">
-  <a class="nav-logo" href="/" aria-label="IELTS Mock bosh sahifa">
+  <a class="nav-logo" href="/" aria-label="IELTS Mock SS bosh sahifa">
     <div class="nav-logo-icon">SD</div>
     <div class="nav-logo-text">
-      <span>IELTS Mock</span>
+      <span>IELTS Mock SS</span>
       <span>ielts.sultanov.space</span>
     </div>
   </a>
@@ -694,14 +699,14 @@ footer a { color: var(--blue); text-decoration: none; }
           <p>Platformani tashkilotingiz jarayonlariga moslang, testlarni rejalashtiring va har bir o'quvchining natijasini kuzating.</p>
           <div class="organization-types">
             <article class="organization-type-card">
-              <div class="organization-type-head"><span class="organization-type-code">SCH</span><h3>Maktablar uchun</h3></div>
+              <div class="organization-type-head"><span class="organization-type-code" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-4 7 4v12M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01"/></svg></span><h3>Maktablar uchun</h3></div>
               <div class="organization-feature">Sinflar, o'quvchilar va fanlar</div>
               <div class="organization-feature">Direktor, ustoz va xodim rollari</div>
               <div class="organization-feature">Sinf bo'yicha test va natijalar</div>
               <div class="organization-feature">Excel import va eksport</div>
             </article>
             <article class="organization-type-card">
-              <div class="organization-type-head"><span class="organization-type-code">LC</span><h3>O'quv markazlari uchun</h3></div>
+              <div class="organization-type-head"><span class="organization-type-code" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 21V3h14v18M2 21h20M10 21v-4h4v4"/><path d="M9 7h.01M15 7h.01M9 11h.01M15 11h.01"/></svg></span><h3>O'quv markazlari uchun</h3></div>
               <div class="organization-feature">Guruhlar, teacher va o'quvchilar</div>
               <div class="organization-feature">Testlarni guruhga rejalashtirish</div>
               <div class="organization-feature">Writing va Speaking tekshiruvi</div>
@@ -1022,8 +1027,49 @@ footer a { color: var(--blue); text-decoration: none; }
 
 <!-- FOOTER -->
 <footer>
-  <span>IELTS Mock · ielts.sultanov.space · 2026</span>
-  <span><a href="mailto:diyorbeksultanov.ss@gmail.com">Bog'lanish</a></span>
+  <div class="footer-shell">
+    <div class="footer-main">
+      <div class="footer-brand">
+        <a class="footer-brand-row" href="/" aria-label="IELTS Mock SS bosh sahifa">
+          <span class="footer-logo"><img src="/static/assets/site-logo-sd.png" alt="IELTS Mock SS"></span>
+          <span><span class="footer-brand-name">IELTS Mock SS</span><span class="footer-brand-domain">ielts.sultanov.space</span></span>
+        </a>
+        <p class="footer-description">IELTS imtihoniga tayyorlanish, natijalarni kuzatish va maktab hamda o'quv markazlaridagi ta'lim jarayonini boshqarish uchun yagona platforma.</p>
+        <div class="footer-sections" aria-label="IELTS bo'limlari">
+          <span class="footer-section-tag">Listening</span><span class="footer-section-tag">Reading</span><span class="footer-section-tag">Writing</span><span class="footer-section-tag">Speaking</span>
+        </div>
+      </div>
+      <div class="footer-column">
+        <h3>Platforma</h3>
+        <ul class="footer-links">
+          <li><a href="/#info">Imkoniyatlar</a></li>
+          <li><a href="/tests">Mock testlar</a></li>
+          <li><a href="/register">Ro'yxatdan o'tish</a></li>
+          <li><a href="/profile">Profil / Kirish</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h3>Tashkilotlar</h3>
+        <ul class="footer-links">
+          <li><a href="/#organizations">Maktablar uchun</a></li>
+          <li><a href="/#organizations">O'quv markazlari uchun</a></li>
+          <li><a href="/#organizations">White-label imkoniyatlari</a></li>
+          <li><a href="/#organizations">Hamkorlik uchun ariza</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h3>Bog'lanish</h3>
+        <div class="footer-contact">
+          <div class="footer-contact-item"><a href="mailto:diyorbeksultanov.ss@gmail.com">diyorbeksultanov.ss@gmail.com</a></div>
+          <div class="footer-contact-item"><a href="tel:+998992542485">+998 99 254 24 85</a></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 IELTS Mock SS. Barcha huquqlar himoyalangan.</span>
+      <span class="footer-bottom-note">Platforma faol va rivojlantirilmoqda</span>
+    </div>
+  </div>
 </footer>
 
 <script>

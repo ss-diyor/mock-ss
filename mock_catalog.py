@@ -12,7 +12,7 @@ from typing import Any
 TEST_CATALOG: list[dict[str, Any]] = [
     {
         "id": "mock-001",
-        "title": "IELTS Mock Test 1",
+        "title": "IELTS Mock SS 1",
         "level": "Academic",
         "status": "ready",
         "description": "Demo uchun asosiy Listening, Reading va Writing bo'limlari.",
@@ -25,7 +25,7 @@ TEST_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "mock-002",
-        "title": "IELTS Mock Test 2",
+        "title": "IELTS Mock SS 2",
         "level": "Academic",
         "status": "demo",
         "description": "Ta'lim markazi demo kuni uchun qo'shimcha test set.",
@@ -38,7 +38,7 @@ TEST_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "mock-003",
-        "title": "IELTS Mock Test 3",
+        "title": "IELTS Mock SS 3",
         "level": "Academic",
         "status": "planned",
         "description": "Real test-bank qo'shilgandan keyin faollashtiriladi.",

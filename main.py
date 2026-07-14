@@ -262,7 +262,7 @@ async def send_email(to_email: str, to_name: str, subject: str, html_body: str):
                 "Content-Type": "application/json"
             },
             json={
-                "from": f"IELTS Mock <{EMAIL_FROM}>",
+                "from": f"IELTS Mock SS <{EMAIL_FROM}>",
                 "to": [to_email],
                 "subject": subject,
                 "html": html_body
@@ -285,7 +285,7 @@ async def send_email_with_attachment(to_email: str, to_name: str, subject: str, 
                 "Content-Type": "application/json"
             },
             json={
-                "from": f"IELTS Mock <{EMAIL_FROM}>",
+                "from": f"IELTS Mock SS <{EMAIL_FROM}>",
                 "to": [to_email],
                 "subject": subject,
                 "html": html_body,
@@ -319,7 +319,7 @@ def build_result_email(name: str, section: str, score, total, band, feedback=Non
 
     return f"""
     <div style="font-family:Arial,sans-serif; max-width:520px; margin:0 auto; padding:24px; border:1px solid #c9d8ff; border-radius:12px;">
-      <h2 style="color:#1a56e8;">IELTS Mock — {section_name} natijasi</h2>
+      <h2 style="color:#1a56e8;">IELTS Mock SS — {section_name} natijasi</h2>
       <p>Assalomu alaykum, {name}!</p>
       {body}
       <p style="margin-top:20px; color:#4a5978; font-size:13px;">
@@ -560,7 +560,7 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
             html = build_result_email(user_name, data.section, data.score, data.total, band)
             
             await send_email_with_attachment(
-                user_email, user_name, f"IELTS Mock — {data.section.capitalize()} natijangiz",
+                user_email, user_name, f"IELTS Mock SS — {data.section.capitalize()} natijangiz",
                 html, pdf_bytes, f"ielts_natija_{user_email.split('@')[0]}.pdf"
             )
             
@@ -576,7 +576,7 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
     else:
         try:
             await send_email(
-                user_email, user_name, "IELTS Mock — Writing javobingiz qabul qilindi",
+                user_email, user_name, "IELTS Mock SS — Writing javobingiz qabul qilindi",
                 build_result_email(user_name, "writing", None, None, None)
             )
             if chat_id:
@@ -770,7 +770,7 @@ def build_result_pdf(full_name: str, email: str, sections: list) -> bytes:
     pdf.set_xy(0, 9)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(210, 8, "IELTS Mock Exam - Natija", align="C")
+    pdf.cell(210, 8, "IELTS Mock SS Exam - Natija", align="C")
     pdf.set_xy(0, 18)
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(210, 6, "ielts.sultanov.space", align="C")
@@ -1634,7 +1634,7 @@ async def grade_writing(data: GradeWriting, _: None = Depends(require_admin)):
                 
             pdf_bytes = build_result_pdf(row["full_name"], row["email"].lower(), sections)
             await send_email_with_attachment(
-                row["email"], row["full_name"], "IELTS Mock — Writing natijangiz tayyor", 
+                row["email"], row["full_name"], "IELTS Mock SS — Writing natijangiz tayyor",
                 html, pdf_bytes, f"ielts_natija_{row['email'].lower().split('@')[0]}.pdf"
             )
             
@@ -1694,7 +1694,7 @@ async def notify_result(result_id: int, _: None = Depends(require_admin)):
         html = build_result_email(row["full_name"], row["section"], row["score"], row["total"], band)
         
         await send_email_with_attachment(
-            row["email"], row["full_name"], f"IELTS Mock — {row['section'].capitalize()} natijangiz", 
+            row["email"], row["full_name"], f"IELTS Mock SS — {row['section'].capitalize()} natijangiz",
             html, pdf_bytes, f"ielts_natija_{row['email'].lower().split('@')[0]}.pdf"
         )
         

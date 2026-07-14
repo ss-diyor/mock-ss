@@ -115,7 +115,7 @@ async def send_email(to_email: str, to_name: str, subject: str, html_body: str):
                 "Content-Type": "application/json"
             },
             json={
-                "from": f"IELTS Mock <{EMAIL_FROM}>",
+                "from": f"IELTS Mock SS <{EMAIL_FROM}>",
                 "to": [to_email],
                 "subject": subject,
                 "html": html_body
@@ -130,7 +130,7 @@ def build_verification_email(name: str, code: str) -> str:
     <div style="font-family:Arial,sans-serif; max-width:520px; margin:0 auto; padding:24px; border:1px solid #c9d8ff; border-radius:12px;">
       <h2 style="color:#1a56e8;">Email manzilingizni tasdiqlang</h2>
       <p>Assalomu alaykum, {name}!</p>
-      <p>IELTS Mock akkauntingizni faollashtirish uchun quyidagi kodni kiriting:</p>
+      <p>IELTS Mock SS akkauntingizni faollashtirish uchun quyidagi kodni kiriting:</p>
       <div style="margin:20px 0; text-align:center;">
         <span style="display:inline-block; font-family:'Courier New',monospace; font-size:32px; font-weight:700; letter-spacing:8px; color:#1a56e8; background:#eef3ff; padding:14px 24px; border-radius:10px;">{code}</span>
       </div>
@@ -523,7 +523,7 @@ async def register(data: RegisterIn):
     try:
         await send_email(
             row["email"], row["full_name"],
-            "IELTS Mock — Email tasdiqlash kodi",
+            "IELTS Mock SS — Email tasdiqlash kodi",
             build_verification_email(row["full_name"], code)
         )
     except Exception:
@@ -730,7 +730,7 @@ async def resend_verification(data: ResendVerificationIn, current_user: dict = D
     try:
         await send_email(
             email, row["full_name"],
-            "IELTS Mock — Email tasdiqlash kodi",
+            "IELTS Mock SS — Email tasdiqlash kodi",
             build_verification_email(row["full_name"], code)
         )
         if row.get("telegram_chat_id"):
@@ -764,7 +764,7 @@ async def forgot_password(data: ForgotPasswordIn):
     try:
         await send_email(
             email, row["full_name"],
-            "IELTS Mock — Parolni tiklash",
+            "IELTS Mock SS — Parolni tiklash",
             build_reset_email(row["full_name"], reset_link)
         )
     except Exception:

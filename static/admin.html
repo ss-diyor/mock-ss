@@ -154,6 +154,21 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
 .center-owner-form{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--border);
   background:var(--bg);flex-wrap:wrap;align-items:center;}
 .center-owner-form input{max-width:260px;}
+.org-create-shell{position:relative;overflow:hidden;border-radius:16px;box-shadow:0 16px 45px rgba(20,61,150,.08)}
+.org-create-shell::after{content:'';position:absolute;width:210px;height:210px;right:-90px;top:-125px;border-radius:50%;background:radial-gradient(circle,rgba(48,111,255,.16),transparent 70%);pointer-events:none}
+.org-list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px;padding:0 2px}.org-list-heading{display:flex;align-items:center;gap:10px}.org-list-heading strong{display:block;font-size:15px}.org-list-heading span{display:block;margin-top:3px;color:var(--muted);font:600 9px var(--mono)}
+.org-list-icon{width:37px;height:37px;display:grid;place-items:center;border:1px solid var(--border);border-radius:10px;background:linear-gradient(145deg,#fff,#eef3ff);color:var(--blue);box-shadow:0 8px 20px rgba(26,86,232,.1)}.org-list-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.org-admin-card{--org-accent:#1a56e8;position:relative;isolation:isolate;overflow:hidden;margin-bottom:18px;border:1px solid color-mix(in srgb,var(--org-accent) 20%,#d8e3fb);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(246,249,255,.96));box-shadow:0 16px 46px rgba(17,46,112,.08);transition:.28s transform,.28s box-shadow,.28s border-color;animation:orgCardIn .45s both cubic-bezier(.16,1,.3,1)}
+.org-admin-card::before{content:'';position:absolute;z-index:-1;width:280px;height:280px;right:-145px;top:-160px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--org-accent) 19%,transparent),transparent 68%);pointer-events:none}.org-admin-card::after{content:'';position:absolute;left:0;top:22px;bottom:22px;width:3px;border-radius:0 5px 5px 0;background:var(--org-accent);box-shadow:0 0 20px color-mix(in srgb,var(--org-accent) 55%,transparent)}
+.org-admin-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--org-accent) 38%,#cad9f8);box-shadow:0 24px 60px rgba(17,46,112,.13)}.org-admin-card.is-trashed{filter:saturate(.68);opacity:.86}.org-admin-card.is-inactive{--org-accent:#ef6b68}
+@keyframes orgCardIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.org-card-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:21px 23px 18px}.org-identity{display:flex;align-items:center;gap:15px;min-width:0}.org-logo{position:relative;width:58px;height:58px;flex:0 0 58px;display:grid;place-items:center;overflow:hidden;border:1px solid color-mix(in srgb,var(--org-accent) 22%,#d7e2fa);border-radius:15px;background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--org-accent) 8%,#f4f7ff));color:var(--org-accent);box-shadow:0 10px 24px color-mix(in srgb,var(--org-accent) 14%,transparent)}.org-logo img{width:100%;height:100%;object-fit:contain;padding:7px}.org-logo svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.org-type-line{display:flex;align-items:center;gap:7px;margin-bottom:5px;color:var(--org-accent);font:750 9px var(--mono);letter-spacing:.06em;text-transform:uppercase}.org-type-line span{padding:4px 7px;border-radius:6px;background:color-mix(in srgb,var(--org-accent) 9%,#fff)}.org-title{max-width:560px;margin:0;font-size:20px;line-height:1.18;letter-spacing:-.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.org-subline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;color:var(--muted);font:600 9px var(--mono)}.org-subline i{width:3px;height:3px;border-radius:50%;background:#aab7d0}
+.org-statuses{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;max-width:390px}.org-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid #d7e2f7;border-radius:999px;background:rgba(255,255,255,.78);color:#53617d;font:700 8px var(--mono);white-space:nowrap}.org-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:#8b98b1}.org-chip.success{border-color:#c8eed9;background:#edfbf3;color:#15864e}.org-chip.success::before{background:#20b967;box-shadow:0 0 0 3px rgba(32,185,103,.1)}.org-chip.warning{border-color:#f5ddb0;background:#fff8e9;color:#ad6a00}.org-chip.warning::before{background:#eda91f}.org-chip.danger{border-color:#f4caca;background:#fff1f1;color:#c13f3a}.org-chip.danger::before{background:#e6544f}.org-chip.info{border-color:#cfddff;background:#eff4ff;color:#1a56e8}.org-chip.info::before{background:#3475ff}
+.org-card-body{padding:0 23px 21px}.org-metrics-grid{display:grid;grid-template-columns:minmax(170px,.8fr) minmax(170px,.8fr) minmax(250px,1.35fr);gap:10px}.org-metric{min-width:0;padding:13px 14px;border:1px solid #dce5f7;border-radius:12px;background:rgba(255,255,255,.76)}.org-metric-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.org-metric-label{display:flex;align-items:center;gap:7px;color:#687694;font:700 9px var(--mono);text-transform:uppercase}.org-metric-label svg{width:15px;height:15px;fill:none;stroke:var(--org-accent);stroke-width:1.8}.org-metric-value{font:800 14px var(--mono);color:#13203d}.org-progress{height:5px;margin-top:10px;overflow:hidden;border-radius:999px;background:#e9eef9}.org-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--org-accent),color-mix(in srgb,var(--org-accent) 58%,#75a0ff));box-shadow:0 0 12px color-mix(in srgb,var(--org-accent) 35%,transparent)}
+.org-leader{display:flex;align-items:center;gap:11px}.org-leader-avatar{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border-radius:10px;background:color-mix(in srgb,var(--org-accent) 10%,#f0f4ff);color:var(--org-accent);font:800 11px var(--mono)}.org-leader-copy{min-width:0}.org-leader-copy strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.org-leader-copy span{display:block;margin-top:4px;color:var(--muted);font:600 9px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.org-leader.missing .org-leader-avatar{background:#fff5e2;color:#c57900}.org-leader.missing strong{color:#a96900}
+.org-action-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:13px;border-top:1px solid #e0e8f7}.org-action-main,.org-action-danger{display:flex;gap:7px;flex-wrap:wrap}.org-action-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #cfdbf4;border-radius:8px;background:rgba(255,255,255,.8);color:#34425f;cursor:pointer;font:700 9px var(--mono);transition:.16s transform,.16s border-color,.16s background}.org-action-btn:hover{transform:translateY(-1px);border-color:var(--org-accent);background:color-mix(in srgb,var(--org-accent) 5%,#fff);color:var(--org-accent)}.org-action-btn.primary{border-color:var(--org-accent);background:var(--org-accent);color:#fff;box-shadow:0 8px 18px color-mix(in srgb,var(--org-accent) 22%,transparent)}.org-action-btn.danger{color:#d24742}.org-action-btn.danger:hover{border-color:#e05a55;background:#fff3f3;color:#bd332f}.org-action-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.org-inventory-slot{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed #cfdbf1}.org-owner-setup{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 23px;border-top:1px solid #dbe5f8;background:linear-gradient(90deg,color-mix(in srgb,var(--org-accent) 6%,#f7f9ff),#f7f9ff)}.org-owner-prompt{display:flex;align-items:center;gap:9px;color:#8b6200;font:700 10px var(--mono)}.org-owner-prompt span{width:27px;height:27px;display:grid;place-items:center;border-radius:8px;background:#fff3d7}.org-owner-controls{display:flex;gap:7px;flex:1;justify-content:flex-end}.org-owner-controls input{max-width:300px}
 .faq-admin-grid{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(260px,2fr) minmax(100px,.5fr);gap:12px;}
 .support-admin-layout{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:16px;min-height:560px}
 .support-admin-list,.support-admin-detail{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
@@ -173,8 +188,10 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   .users-table-wrap{overflow-x:auto;}
   table.users-table{min-width:640px;}
   .faq-admin-grid{grid-template-columns:1fr;}
+  .org-card-hero{flex-direction:column}.org-statuses{justify-content:flex-start;max-width:none}.org-metrics-grid{grid-template-columns:1fr}.org-action-bar,.org-owner-setup{align-items:stretch;flex-direction:column}.org-action-danger{padding-top:8px;border-top:1px solid #e1e8f6}.org-owner-controls{justify-content:stretch}.org-owner-controls input{max-width:none}.org-title{white-space:normal}.org-list-toolbar{align-items:flex-end}.org-list-heading span{max-width:210px}
   .support-admin-layout{grid-template-columns:1fr}.support-admin-list{max-height:300px}.support-admin-detail{min-height:520px}
 }
+@media(prefers-reduced-motion:reduce){.org-admin-card{animation:none;transition:none}}
 </style>
 <script src="/static/notification-center.js"></script>
 </head>
@@ -297,7 +314,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
 
   <!-- CENTERS SECTION -->
   <div class="section-view" id="section-centers">
-    <div class="form-card" style="margin-bottom:24px;">
+    <div class="form-card org-create-shell" style="margin-bottom:24px;">
       <div class="form-card-head">$ organizations --create</div>
       <div class="form-card-body" style="flex-direction:row;flex-wrap:wrap;align-items:flex-end;">
         <div style="flex:2;min-width:180px;">
@@ -323,8 +340,8 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
       </div>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <span style="font-family:var(--mono);font-size:12px;color:var(--muted);">$ ro'yxat</span>
+    <div class="org-list-toolbar">
+      <div class="org-list-heading"><span class="org-list-icon"><svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13M8 21v-5h8v5M8 10h.01M12 10h.01M16 10h.01M8 13h.01M12 13h.01M16 13h.01"/></svg></span><div><strong>Tashkilotlar portfeli</strong><span id="org-list-summary">Maktab va o'quv markazlari</span></div></div>
       <button class="btn-outline btn-sm" onclick="loadCenters()">↻ Yangilash</button>
     </div>
 
@@ -870,7 +887,7 @@ async function loadCenters() {
   }
 }
 
-function renderCenters() {
+function renderCentersLegacy() {
   const listEl = document.getElementById('centers-list');
   const emptyEl = document.getElementById('centers-empty');
 
@@ -936,6 +953,144 @@ function renderCenters() {
         <button class="btn-primary btn-sm" onclick="assignHeadTeacher(${c.id}, this)">Tayinlash</button>
       </div>` : ''}
     </div>`;
+  }).join('');
+}
+
+function orgInitials(name) {
+  return String(name || '?').trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase();
+}
+
+function orgTypeIcon(isSchool) {
+  return isSchool
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V9l7-5 7 5v12M8 12h2M14 12h2M8 16h2M14 16h2M10 21v-3h4v3"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V6h10v15M14 10h6v11M7 9h3M7 13h3M7 17h3M17 13h1M17 17h1M3 21h18"/></svg>';
+}
+
+function orgActionIcon(kind) {
+  const icons = {
+    inventory: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="2"/></svg>',
+    directory: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+    test: '<svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM9 11h6M9 15h6M9 7h3"/></svg>',
+    billing: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg>',
+    power: '<svg viewBox="0 0 24 24"><path d="M12 3v8M7.1 5.8a8 8 0 1 0 9.8 0"/></svg>',
+    trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></svg>',
+    restore: '<svg viewBox="0 0 24 24"><path d="M4 7v5h5M5.8 17a8 8 0 1 0 .3-10.3L4 9"/></svg>'
+  };
+  return icons[kind] || '';
+}
+
+function renderCenters() {
+  const listEl = document.getElementById('centers-list');
+  const emptyEl = document.getElementById('centers-empty');
+  const summaryEl = document.getElementById('org-list-summary');
+
+  if (!allCenters.length) {
+    listEl.innerHTML = '';
+    emptyEl.textContent = "Hali tashkilotlar yo'q — yuqoridagi formadan birinchisini yarating";
+    emptyEl.style.display = 'block';
+    if (summaryEl) summaryEl.textContent = "Hozircha tashkilot yo'q";
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const liveCenters = allCenters.filter(c => !c.deleted_at);
+  const schoolCount = liveCenters.filter(c => c.organization_type === 'school').length;
+  const learningCount = liveCenters.length - schoolCount;
+  if (summaryEl) summaryEl.textContent = `${liveCenters.length} ta faol portfel · ${schoolCount} maktab · ${learningCount} o'quv markazi`;
+
+  listEl.innerHTML = allCenters.map((c, index) => {
+    const isSchool = c.organization_type === 'school';
+    const typeLabel = isSchool ? 'Maktab' : "O'quv markazi";
+    const leaderLabel = isSchool ? 'Direktor' : 'Head-teacher';
+    const safeColor = /^#[0-9a-f]{6}$/i.test(c.primary_color || '') ? c.primary_color : (isSchool ? '#1a56e8' : '#7655d9');
+    const groupsCount = Number(c.groups_count || 0);
+    const studentsCount = Number(c.students_count || 0);
+    const maxGroups = Math.max(1, Number(c.max_groups || 1));
+    const maxStudents = Math.max(1, Number(c.max_students || 1));
+    const groupPercent = Math.min(100, Math.round(groupsCount / maxGroups * 100));
+    const studentPercent = Math.min(100, Math.round(studentsCount / maxStudents * 100));
+    const directoryPublic = c.directory_admin_override === 'force_public' ||
+      (c.directory_admin_override === 'inherit' && c.directory_opt_in);
+    const createdAt = new Date(c.created_at).toLocaleDateString('uz-UZ', {day:'2-digit', month:'short', year:'numeric'});
+    const ownerName = adminEsc(c.owner_name || '');
+    const ownerEmail = adminEsc(c.owner_email || '');
+    const logoHtml = c.logo_url
+      ? `<img src="${adminEsc(c.logo_url)}" alt="${adminEsc(c.name)} logosi" onerror="this.parentElement.innerHTML=orgTypeIcon(${isSchool})">`
+      : orgTypeIcon(isSchool);
+    const statusChip = c.deleted_at
+      ? '<span class="org-chip warning">Savatda</span>'
+      : c.is_active
+        ? '<span class="org-chip success">Faol</span>'
+        : '<span class="org-chip danger">Yopiq</span>';
+    const subscriptionChip = c.subscription_required
+      ? `<span class="org-chip warning">Obuna · ${adminEsc(c.subscription_status || 'trial')}</span>`
+      : '<span class="org-chip success">Obunasiz</span>';
+    const directoryChip = c.directory_admin_override === 'force_hidden'
+      ? '<span class="org-chip">Katalog yashirilgan</span>'
+      : directoryPublic
+        ? `<span class="org-chip info">Public katalog${c.directory_admin_override === 'force_public' ? ' · admin' : ''}</span>`
+        : '<span class="org-chip">Katalog yopiq</span>';
+    const uploadChip = c.test_upload_enabled
+      ? '<span class="org-chip info">Test yuklash yoqilgan</span>'
+      : '<span class="org-chip">Test yuklash yopiq</span>';
+    const leaderHtml = c.owner_name
+      ? `<div class="org-leader"><span class="org-leader-avatar">${adminEsc(orgInitials(c.owner_name))}</span><div class="org-leader-copy"><strong>${ownerName}</strong><span>${leaderLabel} · ${ownerEmail}</span></div></div>`
+      : `<div class="org-leader missing"><span class="org-leader-avatar">!</span><div class="org-leader-copy"><strong>${leaderLabel} tayinlanmagan</strong><span>Rahbar profilini biriktiring</span></div></div>`;
+    const slugOrId = c.slug ? `/org/${adminEsc(c.slug)}` : `ID #${Number(c.id)}`;
+    const region = c.directory_region ? adminEsc(c.directory_region) : 'Hudud kiritilmagan';
+
+    const actionBar = c.deleted_at
+      ? `<div class="org-action-bar"><div class="org-action-main"><button class="org-action-btn primary" onclick="restoreCenter(${c.id},this)">${orgActionIcon('restore')}Tiklash</button></div><div class="org-action-danger"><button class="org-action-btn danger" onclick="purgeCenter(${c.id})">${orgActionIcon('trash')}Butunlay o'chirish</button></div></div>`
+      : `<div class="org-action-bar">
+          <div class="org-action-main">
+            <button class="org-action-btn primary" onclick="toggleInventory(${c.id},this)">${orgActionIcon('inventory')}Tarkibini boshqarish</button>
+            <button class="org-action-btn" onclick="manageCenterDirectory(${c.id})">${orgActionIcon('directory')}Public profil</button>
+            <button class="org-action-btn" onclick="toggleTestUpload(${c.id},this)">${orgActionIcon('test')}${c.test_upload_enabled ? "Test yuklashni o'chirish" : 'Test yuklashga ruxsat'}</button>
+            <button class="org-action-btn" onclick="toggleCenterSubscription(${c.id},this)">${orgActionIcon('billing')}${c.subscription_required ? "Obunani o'chirish" : 'Obunani yoqish'}</button>
+          </div>
+          <div class="org-action-danger">
+            <button class="org-action-btn" onclick="toggleCenter(${c.id},this)">${orgActionIcon('power')}${c.is_active ? 'Yopish' : 'Qayta ochish'}</button>
+            <button class="org-action-btn danger" onclick="trashCenter(${c.id})">${orgActionIcon('trash')}Savatga</button>
+          </div>
+        </div>`;
+
+    return `
+      <article class="org-admin-card ${c.deleted_at ? 'is-trashed' : (!c.is_active ? 'is-inactive' : '')}" style="--org-accent:${safeColor};animation-delay:${Math.min(index * 55, 330)}ms">
+        <div class="org-card-hero">
+          <div class="org-identity">
+            <div class="org-logo">${logoHtml}</div>
+            <div style="min-width:0">
+              <div class="org-type-line"><span>${typeLabel}</span> ${c.directory_featured ? '★ Tavsiya etilgan' : 'Tashkilot portfeli'}</div>
+              <h3 class="org-title">${adminEsc(c.brand_name || c.name)}</h3>
+              <div class="org-subline"><span>${slugOrId}</span><i></i><span>${region}</span><i></i><span>${createdAt}</span></div>
+            </div>
+          </div>
+          <div class="org-statuses">${statusChip}${subscriptionChip}${directoryChip}${uploadChip}</div>
+        </div>
+        <div class="org-card-body">
+          <div class="org-metrics-grid">
+            <div class="org-metric">
+              <div class="org-metric-head"><span class="org-metric-label"><svg viewBox="0 0 24 24"><path d="M4 6h6l2 2h8v10H4z"/></svg>Guruh / sinf</span><span class="org-metric-value">${groupsCount} / ${maxGroups}</span></div>
+              <div class="org-progress"><span style="width:${groupPercent}%"></span></div>
+            </div>
+            <div class="org-metric">
+              <div class="org-metric-head"><span class="org-metric-label"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>O'quvchilar</span><span class="org-metric-value">${studentsCount} / ${maxStudents}</span></div>
+              <div class="org-progress"><span style="width:${studentPercent}%"></span></div>
+            </div>
+            <div class="org-metric">${leaderHtml}</div>
+          </div>
+          ${actionBar}
+          <div class="org-inventory-slot" id="inventory-${c.id}"></div>
+        </div>
+        ${!c.owner_id && !c.deleted_at ? `
+          <div class="org-owner-setup">
+            <div class="org-owner-prompt"><span>!</span>${leaderLabel} profilini biriktirish kerak</div>
+            <div class="org-owner-controls">
+              <input type="text" id="owner-input-${c.id}" placeholder="${leaderLabel} username yoki email">
+              <button class="btn-primary btn-sm" onclick="assignHeadTeacher(${c.id},this)">Tayinlash</button>
+            </div>
+          </div>` : ''}
+      </article>`;
   }).join('');
 }
 
@@ -1007,13 +1162,13 @@ async function purgeCenter(id) {
 const inventoryKinds={groups:['group','Guruhlar'],classes:['class','Sinflar'],subjects:['subject','Fanlar'],positions:['position','Lavozimlar'],staff:['staff','Xodimlar'],users:['user',"O'quvchi va foydalanuvchilar"],tests:['test','Testlar']};
 async function toggleInventory(centerId,btn){
   const box=document.getElementById(`inventory-${centerId}`);
-  if(box.style.display!=='none'){box.style.display='none';btn.textContent='Tarkibini boshqarish';return}
-  box.style.display='block';box.innerHTML='<span class="spinner"></span> Yuklanmoqda...';btn.textContent='Yopish';
+  if(box.style.display!=='none'){box.style.display='none';btn.innerHTML=orgActionIcon('inventory')+'Tarkibini boshqarish';return}
+  box.style.display='block';box.innerHTML='<span class="spinner"></span> Yuklanmoqda...';btn.innerHTML=orgActionIcon('inventory')+'Yopish';
   const res=await adminFetch(`/api/admin/centers/${centerId}/inventory`),data=await res.json();
   if(!res.ok){box.innerHTML=`<div class="alert danger">${adminEsc(data.detail||'Xatolik')}</div>`;return}
   box.innerHTML=Object.entries(inventoryKinds).map(([key,[kind,title]])=>{const rows=data[key]||[];return `<div style="margin-top:12px"><b>${title} (${rows.length})</b><div style="display:grid;gap:6px;margin-top:6px">${rows.length?rows.map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px"><span>${adminEsc(x.name||x.email||'#'+x.id)} ${x.email?`<small style="color:var(--muted)">${adminEsc(x.email)}</small>`:''} ${x.deleted_at?'<span class="badge">Savatda</span>':''}</span><span>${x.deleted_at?`<button class="btn-outline btn-sm" onclick="restoreEntity('${kind}',${x.id},${centerId})">Tiklash</button> <button class="btn-outline btn-sm" style="color:var(--red)" onclick="purgeEntity('${kind}',${x.id},${centerId})">Butunlay o'chirish</button>`:`<button class="btn-outline btn-sm" style="color:var(--red)" onclick="trashEntity('${kind}',${x.id},${centerId})">Savatga</button>`}</span></div>`).join(''):'<small style="color:var(--muted)">Mavjud emas</small>'}</div></div>`}).join('');
 }
-async function refreshInventory(centerId){const box=document.getElementById(`inventory-${centerId}`),btn=[...box.closest('.center-card').querySelectorAll('button')].find(b=>b.textContent==='Yopish');box.style.display='none';if(btn)await toggleInventory(centerId,btn)}
+async function refreshInventory(centerId){const box=document.getElementById(`inventory-${centerId}`),card=box.closest('.org-admin-card,.center-card'),btn=card?[...card.querySelectorAll('button')].find(b=>b.textContent==='Yopish'):null;box.style.display='none';if(btn)await toggleInventory(centerId,btn)}
 async function trashEntity(kind,id,centerId){if(!confirm("Obyekt savatga o'tkazilsinmi?"))return;const res=await adminFetch(`/api/admin/entities/${kind}/${id}/trash`,{method:'POST'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');await refreshInventory(centerId)}
 async function restoreEntity(kind,id,centerId){const res=await adminFetch(`/api/admin/entities/${kind}/${id}/restore`,{method:'POST'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');await refreshInventory(centerId)}
 async function purgeEntity(kind,id,centerId){if(!confirm("Butunlay o'chirish qaytarib bo'lmaydi. Davom etilsinmi?"))return;const res=await adminFetch(`/api/admin/entities/${kind}/${id}`,{method:'DELETE'}),data=await res.json();if(!res.ok)return alert(data.detail||'Xatolik');await refreshInventory(centerId)}

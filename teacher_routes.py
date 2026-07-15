@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from db import get_pool
 from auth import get_current_teacher
+from notification_center import create_notification
 from scoring import get_band_score, calculate_overall_band
 from branding import branding_payload
 
@@ -254,7 +255,16 @@ async def request_resubmission(student_id: int, result_id: int, data: Resubmissi
             ON CONFLICT(result_id,status) DO UPDATE SET reason=EXCLUDED.reason,due_at=EXCLUDED.due_at,created_at=NOW()
             """, result_id, student_id, current_user["id"], row["section"], reason, due_at
         )
-    due_text = due_at.strftime("%d.%m.%Y %H:%M UTC") if due_at else "muddat belgilanmagan"
+        due_text = due_at.strftime("%d.%m.%Y %H:%M UTC") if due_at else "muddat belgilanmagan"
+        await create_notification(
+            conn,
+            recipient_user_id=student_id,
+            kind="task",
+            title="Qayta topshirish vazifasi",
+            message=f"{row['section'].title()} ishini qayta topshiring. {reason} Muddat: {due_text}.",
+            action_url="/profile",
+            metadata={"event": "resubmission", "result_id": result_id, "section": row["section"]},
+        )
     try:
         from auth import send_email
         await send_email(row["email"], row["full_name"], "IELTS Mock SS — qayta topshirish",
@@ -340,6 +350,15 @@ async def grade_student_writing(student_id: int, result_id: int, data: GradeWrit
         )
         if not row:
             raise HTTPException(status_code=404, detail="Natija topilmadi")
+        await create_notification(
+            conn,
+            recipient_user_id=student_id,
+            kind="success",
+            title="Writing natijangiz baholandi",
+            message=f"Writing uchun Band {data.band} qo'yildi. Teacher feedback profilingizda mavjud.",
+            action_url="/profile",
+            metadata={"event": "writing_graded", "result_id": result_id, "band": data.band},
+        )
 
     try:
         from main import build_result_email, send_email
@@ -513,6 +532,16 @@ async def grade_student_speaking(
         )
         if not row:
             raise HTTPException(status_code=404, detail="Natija topilmadi")
+
+        await create_notification(
+            conn,
+            recipient_user_id=student_id,
+            kind="success",
+            title="Speaking natijangiz baholandi",
+            message=f"Speaking uchun Band {data.band} qo'yildi. Teacher feedback profilingizda mavjud.",
+            action_url="/profile",
+            metadata={"event": "speaking_graded", "result_id": result_id, "band": data.band},
+        )
 
         user_row = await conn.fetchrow(
             "SELECT telegram_chat_id FROM users WHERE email = $1", student["email"]

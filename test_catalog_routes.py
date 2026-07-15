@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from auth import JWT_ALGO, JWT_SECRET, get_current_head_teacher, get_current_user
 from db import get_pool
+from notification_center import create_notification
 from test_builder_routes import render_builder_section
 
 
@@ -266,7 +267,7 @@ async def organization_schedule_test(data: TestScheduleIn, current_user: dict = 
     db = await get_pool()
     async with db.acquire() as conn:
         async with conn.transaction():
-            test = await conn.fetchrow("SELECT id FROM tests WHERE id=$1 AND status='published' AND visibility='organization' AND center_id=$2", data.test_id, current_user["center_id"])
+            test = await conn.fetchrow("SELECT id,title FROM tests WHERE id=$1 AND status='published' AND visibility='organization' AND center_id=$2", data.test_id, current_user["center_id"])
             if not test: raise HTTPException(status_code=404, detail="Publish qilingan test topilmadi")
             if group_id and not await conn.fetchval("SELECT 1 FROM groups WHERE id=$1 AND center_id=$2", group_id, current_user["center_id"]): raise HTTPException(status_code=404, detail="Guruh topilmadi")
             if class_id and not await conn.fetchval("SELECT 1 FROM school_classes WHERE id=$1 AND center_id=$2", class_id, current_user["center_id"]): raise HTTPException(status_code=404, detail="Sinf topilmadi")
@@ -279,6 +280,37 @@ async def organization_schedule_test(data: TestScheduleIn, current_user: dict = 
                 schedule_id=existing
             else:
                 schedule_id=await conn.fetchval("INSERT INTO test_assignments(test_id,center_id,group_id,class_id,available_from,available_until,attempt_limit,assigned_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",data.test_id,current_user["center_id"],group_id,class_id,available_from,available_until,data.attempt_limit,current_user["id"])
+            if group_id:
+                recipients = await conn.fetch("SELECT id FROM users WHERE group_id=$1 AND role='student' AND deleted_at IS NULL", group_id)
+            elif class_id:
+                recipients = await conn.fetch(
+                    """
+                    SELECT u.id FROM school_class_students cs
+                    JOIN users u ON u.id=cs.student_id
+                    WHERE cs.class_id=$1 AND cs.left_at IS NULL AND u.deleted_at IS NULL
+                    """,
+                    class_id,
+                )
+            else:
+                recipients = await conn.fetch(
+                    "SELECT id FROM users WHERE center_id=$1 AND role='student' AND deleted_at IS NULL",
+                    current_user["center_id"],
+                )
+            schedule_text = ""
+            if available_from:
+                schedule_text += f" Boshlanish: {available_from.strftime('%d.%m.%Y %H:%M')}."
+            if available_until:
+                schedule_text += f" Yakun: {available_until.strftime('%d.%m.%Y %H:%M')}."
+            for recipient in recipients:
+                await create_notification(
+                    conn,
+                    recipient_user_id=recipient["id"],
+                    kind="task",
+                    title="Sizga yangi test biriktirildi",
+                    message=f"{test['title']} testini topshirishingiz kerak.{schedule_text}",
+                    action_url="/tests",
+                    metadata={"event": "test_assigned", "test_id": data.test_id, "schedule_id": schedule_id},
+                )
     return {"id":schedule_id,"message":"Test rejalashtirildi"}
 
 

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from auth import get_current_head_teacher
 from db import get_pool
+from notification_center import notify_admin
 
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
@@ -118,5 +119,14 @@ async def submit_payment(
             """,
             center["id"], plan_id, billing_cycle, amount, order_code, payer_name,
             transaction_reference, receipt_data, receipt.content_type
+        )
+        center_name = await conn.fetchval("SELECT name FROM centers WHERE id=$1", center["id"])
+        await notify_admin(
+            conn,
+            "Yangi obuna to'lovi",
+            f"{center_name} {order_code} raqamli to'lov chekini yubordi.",
+            kind="task",
+            action_url="/admin",
+            metadata={"event": "subscription_payment", "payment_id": row["id"], "center_id": center["id"]},
         )
     return dict(row) | {"message": "To'lov tasdiqlash uchun yuborildi"}

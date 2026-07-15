@@ -132,6 +132,7 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
   .group-row { flex-direction: column; align-items: flex-start; }
 }
 </style>
+<script src="/static/notification-center.js"></script>
 </head>
 <body>
 
@@ -435,6 +436,7 @@ async function apiCall(base, path, options = {}) {
 }
 
 function logout() {
+  window.NotificationCenter?.unmount();
   localStorage.removeItem('ielts_token');
   token = null;
   currentUser = null;
@@ -481,6 +483,7 @@ function afterAuthResolved() {
     <span class="badge muted">@${currentUser.username}</span>
     <button class="btn-outline btn-sm" onclick="logout()">Chiqish</button>
   `;
+  window.NotificationCenter?.mount({ target: document.getElementById('nav-right'), getToken: () => token });
   showView('view-dashboard');
   loadCenter();
   loadGroups();

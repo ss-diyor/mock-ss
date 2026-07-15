@@ -165,6 +165,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   .faq-admin-grid{grid-template-columns:1fr;}
 }
 </style>
+<script src="/static/notification-center.js"></script>
 </head>
 <body>
 
@@ -450,6 +451,7 @@ async function loadResults(isLogin=false) {
     document.getElementById('view-login').style.display = 'none';
     document.getElementById('view-dashboard').style.display = 'block';
     document.getElementById('nav-status').innerHTML = `<span class="badge green">● Ulangan</span>`;
+    window.NotificationCenter?.mount({ target: document.getElementById('nav-status'), getAdminSecret: () => currentSecret });
 
     renderStats();
     renderResults();

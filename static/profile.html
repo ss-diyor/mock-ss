@@ -219,6 +219,7 @@ textarea { resize: vertical; min-height: 80px; }
   font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0;
 }
 </style>
+<script src="/static/notification-center.js"></script>
 </head>
 <body>
 
@@ -713,6 +714,7 @@ function renderDashboard() {
   document.getElementById('referral-link').value = window.location.origin + '/?ref=' + (currentUser.referral_code || '');
 
   document.getElementById('verify-banner').style.display = currentUser.email_verified ? 'none' : 'flex';
+  window.NotificationCenter?.mount({ target: document.querySelector('nav'), getToken: () => token });
 }
 
 function copyReferral() {
@@ -1102,6 +1104,7 @@ async function resendVerificationCode() {
 
 // ─── LOGOUT ───────────────────────────────────────────────
 function logout() {
+  window.NotificationCenter?.unmount();
   localStorage.removeItem('ielts_token');
   token = null;
   currentUser = null;

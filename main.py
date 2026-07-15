@@ -32,6 +32,15 @@ from billing_routes import router as billing_router
 from test_catalog_routes import router as test_catalog_router, _can_access_test
 from test_builder_routes import router as test_builder_router
 from branding import ORGANIZATION_TYPES, SLUG_RE, branding_payload
+from notification_center import (
+    router as notification_router,
+    ensure_notification_tables,
+    fetch_notifications,
+    mark_notification_read,
+    mark_all_notifications_read,
+    create_notification,
+    notify_admin,
+)
 
 app = FastAPI(title="IELTS Mock SS")
 app.include_router(feature_router)
@@ -43,6 +52,7 @@ app.include_router(school_staff_router)
 app.include_router(billing_router)
 app.include_router(test_catalog_router)
 app.include_router(test_builder_router)
+app.include_router(notification_router)
 
 
 @app.middleware("http")
@@ -116,6 +126,7 @@ async def startup():
     await ensure_users_table()
     await ensure_center_group_tables()
     async with db.acquire() as conn:
+        await ensure_notification_tables(conn)
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS feedback_templates (
                 id SERIAL PRIMARY KEY,
@@ -592,6 +603,23 @@ async def submit_result(data: SubmitResult, current_user: dict = Depends(get_cur
 
         user_row = await conn.fetchrow("SELECT telegram_chat_id FROM users WHERE email = $1", user_email)
         chat_id = user_row["telegram_chat_id"] if user_row else None
+        await create_notification(
+            conn,
+            recipient_user_id=current_user["id"],
+            kind="task" if data.section == "writing" else "success",
+            title=f"{data.section.title()} natijasi saqlandi",
+            message=("Ishingiz teacher tekshiruviga yuborildi." if data.section == "writing" else f"Natijangiz: {data.score}/{data.total}."),
+            action_url="/profile",
+            metadata={"event": "result_saved", "result_id": result_row["id"], "section": data.section},
+        )
+        await notify_admin(
+            conn,
+            "Yangi test natijasi",
+            f"{user_name} {data.section.title()} bo'limini topshirdi.",
+            kind="info",
+            action_url="/admin",
+            metadata={"event": "result_saved", "result_id": result_row["id"], "section": data.section},
+        )
 
     percentage = round((data.score / data.total) * 100) if data.score is not None and data.total else None
     band = get_band_score(data.score, data.total, data.section) if data.score is not None and data.total else None
@@ -759,6 +787,23 @@ async def submit_speaking(
               AND NOT ('speaking' = ANY(sections_completed))
             """,
             session_id
+        )
+        await create_notification(
+            conn,
+            recipient_user_id=current_user["id"],
+            kind="task",
+            title="Speaking audiongiz saqlandi",
+            message="Speaking javobingiz teacher tekshiruviga yuborildi.",
+            action_url="/profile",
+            metadata={"event": "speaking_submitted", "result_id": result_id, "section": "speaking"},
+        )
+        await notify_admin(
+            conn,
+            "Yangi Speaking javobi",
+            f"{user_name} Speaking audiosini yubordi.",
+            kind="task",
+            action_url="/admin",
+            metadata={"event": "speaking_submitted", "result_id": result_id},
         )
 
     # Telegram guruhiga audio yuborish
@@ -1054,6 +1099,14 @@ async def create_organization_application(data: OrganizationApplicationIn):
             organization_name, data.organization_type, contact_name, phone, email,
             data.student_count, message
         )
+        await notify_admin(
+            conn,
+            "Yangi tashkilot arizasi",
+            f"{organization_name} nomidan {contact_name} ariza yubordi.",
+            kind="task",
+            action_url="/admin",
+            metadata={"event": "organization_application", "application_id": application_id},
+        )
     return {"ok": True, "application_id": application_id, "message": "Arizangiz qabul qilindi"}
 
 
@@ -1167,6 +1220,14 @@ async def submit_testimonial(data: TestimonialSubmitIn, current_user: dict = Dep
             current_user["id"], content, current_user.get("role") or "student",
             data.show_full_name, data.show_organization, data.show_avatar
         )
+        await notify_admin(
+            conn,
+            "Yangi foydalanuvchi fikri",
+            f"{current_user['full_name']} fikrini moderatsiyaga yubordi.",
+            kind="task",
+            action_url="/admin",
+            metadata={"event": "testimonial_pending", "testimonial_id": row["id"]},
+        )
     return {**dict(row), "message": "Fikringiz moderatsiyaga yuborildi"}
 
 
@@ -1196,6 +1257,31 @@ def check_admin(secret: str):
 
 def require_admin(x_admin_secret: str = Header("", alias="X-Admin-Secret")):
     check_admin(x_admin_secret)
+
+
+@app.get("/api/admin/notifications")
+async def admin_notifications(_: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        return await fetch_notifications(conn, role="admin", limit=40)
+
+
+@app.post("/api/admin/notifications/{notification_id}/read")
+async def admin_read_notification(notification_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        updated = await mark_notification_read(conn, notification_id, role="admin")
+    if not updated:
+        raise HTTPException(status_code=404, detail="Bildirishnoma topilmadi")
+    return {"ok": True}
+
+
+@app.post("/api/admin/notifications/read-all")
+async def admin_read_all_notifications(_: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        updated = await mark_all_notifications_read(conn, role="admin")
+    return {"ok": True, "updated": updated}
 
 
 @app.get("/api/admin/faqs")
@@ -1326,11 +1412,26 @@ async def admin_review_testimonial(
                 reviewed_at=CASE WHEN $3='pending' THEN NULL ELSE NOW() END,
                 published_at=CASE WHEN $3='published' THEN COALESCE(published_at, NOW()) ELSE NULL END
             WHERE id=$1
-            RETURNING id, content, original_content, status, featured, sort_order,
+            RETURNING id, user_id, content, original_content, status, featured, sort_order,
                       admin_note, updated_at, reviewed_at, published_at
             """,
             testimonial_id, content, data.status, data.featured, data.sort_order, note
         )
+        if row and data.status in {"published", "rejected", "archived"}:
+            status_text = {
+                "published": "Fikringiz landing page'da chop etildi.",
+                "rejected": "Fikringiz moderatsiyadan o'tmadi.",
+                "archived": "Fikringiz arxivlandi.",
+            }[data.status]
+            await create_notification(
+                conn,
+                recipient_user_id=row["user_id"],
+                kind="success" if data.status == "published" else "warning",
+                title="Fikringiz holati yangilandi",
+                message=status_text + (f" Admin izohi: {note}" if note else ""),
+                action_url="/profile",
+                metadata={"event": "testimonial_review", "testimonial_id": testimonial_id, "status": data.status},
+            )
     if not row:
         raise HTTPException(status_code=404, detail="Fikr topilmadi")
     return dict(row)
@@ -1779,6 +1880,18 @@ async def admin_review_subscription_payment(
                         updated_at=NOW()
                     """,
                     payment["center_id"], payment["plan_id"], payment["billing_cycle"]
+                )
+            owner_id = await conn.fetchval("SELECT owner_id FROM centers WHERE id=$1", payment["center_id"])
+            if owner_id:
+                await create_notification(
+                    conn,
+                    recipient_user_id=owner_id,
+                    kind="success" if data.action == "approve" else "warning",
+                    title="Obuna to'lovi ko'rib chiqildi",
+                    message=("To'lov tasdiqlandi va obuna faollashtirildi." if data.action == "approve" else "To'lov rad etildi.")
+                            + (f" Izoh: {note}" if note else ""),
+                    action_url="/head-teacher",
+                    metadata={"event": "payment_review", "payment_id": payment_id, "status": new_status},
                 )
     return {"message": "To'lov tasdiqlandi" if data.action == "approve" else "To'lov rad etildi"}
 

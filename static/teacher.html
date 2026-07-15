@@ -140,6 +140,7 @@ table.students-table tr.clickable:hover { background: var(--bg); }
 .history-date { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .history-band { font-family: var(--mono); font-weight: 700; color: var(--blue); }
 </style>
+<script src="/static/notification-center.js"></script>
 </head>
 <body>
 
@@ -316,6 +317,7 @@ async function apiCall(base, path, options = {}) {
 }
 
 function logout() {
+  window.NotificationCenter?.unmount();
   localStorage.removeItem('ielts_token');
   token = null;
   currentUser = null;
@@ -368,6 +370,7 @@ function afterAuthResolved() {
     <span class="badge muted">@${currentUser.username}</span>
     <button class="btn-outline btn-sm" onclick="logout()">Chiqish</button>
   `;
+  window.NotificationCenter?.mount({ target: document.getElementById('nav-right'), getToken: () => token });
   loadGroup();
 }
 

@@ -1681,6 +1681,121 @@ async def admin_list_centers(_: None = Depends(require_admin)):
     ]
 
 
+@app.get("/api/admin/centers/{center_id}/detail")
+async def admin_center_detail(center_id: int, _: None = Depends(require_admin)):
+    """Public katalog ma'lumotlarini admin uchun visibility cheklovisiz ko'rsatadi."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT c.id, c.name, c.organization_type, c.slug, c.brand_name,
+                   c.brand_primary_color, c.brand_logo_url, c.brand_contact_email,
+                   c.brand_contact_phone, c.directory_description, c.directory_region,
+                   c.directory_address, c.directory_website_url, c.directory_telegram_url,
+                   c.directory_instagram_url, c.directory_show_email, c.directory_show_phone,
+                   c.directory_show_address, c.directory_show_statistics,
+                   c.directory_show_testimonials, c.directory_featured,
+                   c.directory_opt_in, c.directory_admin_override,
+                   c.subscription_required, c.test_upload_enabled,
+                   c.is_active, c.deleted_at, c.max_groups, c.max_students, c.created_at,
+                   c.owner_id, owner.full_name AS owner_name, owner.email AS owner_email,
+                   sub.status AS subscription_status, sub.current_period_end,
+                   COUNT(DISTINCT g.id) FILTER (WHERE g.deleted_at IS NULL) AS groups_count,
+                   COUNT(DISTINCT u.id) FILTER (
+                       WHERE u.role='student' AND u.deleted_at IS NULL
+                   ) AS students_count
+            FROM centers c
+            LEFT JOIN users owner ON owner.id=c.owner_id
+            LEFT JOIN organization_subscriptions sub ON sub.center_id=c.id
+            LEFT JOIN groups g ON g.center_id=c.id
+            LEFT JOIN users u ON u.center_id=c.id
+            WHERE c.id=$1
+            GROUP BY c.id, owner.full_name, owner.email,
+                     sub.status, sub.current_period_end
+            """,
+            center_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
+
+        feedback_rows = await conn.fetch(
+            """
+            SELECT t.content, t.show_full_name, u.full_name, u.username, u.role
+            FROM testimonials t
+            JOIN users u ON u.id=t.user_id
+            WHERE u.center_id=$1 AND t.status='published' AND u.deleted_at IS NULL
+            ORDER BY t.featured DESC, t.sort_order, t.published_at DESC NULLS LAST
+            LIMIT 6
+            """,
+            center_id
+        )
+
+    directory_public = (
+        row["is_active"] is True
+        and row["deleted_at"] is None
+        and bool(row["slug"])
+        and (
+            row["directory_admin_override"] == "force_public"
+            or (
+                row["directory_admin_override"] == "inherit"
+                and row["directory_opt_in"] is True
+            )
+        )
+    )
+    return {
+        "id": row["id"],
+        "internal_name": row["name"],
+        "name": row["brand_name"] or row["name"],
+        "organization_type": row["organization_type"],
+        "slug": row["slug"],
+        "description": row["directory_description"],
+        "region": row["directory_region"],
+        "address": row["directory_address"],
+        "logo_url": row["brand_logo_url"],
+        "primary_color": row["brand_primary_color"] or "#1a56e8",
+        "contact_email": row["brand_contact_email"],
+        "contact_phone": row["brand_contact_phone"],
+        "website_url": row["directory_website_url"],
+        "telegram_url": row["directory_telegram_url"],
+        "instagram_url": row["directory_instagram_url"],
+        "show_email": row["directory_show_email"] is True,
+        "show_phone": row["directory_show_phone"] is True,
+        "show_address": row["directory_show_address"] is True,
+        "show_statistics": row["directory_show_statistics"] is True,
+        "show_testimonials": row["directory_show_testimonials"] is True,
+        "featured": row["directory_featured"] is True,
+        "directory_public": directory_public,
+        "directory_mode": row["directory_admin_override"],
+        "is_active": row["is_active"],
+        "deleted_at": row["deleted_at"].isoformat() if row["deleted_at"] else None,
+        "groups_count": row["groups_count"],
+        "students_count": row["students_count"],
+        "max_groups": row["max_groups"] or DEFAULT_MAX_GROUPS_PER_CENTER,
+        "max_students": row["max_students"] or DEFAULT_MAX_STUDENTS_PER_CENTER,
+        "owner_name": row["owner_name"],
+        "owner_email": row["owner_email"],
+        "subscription_required": row["subscription_required"],
+        "subscription_status": row["subscription_status"],
+        "subscription_period_end": (
+            row["current_period_end"].isoformat() if row["current_period_end"] else None
+        ),
+        "test_upload_enabled": row["test_upload_enabled"],
+        "created_at": row["created_at"].isoformat(),
+        "public_url": f"/org/{row['slug']}" if directory_public else None,
+        "testimonials": [
+            {
+                "content": item["content"],
+                "full_name": (
+                    (item["full_name"] or item["username"])
+                    if item["show_full_name"] else "Tasdiqlangan foydalanuvchi"
+                ),
+                "role": testimonial_role_label(item["role"], row["organization_type"]),
+            }
+            for item in feedback_rows
+        ],
+    }
+
+
 @app.post("/api/admin/centers/{center_id}/directory")
 async def admin_update_center_directory(
     center_id: int,
@@ -2762,6 +2877,10 @@ async def root_healthcheck():
 @app.get("/admin")
 async def admin_page():
     return FileResponse("static/admin.html")
+
+@app.get("/admin/organizations/{center_id}")
+async def admin_organization_detail_page(center_id: int):
+    return FileResponse("static/organization-admin.html")
 
 @app.get("/profile")
 async def profile_page():

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Tashkilot ma'lumoti — Admin Panel</title>
+  <link rel="icon" type="image/png" href="/static/assets/site-logo-sd.png">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/organizations.css">
+  <link rel="stylesheet" href="/static/organization-admin.css">
+</head>
+<body class="admin-organization-page">
+  <nav class="site-nav admin-detail-nav">
+    <div class="nav-inner">
+      <a class="nav-logo" href="/admin?section=centers" onclick="returnToAdmin(event)" aria-label="Admin panelga qaytish">
+        <span class="nav-logo-icon"><img src="/static/assets/site-logo-sd.png" alt="IELTS Mock SS"></span>
+        <span class="nav-logo-text"><strong>Admin Panel</strong><small>Tashkilot ma'lumotlari</small></span>
+      </a>
+      <div class="nav-actions">
+        <a class="button button-secondary" href="/organizations"><span>Public katalog</span></a>
+        <a class="button button-primary" href="/admin?section=centers" onclick="returnToAdmin(event)">← <span>Admin panel</span></a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="admin-detail-main">
+    <div class="admin-detail-toolbar">
+      <div class="admin-breadcrumb"><span>Admin</span><span>/</span><strong>Tashkilot ma'lumoti</strong></div>
+      <div class="admin-view-note"><i></i> Admin ko‘rinishi — yashirilgan ma’lumotlar ham ko‘rsatiladi</div>
+    </div>
+    <div id="admin-organization-detail" class="empty-state admin-empty">Tashkilot ma'lumotlari yuklanmoqda...</div>
+  </main>
+
+  <footer><span>© 2026 IELTS Mock SS</span><span>Admin tashkilot ma'lumotlari</span></footer>
+
+<script>
+const esc=value=>String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+const adminSecret=sessionStorage.getItem('organization_admin_secret')||'';
+const idMatch=location.pathname.match(/^\/admin\/organizations\/(\d+)\/?$/);
+const centerId=idMatch?Number(idMatch[1]):0;
+const box=document.getElementById('admin-organization-detail');
+function returnToAdmin(event){if(history.length>1){event.preventDefault();history.back()}}
+const initials=name=>String(name||'T').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
+const typeLabel=row=>row.organization_type==='school'?'Maktab':"O'quv markazi";
+const leaderLabel=row=>row.organization_type==='school'?'Direktor':'Head-teacher';
+const typeIcon=row=>row.organization_type==='school'
+  ? '<svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-4 7 4v12M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01"/></svg>'
+  : '<svg viewBox="0 0 24 24"><path d="M5 21V3h14v18M2 21h20M9 7h.01M15 7h.01M9 11h.01M15 11h.01M10 21v-4h4v4"/></svg>';
+const icons={
+  phone:'<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3 5.2 2 2 0 0 1 5 3h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.4 2.1L9 11a16 16 0 0 0 4 4l1.4-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>',
+  mail:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  map:'<svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>'
+};
+
+function safeHttpUrl(value){
+  if(!value)return null;
+  try{const url=new URL(value,location.origin);return ['http:','https:'].includes(url.protocol)?url.href:null}catch{return null}
+}
+function logoHtml(row){
+  const fallback=esc(initials(row.name));
+  const image=row.logo_url?`<img src="${esc(row.logo_url)}" alt="${esc(row.name)} logosi" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span hidden>${fallback}</span>`:`<span>${fallback}</span>`;
+  return `<div class="organization-logo logo-detail" style="--brand:${esc(row.primary_color||'#1a56e8')}">${image}</div>`;
+}
+function visibilityTag(show){return `<span class="visibility-tag ${show?'':'hidden'}">${show?'Public':'Yashirin'}</span>`}
+function infoRow(icon,label,value,show){
+  return `<div class="admin-info-row"><span class="admin-info-icon">${icon}</span><span><small>${label}</small><b>${esc(value||'Kiritilmagan')}</b></span>${visibilityTag(show)}</div>`;
+}
+function chip(text,state=''){return `<span class="admin-chip ${state}">${esc(text)}</span>`}
+function socialButton(label,value){
+  const url=safeHttpUrl(value);return url?`<a class="button button-secondary" target="_blank" rel="noopener" href="${esc(url)}">${label} ↗</a>`:'';
+}
+
+function renderDetail(row){
+  document.title=`${row.name} — Admin Panel`;
+  document.documentElement.style.setProperty('--org-primary',row.primary_color||'#1a56e8');
+  box.className='';
+  const state=row.deleted_at?chip('Savatda','warning'):row.is_active?chip('Faol','success'):chip('Yopiq','danger');
+  const directory=row.directory_public?chip('Public katalog','success'):chip('Katalog yopiq','warning');
+  const subscription=row.subscription_required?chip('Obuna: '+(row.subscription_status||'trial'),'warning'):chip('Obunasiz','success');
+  const upload=row.test_upload_enabled?chip('Test yuklash yoqilgan','success'):chip('Test yuklash yopiq');
+  const publicButton=row.public_url
+    ? `<a class="button button-primary" target="_blank" rel="noopener" href="${esc(row.public_url)}">Public sahifani ko'rish ↗</a>`
+    : '<span class="button disabled">Public sahifa mavjud emas</span>';
+  const owner=row.owner_name
+    ? `<div class="admin-owner"><span class="admin-owner-avatar">${esc(initials(row.owner_name))}</span><div class="admin-owner-copy"><strong>${esc(row.owner_name)}</strong><span>${leaderLabel(row)} · ${esc(row.owner_email||'Email kiritilmagan')}</span></div></div>`
+    : `<div class="admin-owner"><span class="admin-owner-avatar">!</span><div class="admin-owner-copy"><strong>${leaderLabel(row)} tayinlanmagan</strong><span>Admin panel orqali rahbar profilini biriktiring</span></div></div>`;
+  const socials=socialButton('Rasmiy sayt',row.website_url)+socialButton('Telegram',row.telegram_url)+socialButton('Instagram',row.instagram_url);
+  const created=new Date(row.created_at).toLocaleDateString('uz-UZ',{day:'2-digit',month:'long',year:'numeric'});
+  const quotes=(row.testimonials||[]).length
+    ? `<section class="detail-panel testimonials-panel"><div class="section-label">$ feedback --published</div><h2>Tasdiqlangan fikrlar</h2><div class="admin-testimonials">${row.testimonials.map(item=>`<article class="admin-quote"><p>“${esc(item.content)}”</p><b>${esc(item.full_name)}</b><small>${esc(item.role)}</small></article>`).join('')}</div></section>`
+    : '';
+
+  box.innerHTML=`
+    <section class="organization-hero">
+      <div class="organization-identity">${logoHtml(row)}<div><span class="type-badge">${typeIcon(row)}${typeLabel(row)}</span><h1>${esc(row.name)}</h1><p>${esc(row.region||'Hudud kiritilmagan')} · ID #${row.id}</p><div class="admin-status-row">${state}${directory}${subscription}${upload}</div></div></div>
+      <div class="admin-hero-actions">${publicButton}<a class="button button-secondary" href="/admin?section=centers" onclick="returnToAdmin(event)">Ro'yxatga qaytish</a></div>
+      <div class="hero-watermark">${typeIcon(row)}</div>
+    </section>
+    <div class="detail-layout">
+      <section class="detail-panel about-panel">
+        <div class="section-label">$ organization --admin-view</div><h2>Tashkilot haqida</h2>
+        <p class="about-copy">${esc(row.description||"Tashkilot haqida ma'lumot hali kiritilmagan.")}</p>
+        <div class="admin-summary-grid">
+          <div class="admin-summary-card"><span>O'quvchilar</span><b>${row.students_count}</b><small>Limit: ${row.max_students}</small></div>
+          <div class="admin-summary-card"><span>Guruh / sinf</span><b>${row.groups_count}</b><small>Limit: ${row.max_groups}</small></div>
+          <div class="admin-summary-card"><span>Public slug</span><b style="font-size:13px">${esc(row.slug||'—')}</b><small>${row.directory_public?'Ishlayapti':'Public emas'}</small></div>
+          <div class="admin-summary-card"><span>Yaratilgan</span><b style="font-size:13px">${esc(created)}</b><small>Ichki nom: ${esc(row.internal_name)}</small></div>
+        </div>
+        ${owner}
+        ${socials?`<div class="admin-socials">${socials}</div>`:''}
+        ${row.directory_public?'':`<div class="admin-public-warning">Bu tashkilotning public profili hozir ko‘rinmaydi. Sabab: katalog ruxsati, faol holat yoki public slug sozlamasi yetishmayapti.</div>`}
+      </section>
+      <aside class="detail-panel contact-panel">
+        <div class="section-label">$ contact --admin-view</div><h2>Aloqa va manzil</h2>
+        <div class="admin-info-list">
+          ${infoRow(icons.phone,'Telefon',row.contact_phone,row.show_phone)}
+          ${infoRow(icons.mail,'Email',row.contact_email,row.show_email)}
+          ${infoRow(icons.map,'Manzil',row.address,row.show_address)}
+        </div>
+        <div class="admin-public-warning" style="margin-top:12px">“Yashirin” belgisi ma’lumot admin uchun ko‘rinishini, ammo public sahifada chiqarilmasligini anglatadi.</div>
+      </aside>
+    </div>
+    ${quotes}
+  `;
+}
+
+async function loadAdminOrganization(){
+  if(!centerId){box.innerHTML='<b>Noto‘g‘ri tashkilot ID</b><a class="button button-secondary" href="/admin?section=centers">Admin panelga qaytish</a>';return}
+  if(!adminSecret){box.innerHTML='<b>Admin sessiyasi topilmadi</b><span>Avval admin panelga kirib, tashkilot kartasidagi “Qo‘shimcha ma’lumot” tugmasidan foydalaning.</span><a class="button button-primary" href="/admin?section=centers">Admin panelga kirish</a>';return}
+  try{
+    const res=await fetch(`/api/admin/centers/${centerId}/detail`,{headers:{'X-Admin-Secret':adminSecret}});
+    const row=await res.json();
+    if(!res.ok)throw new Error(row.detail||"Tashkilot ma'lumoti yuklanmadi");
+    renderDetail(row);
+  }catch(error){
+    if(String(error.message).includes("Ruxsat yo'q"))sessionStorage.removeItem('organization_admin_secret');
+    box.innerHTML=`<b>Ma'lumot yuklanmadi</b><span>${esc(error.message)}</span><a class="button button-primary" href="/admin?section=centers">Admin panelga qaytish</a>`;
+  }
+}
+loadAdminOrganization();
+</script>
+</body>
+</html>

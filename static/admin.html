@@ -511,8 +511,10 @@ async function loadResults(isLogin=false) {
     if (isLogin) {
       loadUsers();
       const params=new URLSearchParams(location.search);
-      if(params.get('section')==='support'){
-        switchSection('support');
+      const requestedSection=params.get('section');
+      const allowedSections=['stats','results','users','centers','applications','support','testimonials','faqs','tests','subscriptions'];
+      if(allowedSections.includes(requestedSection))switchSection(requestedSection);
+      if(requestedSection==='support'){
         const ticketId=Number(params.get('ticket'));
         if(ticketId>0)setTimeout(()=>openSupportTicket(ticketId),250);
       }
@@ -986,6 +988,7 @@ function orgActionIcon(kind) {
   const icons = {
     inventory: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="2"/></svg>',
     directory: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+    details: '<svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>',
     test: '<svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM9 11h6M9 15h6M9 7h3"/></svg>',
     billing: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg>',
     power: '<svg viewBox="0 0 24 24"><path d="M12 3v8M7.1 5.8a8 8 0 1 0 9.8 0"/></svg>',
@@ -1074,6 +1077,7 @@ function renderCenters() {
       : `<div class="org-action-bar">
           <div class="org-action-main">
             <button class="org-action-btn primary" onclick="toggleInventory(${c.id},this)">${orgActionIcon('inventory')}Tarkibini boshqarish</button>
+            <button class="org-action-btn" onclick="openOrganizationDetails(${c.id})">${orgActionIcon('details')}Qo'shimcha ma'lumot</button>
             <button class="org-action-btn" onclick="manageCenterDirectory(${c.id})">${orgActionIcon('directory')}Public profil</button>
             <button class="org-action-btn" onclick="toggleTestUpload(${c.id},this)">${orgActionIcon('test')}${c.test_upload_enabled ? "Test yuklashni o'chirish" : 'Test yuklashga ruxsat'}</button>
             <button class="org-action-btn" onclick="toggleCenterSubscription(${c.id},this)">${orgActionIcon('billing')}${c.subscription_required ? "Obunani o'chirish" : 'Obunani yoqish'}</button>
@@ -1123,6 +1127,12 @@ function renderCenters() {
           </div>` : ''}
       </article>`;
   }).join('');
+}
+
+function openOrganizationDetails(centerId) {
+  if (!currentSecret) return alert('Avval admin parolini kiriting');
+  sessionStorage.setItem('organization_admin_secret', currentSecret);
+  window.location.href = `/admin/organizations/${centerId}`;
 }
 
 async function createCenter() {

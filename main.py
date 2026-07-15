@@ -1550,26 +1550,30 @@ async def admin_users(
     search: Optional[str] = None,
     center_id: Optional[int] = None,
     affiliation: str = "all",
+    role: Optional[str] = None,
+    status: str = "all",
+    page: int = 1,
+    page_size: int = 50,
     _: None = Depends(require_admin),
 ):
     if affiliation not in {"all", "affiliated", "independent"}:
         raise HTTPException(status_code=400, detail="Tashkilot filtri noto'g'ri")
     if center_id is not None and center_id <= 0:
         raise HTTPException(status_code=400, detail="Tashkilot ID noto'g'ri")
+    allowed_roles = {"student", "teacher", "head_teacher", "school_staff", "director", "admin"}
+    if role and role not in allowed_roles:
+        raise HTTPException(status_code=400, detail="Foydalanuvchi roli noto'g'ri")
+    if status not in {"all", "active", "suspended", "unverified", "deleted"}:
+        raise HTTPException(status_code=400, detail="Foydalanuvchi holati noto'g'ri")
+    page = max(1, page)
+    page_size = min(200, max(10, page_size))
     db = await get_pool()
     search_term = f"%{search.strip()}%" if search and search.strip() else None
     async with db.acquire() as conn:
-        rows = await conn.fetch(
+        total = await conn.fetchval(
             """
-            SELECT u.id, u.username, u.email, u.full_name, u.created_at,
-                   u.email_verified, u.is_suspended, u.deleted_at, u.role,
-                   u.center_id, c.name AS organization_name,
-                   c.organization_type,
-                   (u.avatar_mime IS NOT NULL) AS has_avatar,
-                   COUNT(er.id) AS attempts
+            SELECT COUNT(*)
             FROM users u
-            LEFT JOIN exam_results er ON er.email = u.email
-            LEFT JOIN centers c ON c.id=u.center_id
             WHERE ($1::text IS NULL OR u.username ILIKE $1 OR u.email ILIKE $1 OR u.full_name ILIKE $1)
               AND ($2::int IS NULL OR u.center_id=$2)
               AND (
@@ -1577,14 +1581,59 @@ async def admin_users(
                 OR ($3='affiliated' AND u.center_id IS NOT NULL)
                 OR ($3='independent' AND u.center_id IS NULL)
               )
-            GROUP BY u.id, c.id
-            ORDER BY u.created_at DESC
-            LIMIT 500
+              AND ($4::text IS NULL OR u.role=$4)
+              AND (
+                $5::text='all'
+                OR ($5='active' AND u.deleted_at IS NULL AND COALESCE(u.is_suspended,FALSE)=FALSE)
+                OR ($5='suspended' AND u.deleted_at IS NULL AND COALESCE(u.is_suspended,FALSE)=TRUE)
+                OR ($5='unverified' AND u.deleted_at IS NULL AND u.email_verified IS NOT TRUE)
+                OR ($5='deleted' AND u.deleted_at IS NOT NULL)
+              )
             """,
-            search_term, center_id, affiliation
+            search_term, center_id, affiliation, role, status
+        )
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        page = min(page, total_pages)
+        offset = (page - 1) * page_size
+        rows = await conn.fetch(
+            """
+            SELECT u.id, u.username, u.email, u.full_name, u.created_at,
+                   u.email_verified, u.is_suspended, u.deleted_at, u.role,
+                   u.center_id, c.name AS organization_name,
+                   c.organization_type,
+                   (u.avatar_mime IS NOT NULL) AS has_avatar,
+                   COALESCE(er.attempts, 0) AS attempts
+            FROM users u
+            LEFT JOIN centers c ON c.id=u.center_id
+            LEFT JOIN (
+                SELECT LOWER(email) AS email_key, COUNT(*) AS attempts
+                FROM exam_results GROUP BY LOWER(email)
+            ) er ON er.email_key=LOWER(u.email)
+            WHERE ($1::text IS NULL OR u.username ILIKE $1 OR u.email ILIKE $1 OR u.full_name ILIKE $1)
+              AND ($2::int IS NULL OR u.center_id=$2)
+              AND (
+                $3::text='all'
+                OR ($3='affiliated' AND u.center_id IS NOT NULL)
+                OR ($3='independent' AND u.center_id IS NULL)
+              )
+              AND ($4::text IS NULL OR u.role=$4)
+              AND (
+                $5::text='all'
+                OR ($5='active' AND u.deleted_at IS NULL AND COALESCE(u.is_suspended,FALSE)=FALSE)
+                OR ($5='suspended' AND u.deleted_at IS NULL AND COALESCE(u.is_suspended,FALSE)=TRUE)
+                OR ($5='unverified' AND u.deleted_at IS NULL AND u.email_verified IS NOT TRUE)
+                OR ($5='deleted' AND u.deleted_at IS NOT NULL)
+              )
+            ORDER BY u.created_at DESC
+            LIMIT $6 OFFSET $7
+            """,
+            search_term, center_id, affiliation, role, status, page_size, offset
         )
     return {
-        "total": len(rows),
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
         "users": [
             {
                 "id": r["id"],

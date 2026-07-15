@@ -120,8 +120,9 @@ input:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26
 .search-row input{max-width:320px;}
 .user-filter-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-8px 0 16px;padding:9px;border:1px solid var(--border);border-radius:11px;background:rgba(238,243,255,.72)}
 .user-affiliation-tabs{display:flex;gap:5px;padding:3px;border-radius:8px;background:#e8eefc}.user-affiliation-btn{padding:7px 11px;border:0;border-radius:6px;background:transparent;color:#66738d;cursor:pointer;font:700 9px var(--mono);white-space:nowrap}.user-affiliation-btn.active{background:#fff;color:var(--blue);box-shadow:0 3px 10px rgba(26,86,232,.11)}
-.user-center-select{width:auto;min-width:230px;max-width:360px;padding:8px 32px 8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font:600 10px var(--mono)}.user-filter-summary{margin-left:auto;color:var(--muted);font:600 9px var(--mono)}
+.user-center-select,.user-advanced-select{width:auto;padding:8px 32px 8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font:600 10px var(--mono)}.user-center-select{min-width:230px;max-width:360px}.user-advanced-select{min-width:145px}.user-filter-summary{margin-left:auto;color:var(--muted);font:600 9px var(--mono)}
 .user-row-number{width:54px;color:var(--blue);font:800 11px var(--mono)}.user-organization-cell{min-width:180px}.user-organization-name{display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.user-organization-meta{display:block;margin-top:4px;color:var(--muted);font:600 9px var(--mono)}.user-independent{color:var(--muted);font:600 10px var(--mono)}
+.user-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.8)}.user-pagination-info{color:var(--muted);font:600 9px var(--mono)}.user-pagination-actions{display:flex;align-items:center;gap:5px}.user-page-btn{min-width:34px;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:7px;background:#fff;color:#53617d;cursor:pointer;font:700 9px var(--mono)}.user-page-btn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}.user-page-btn.active{border-color:var(--blue);background:var(--blue);color:#fff}.user-page-btn:disabled{cursor:not-allowed;opacity:.42}
 .users-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
 table.users-table{width:100%;border-collapse:collapse;font-size:13px;}
 table.users-table th{text-align:left;padding:12px 16px;background:var(--surface2);
@@ -191,7 +192,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   .result-body{flex-direction:column;align-items:flex-start;}
   .users-table-wrap{overflow-x:auto;}
   table.users-table{min-width:920px;}
-  .user-filter-toolbar{align-items:stretch;flex-direction:column}.user-affiliation-tabs{overflow-x:auto}.user-center-select{width:100%;max-width:none}.user-filter-summary{margin-left:0}
+  .user-filter-toolbar{align-items:stretch;flex-direction:column}.user-affiliation-tabs{overflow-x:auto}.user-center-select,.user-advanced-select{width:100%;max-width:none}.user-filter-summary{margin-left:0}.user-pagination{align-items:stretch;flex-direction:column}.user-pagination-actions{overflow-x:auto}
   .faq-admin-grid{grid-template-columns:1fr;}
   .org-card-hero{flex-direction:column}.org-statuses{justify-content:flex-start;max-width:none}.org-metrics-grid{grid-template-columns:1fr}.org-action-bar,.org-owner-setup{align-items:stretch;flex-direction:column}.org-action-danger{padding-top:8px;border-top:1px solid #e1e8f6}.org-owner-controls{justify-content:stretch}.org-owner-controls input{max-width:none}.org-title{white-space:normal}.org-list-toolbar{align-items:stretch;flex-direction:column}.org-list-heading div>span{max-width:240px}.org-list-actions{justify-content:space-between}.org-filter-tabs{overflow-x:auto}.org-order{width:35px;height:35px;flex-basis:35px}.org-logo{width:52px;height:52px;flex-basis:52px}.org-identity{gap:9px}
   .support-admin-layout{grid-template-columns:1fr}.support-admin-list{max-height:300px}.support-admin-detail{min-height:520px}
@@ -308,6 +309,22 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
       <select id="user-center-filter" class="user-center-select" style="display:none" onchange="setUserCenter(this.value)">
         <option value="">Barcha tashkilotlar</option>
       </select>
+      <select id="user-role-filter" class="user-advanced-select" onchange="setUserRole(this.value)" aria-label="Rol bo'yicha filtrlash">
+        <option value="">Barcha rollar</option>
+        <option value="student">O'quvchilar</option>
+        <option value="teacher">O'qituvchilar</option>
+        <option value="head_teacher">Head-teacherlar</option>
+        <option value="school_staff">Maktab xodimlari</option>
+        <option value="director">Direktorlar</option>
+        <option value="admin">Adminlar</option>
+      </select>
+      <select id="user-status-filter" class="user-advanced-select" onchange="setUserStatus(this.value)" aria-label="Holat bo'yicha filtrlash">
+        <option value="all">Barcha holatlar</option>
+        <option value="active">Faol</option>
+        <option value="suspended">Bloklangan</option>
+        <option value="unverified">Email tasdiqlanmagan</option>
+        <option value="deleted">Savatda</option>
+      </select>
       <span class="user-filter-summary" id="users-filter-summary">Foydalanuvchilar yuklanmoqda...</span>
     </div>
     <div class="users-table-wrap">
@@ -327,6 +344,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
         <tbody id="users-tbody"></tbody>
       </table>
     </div>
+    <div class="user-pagination" id="users-pagination" style="display:none"></div>
     <div id="users-empty" class="empty-state" style="display:none;">Foydalanuvchilar topilmadi</div>
   </div>
 
@@ -643,6 +661,11 @@ function renderChart(id, type, labels, datasets) {
 let userAffiliation = 'all';
 let userCenterId = '';
 let userCenterOptionsLoaded = false;
+let userRole = '';
+let userStatus = 'all';
+let userPage = 1;
+let userPageSize = 50;
+let userTotalPages = 1;
 
 async function loadUserCenterOptions() {
   if (userCenterOptionsLoaded) return;
@@ -667,6 +690,7 @@ async function loadUserCenterOptions() {
 
 function setUserAffiliation(mode) {
   userAffiliation = ['all', 'affiliated', 'independent'].includes(mode) ? mode : 'all';
+  userPage = 1;
   if (userAffiliation !== 'affiliated') userCenterId = '';
   document.querySelectorAll('[data-user-affiliation]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.userAffiliation === userAffiliation);
@@ -679,6 +703,32 @@ function setUserAffiliation(mode) {
 
 function setUserCenter(centerId) {
   userCenterId = /^\d+$/.test(centerId) ? centerId : '';
+  userPage = 1;
+  loadUsers();
+}
+
+function setUserRole(role) {
+  userRole = role || '';
+  userPage = 1;
+  loadUsers();
+}
+
+function setUserStatus(status) {
+  userStatus = status || 'all';
+  userPage = 1;
+  loadUsers();
+}
+
+function changeUserPage(page) {
+  const target = Math.max(1, Math.min(userTotalPages, Number(page) || 1));
+  if (target === userPage) return;
+  userPage = target;
+  loadUsers();
+}
+
+function setUserPageSize(size) {
+  userPageSize = [25, 50, 100].includes(Number(size)) ? Number(size) : 50;
+  userPage = 1;
   loadUsers();
 }
 
@@ -686,6 +736,7 @@ async function loadUsers() {
   const search = document.getElementById('user-search').value.trim();
   const tbody = document.getElementById('users-tbody');
   const emptyEl = document.getElementById('users-empty');
+  document.getElementById('users-pagination').style.display = 'none';
   tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);"><span class="spinner"></span> Yuklanmoqda...</td></tr>`;
   emptyEl.style.display = 'none';
 
@@ -694,10 +745,18 @@ async function loadUsers() {
     if (search) params.set('search', search);
     if (userAffiliation !== 'all') params.set('affiliation', userAffiliation);
     if (userAffiliation === 'affiliated' && userCenterId) params.set('center_id', userCenterId);
+    if (userRole) params.set('role', userRole);
+    if (userStatus !== 'all') params.set('status', userStatus);
+    params.set('page', userPage);
+    params.set('page_size', userPageSize);
     const res = await adminFetch('/api/admin/users?' + params);
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Foydalanuvchilarni yuklab bo\'lmadi');
+    userPage = data.page || 1;
+    userPageSize = data.page_size || userPageSize;
+    userTotalPages = data.total_pages || 1;
     renderUsers(data.users || []);
+    renderUserPagination(data.total || 0);
     const scope = userAffiliation === 'independent'
       ? 'mustaqil'
       : userAffiliation === 'affiliated'
@@ -709,6 +768,38 @@ async function loadUsers() {
     emptyEl.textContent = '→ ' + e.message;
     emptyEl.style.display = 'block';
   }
+}
+
+function renderUserPagination(total) {
+  const el = document.getElementById('users-pagination');
+  if (!total) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const start = (userPage - 1) * userPageSize + 1;
+  const end = Math.min(total, userPage * userPageSize);
+  const first = Math.max(1, userPage - 2);
+  const last = Math.min(userTotalPages, userPage + 2);
+  const pageButtons = [];
+  if (first > 1) {
+    pageButtons.push('<button class="user-page-btn" onclick="changeUserPage(1)">1</button>');
+    if (first > 2) pageButtons.push('<span class="user-pagination-info">…</span>');
+  }
+  for (let page = first; page <= last; page++) {
+    pageButtons.push(`<button class="user-page-btn ${page === userPage ? 'active' : ''}" onclick="changeUserPage(${page})">${page}</button>`);
+  }
+  if (last < userTotalPages) {
+    if (last < userTotalPages - 1) pageButtons.push('<span class="user-pagination-info">…</span>');
+    pageButtons.push(`<button class="user-page-btn" onclick="changeUserPage(${userTotalPages})">${userTotalPages}</button>`);
+  }
+  el.innerHTML = `
+    <div class="user-pagination-info">${start}–${end} / ${total} foydalanuvchi</div>
+    <div class="user-pagination-actions">
+      <button class="user-page-btn" onclick="changeUserPage(${userPage - 1})" ${userPage <= 1 ? 'disabled' : ''}>←</button>
+      ${pageButtons.join('')}
+      <button class="user-page-btn" onclick="changeUserPage(${userPage + 1})" ${userPage >= userTotalPages ? 'disabled' : ''}>→</button>
+      <select class="user-advanced-select" onchange="setUserPageSize(this.value)" aria-label="Sahifadagi foydalanuvchilar soni">
+        ${[25,50,100].map(size=>`<option value="${size}" ${size===userPageSize?'selected':''}>${size} ta</option>`).join('')}
+      </select>
+    </div>`;
+  el.style.display = 'flex';
 }
 
 function renderUsers(users) {
@@ -740,7 +831,7 @@ function renderUsers(users) {
       : `<span class="user-independent">Mustaqil foydalanuvchi</span><span class="user-organization-meta">${adminEsc(roleLabels[u.role] || u.role || 'Foydalanuvchi')}</span>`;
     return `
     <tr id="user-row-${u.id}">
-      <td class="user-row-number">${String(index + 1).padStart(2, '0')}</td>
+      <td class="user-row-number">${String((userPage - 1) * userPageSize + index + 1).padStart(2, '0')}</td>
       <td>
         <div class="u-avatar-cell">
           ${avatarHtml}

@@ -156,13 +156,13 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
 .center-owner-form input{max-width:260px;}
 .org-create-shell{position:relative;overflow:hidden;border-radius:16px;box-shadow:0 16px 45px rgba(20,61,150,.08)}
 .org-create-shell::after{content:'';position:absolute;width:210px;height:210px;right:-90px;top:-125px;border-radius:50%;background:radial-gradient(circle,rgba(48,111,255,.16),transparent 70%);pointer-events:none}
-.org-list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px;padding:0 2px}.org-list-heading{display:flex;align-items:center;gap:10px}.org-list-heading strong{display:block;font-size:15px}.org-list-heading span{display:block;margin-top:3px;color:var(--muted);font:600 9px var(--mono)}
+.org-list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:28px 0 14px;padding:0 2px}.org-list-heading{display:flex;align-items:center;gap:10px}.org-list-heading strong{display:block;font-size:15px}.org-list-heading div>span{display:block;margin-top:3px;color:var(--muted);font:600 9px var(--mono)}.org-list-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}.org-filter-tabs{display:flex;align-items:center;gap:5px;padding:4px;border:1px solid var(--border);border-radius:10px;background:rgba(238,243,255,.82)}.org-filter-btn{padding:7px 10px;border:0;border-radius:7px;background:transparent;color:#687694;cursor:pointer;font:700 9px var(--mono);white-space:nowrap;transition:.16s background,.16s color,.16s box-shadow}.org-filter-btn:hover{color:var(--blue)}.org-filter-btn.active{background:#fff;color:var(--blue);box-shadow:0 4px 13px rgba(26,86,232,.12)}
 .org-list-icon{width:37px;height:37px;display:grid;place-items:center;border:1px solid var(--border);border-radius:10px;background:linear-gradient(145deg,#fff,#eef3ff);color:var(--blue);box-shadow:0 8px 20px rgba(26,86,232,.1)}.org-list-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .org-admin-card{--org-accent:#1a56e8;position:relative;isolation:isolate;overflow:hidden;margin-bottom:18px;border:1px solid color-mix(in srgb,var(--org-accent) 20%,#d8e3fb);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(246,249,255,.96));box-shadow:0 16px 46px rgba(17,46,112,.08);transition:.28s transform,.28s box-shadow,.28s border-color;animation:orgCardIn .45s both cubic-bezier(.16,1,.3,1)}
-.org-admin-card::before{content:'';position:absolute;z-index:-1;width:280px;height:280px;right:-145px;top:-160px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--org-accent) 19%,transparent),transparent 68%);pointer-events:none}.org-admin-card::after{content:'';position:absolute;left:0;top:22px;bottom:22px;width:3px;border-radius:0 5px 5px 0;background:var(--org-accent);box-shadow:0 0 20px color-mix(in srgb,var(--org-accent) 55%,transparent)}
+.org-admin-card::before{content:'';position:absolute;z-index:-1;width:280px;height:280px;right:-145px;top:-160px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--org-accent) 19%,transparent),transparent 68%);pointer-events:none}
 .org-admin-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--org-accent) 38%,#cad9f8);box-shadow:0 24px 60px rgba(17,46,112,.13)}.org-admin-card.is-trashed{filter:saturate(.68);opacity:.86}.org-admin-card.is-inactive{--org-accent:#ef6b68}
 @keyframes orgCardIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
-.org-card-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:21px 23px 18px}.org-identity{display:flex;align-items:center;gap:15px;min-width:0}.org-logo{position:relative;width:58px;height:58px;flex:0 0 58px;display:grid;place-items:center;overflow:hidden;border:1px solid color-mix(in srgb,var(--org-accent) 22%,#d7e2fa);border-radius:15px;background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--org-accent) 8%,#f4f7ff));color:var(--org-accent);box-shadow:0 10px 24px color-mix(in srgb,var(--org-accent) 14%,transparent)}.org-logo img{width:100%;height:100%;object-fit:contain;padding:7px}.org-logo svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.org-card-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:21px 23px 18px}.org-identity{display:flex;align-items:center;gap:13px;min-width:0}.org-order{width:39px;height:39px;flex:0 0 39px;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--org-accent) 25%,#d7e2fa);border-radius:12px;background:color-mix(in srgb,var(--org-accent) 8%,#fff);color:var(--org-accent);font:800 11px var(--mono);box-shadow:0 8px 20px color-mix(in srgb,var(--org-accent) 10%,transparent)}.org-logo{position:relative;width:58px;height:58px;flex:0 0 58px;display:grid;place-items:center;overflow:hidden;border:1px solid color-mix(in srgb,var(--org-accent) 22%,#d7e2fa);border-radius:15px;background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--org-accent) 8%,#f4f7ff));color:var(--org-accent);box-shadow:0 10px 24px color-mix(in srgb,var(--org-accent) 14%,transparent)}.org-logo img{width:100%;height:100%;object-fit:contain;padding:7px}.org-logo svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
 .org-type-line{display:flex;align-items:center;gap:7px;margin-bottom:5px;color:var(--org-accent);font:750 9px var(--mono);letter-spacing:.06em;text-transform:uppercase}.org-type-line span{padding:4px 7px;border-radius:6px;background:color-mix(in srgb,var(--org-accent) 9%,#fff)}.org-title{max-width:560px;margin:0;font-size:20px;line-height:1.18;letter-spacing:-.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.org-subline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;color:var(--muted);font:600 9px var(--mono)}.org-subline i{width:3px;height:3px;border-radius:50%;background:#aab7d0}
 .org-statuses{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;max-width:390px}.org-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid #d7e2f7;border-radius:999px;background:rgba(255,255,255,.78);color:#53617d;font:700 8px var(--mono);white-space:nowrap}.org-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:#8b98b1}.org-chip.success{border-color:#c8eed9;background:#edfbf3;color:#15864e}.org-chip.success::before{background:#20b967;box-shadow:0 0 0 3px rgba(32,185,103,.1)}.org-chip.warning{border-color:#f5ddb0;background:#fff8e9;color:#ad6a00}.org-chip.warning::before{background:#eda91f}.org-chip.danger{border-color:#f4caca;background:#fff1f1;color:#c13f3a}.org-chip.danger::before{background:#e6544f}.org-chip.info{border-color:#cfddff;background:#eff4ff;color:#1a56e8}.org-chip.info::before{background:#3475ff}
 .org-card-body{padding:0 23px 21px}.org-metrics-grid{display:grid;grid-template-columns:minmax(170px,.8fr) minmax(170px,.8fr) minmax(250px,1.35fr);gap:10px}.org-metric{min-width:0;padding:13px 14px;border:1px solid #dce5f7;border-radius:12px;background:rgba(255,255,255,.76)}.org-metric-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.org-metric-label{display:flex;align-items:center;gap:7px;color:#687694;font:700 9px var(--mono);text-transform:uppercase}.org-metric-label svg{width:15px;height:15px;fill:none;stroke:var(--org-accent);stroke-width:1.8}.org-metric-value{font:800 14px var(--mono);color:#13203d}.org-progress{height:5px;margin-top:10px;overflow:hidden;border-radius:999px;background:#e9eef9}.org-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--org-accent),color-mix(in srgb,var(--org-accent) 58%,#75a0ff));box-shadow:0 0 12px color-mix(in srgb,var(--org-accent) 35%,transparent)}
@@ -188,7 +188,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   .users-table-wrap{overflow-x:auto;}
   table.users-table{min-width:640px;}
   .faq-admin-grid{grid-template-columns:1fr;}
-  .org-card-hero{flex-direction:column}.org-statuses{justify-content:flex-start;max-width:none}.org-metrics-grid{grid-template-columns:1fr}.org-action-bar,.org-owner-setup{align-items:stretch;flex-direction:column}.org-action-danger{padding-top:8px;border-top:1px solid #e1e8f6}.org-owner-controls{justify-content:stretch}.org-owner-controls input{max-width:none}.org-title{white-space:normal}.org-list-toolbar{align-items:flex-end}.org-list-heading span{max-width:210px}
+  .org-card-hero{flex-direction:column}.org-statuses{justify-content:flex-start;max-width:none}.org-metrics-grid{grid-template-columns:1fr}.org-action-bar,.org-owner-setup{align-items:stretch;flex-direction:column}.org-action-danger{padding-top:8px;border-top:1px solid #e1e8f6}.org-owner-controls{justify-content:stretch}.org-owner-controls input{max-width:none}.org-title{white-space:normal}.org-list-toolbar{align-items:stretch;flex-direction:column}.org-list-heading div>span{max-width:240px}.org-list-actions{justify-content:space-between}.org-filter-tabs{overflow-x:auto}.org-order{width:35px;height:35px;flex-basis:35px}.org-logo{width:52px;height:52px;flex-basis:52px}.org-identity{gap:9px}
   .support-admin-layout{grid-template-columns:1fr}.support-admin-list{max-height:300px}.support-admin-detail{min-height:520px}
 }
 @media(prefers-reduced-motion:reduce){.org-admin-card{animation:none;transition:none}}
@@ -341,8 +341,15 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     </div>
 
     <div class="org-list-toolbar">
-      <div class="org-list-heading"><span class="org-list-icon"><svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13M8 21v-5h8v5M8 10h.01M12 10h.01M16 10h.01M8 13h.01M12 13h.01M16 13h.01"/></svg></span><div><strong>Tashkilotlar portfeli</strong><span id="org-list-summary">Maktab va o'quv markazlari</span></div></div>
-      <button class="btn-outline btn-sm" onclick="loadCenters()">↻ Yangilash</button>
+      <div class="org-list-heading"><span class="org-list-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="3" height="3" rx=".5"/><path d="M10 6.5h10M10 12h10M10 17.5h10"/><rect x="4" y="10.5" width="3" height="3" rx=".5"/><rect x="4" y="16" width="3" height="3" rx=".5"/></svg></span><div><strong>Tashkilotlar ro'yxati</strong><span id="org-list-summary">Faol maktab va o'quv markazlari</span></div></div>
+      <div class="org-list-actions">
+        <div class="org-filter-tabs" role="group" aria-label="Tashkilot turini filtrlash">
+          <button class="org-filter-btn active" data-center-filter="all" onclick="setCenterFilter('all')">Barchasi</button>
+          <button class="org-filter-btn" data-center-filter="school" onclick="setCenterFilter('school')">Maktablar</button>
+          <button class="org-filter-btn" data-center-filter="learning_center" onclick="setCenterFilter('learning_center')">O'quv markazlar</button>
+        </div>
+        <button class="btn-outline btn-sm" onclick="loadCenters()">↻ Yangilash</button>
+      </div>
     </div>
 
     <div id="centers-list"></div>
@@ -867,6 +874,15 @@ async function notify(id, btnEl) {
 
 // ─── CENTERS ────────────────────────────────────────────────
 let allCenters = [];
+let centerFilter = 'all';
+
+function setCenterFilter(filter) {
+  centerFilter = ['all', 'school', 'learning_center'].includes(filter) ? filter : 'all';
+  document.querySelectorAll('[data-center-filter]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.centerFilter === centerFilter);
+  });
+  renderCenters();
+}
 
 async function loadCenters() {
   const listEl = document.getElementById('centers-list');
@@ -993,12 +1009,26 @@ function renderCenters() {
   }
   emptyEl.style.display = 'none';
 
-  const liveCenters = allCenters.filter(c => !c.deleted_at);
-  const schoolCount = liveCenters.filter(c => c.organization_type === 'school').length;
-  const learningCount = liveCenters.length - schoolCount;
-  if (summaryEl) summaryEl.textContent = `${liveCenters.length} ta faol portfel · ${schoolCount} maktab · ${learningCount} o'quv markazi`;
+  const activeCenters = allCenters.filter(c => !c.deleted_at && c.is_active);
+  const schoolCount = activeCenters.filter(c => c.organization_type === 'school').length;
+  const learningCount = activeCenters.length - schoolCount;
+  if (summaryEl) summaryEl.textContent = `${activeCenters.length} ta faol tashkilot · ${schoolCount} maktab · ${learningCount} o'quv markazi`;
 
-  listEl.innerHTML = allCenters.map((c, index) => {
+  document.querySelectorAll('[data-center-filter]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.centerFilter === centerFilter);
+  });
+  const visibleCenters = centerFilter === 'all'
+    ? allCenters
+    : allCenters.filter(c => c.organization_type === centerFilter);
+  if (!visibleCenters.length) {
+    listEl.innerHTML = '';
+    emptyEl.textContent = "Tanlangan tur bo'yicha tashkilot topilmadi";
+    emptyEl.style.display = 'block';
+    return;
+  }
+
+  listEl.innerHTML = visibleCenters.map((c, index) => {
+    const orderNumber = String(allCenters.indexOf(c) + 1).padStart(2, '0');
     const isSchool = c.organization_type === 'school';
     const typeLabel = isSchool ? 'Maktab' : "O'quv markazi";
     const leaderLabel = isSchool ? 'Direktor' : 'Head-teacher';
@@ -1058,9 +1088,10 @@ function renderCenters() {
       <article class="org-admin-card ${c.deleted_at ? 'is-trashed' : (!c.is_active ? 'is-inactive' : '')}" style="--org-accent:${safeColor};animation-delay:${Math.min(index * 55, 330)}ms">
         <div class="org-card-hero">
           <div class="org-identity">
+            <span class="org-order" title="Ro'yxatdagi tartib raqami">${orderNumber}</span>
             <div class="org-logo">${logoHtml}</div>
             <div style="min-width:0">
-              <div class="org-type-line"><span>${typeLabel}</span> ${c.directory_featured ? '★ Tavsiya etilgan' : 'Tashkilot portfeli'}</div>
+              <div class="org-type-line"><span>${typeLabel}</span>${c.directory_featured ? ' ★ Tavsiya etilgan' : ''}</div>
               <h3 class="org-title">${adminEsc(c.brand_name || c.name)}</h3>
               <div class="org-subline"><span>${slugOrId}</span><i></i><span>${region}</span><i></i><span>${createdAt}</span></div>
             </div>

@@ -118,6 +118,10 @@ input:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26
 /* USERS TABLE */
 .search-row{display:flex;gap:10px;margin-bottom:20px;}
 .search-row input{max-width:320px;}
+.user-filter-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-8px 0 16px;padding:9px;border:1px solid var(--border);border-radius:11px;background:rgba(238,243,255,.72)}
+.user-affiliation-tabs{display:flex;gap:5px;padding:3px;border-radius:8px;background:#e8eefc}.user-affiliation-btn{padding:7px 11px;border:0;border-radius:6px;background:transparent;color:#66738d;cursor:pointer;font:700 9px var(--mono);white-space:nowrap}.user-affiliation-btn.active{background:#fff;color:var(--blue);box-shadow:0 3px 10px rgba(26,86,232,.11)}
+.user-center-select{width:auto;min-width:230px;max-width:360px;padding:8px 32px 8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font:600 10px var(--mono)}.user-filter-summary{margin-left:auto;color:var(--muted);font:600 9px var(--mono)}
+.user-row-number{width:54px;color:var(--blue);font:800 11px var(--mono)}.user-organization-cell{min-width:180px}.user-organization-name{display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.user-organization-meta{display:block;margin-top:4px;color:var(--muted);font:600 9px var(--mono)}.user-independent{color:var(--muted);font:600 10px var(--mono)}
 .users-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
 table.users-table{width:100%;border-collapse:collapse;font-size:13px;}
 table.users-table th{text-align:left;padding:12px 16px;background:var(--surface2);
@@ -186,7 +190,8 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   .wrap{padding:20px 16px 60px;}
   .result-body{flex-direction:column;align-items:flex-start;}
   .users-table-wrap{overflow-x:auto;}
-  table.users-table{min-width:640px;}
+  table.users-table{min-width:920px;}
+  .user-filter-toolbar{align-items:stretch;flex-direction:column}.user-affiliation-tabs{overflow-x:auto}.user-center-select{width:100%;max-width:none}.user-filter-summary{margin-left:0}
   .faq-admin-grid{grid-template-columns:1fr;}
   .org-card-hero{flex-direction:column}.org-statuses{justify-content:flex-start;max-width:none}.org-metrics-grid{grid-template-columns:1fr}.org-action-bar,.org-owner-setup{align-items:stretch;flex-direction:column}.org-action-danger{padding-top:8px;border-top:1px solid #e1e8f6}.org-owner-controls{justify-content:stretch}.org-owner-controls input{max-width:none}.org-title{white-space:normal}.org-list-toolbar{align-items:stretch;flex-direction:column}.org-list-heading div>span{max-width:240px}.org-list-actions{justify-content:space-between}.org-filter-tabs{overflow-x:auto}.org-order{width:35px;height:35px;flex-basis:35px}.org-logo{width:52px;height:52px;flex-basis:52px}.org-identity{gap:9px}
   .support-admin-layout{grid-template-columns:1fr}.support-admin-list{max-height:300px}.support-admin-detail{min-height:520px}
@@ -294,12 +299,25 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
       <button class="btn-outline btn-sm" onclick="exportData('users', 'excel')">📥 Excel</button>
       <button class="btn-outline btn-sm" onclick="document.getElementById('user-search').value='';loadUsers();">↻ Yangilash</button>
     </div>
+    <div class="user-filter-toolbar">
+      <div class="user-affiliation-tabs" role="group" aria-label="Foydalanuvchilarni tashkilot bo'yicha filtrlash">
+        <button class="user-affiliation-btn active" data-user-affiliation="all" onclick="setUserAffiliation('all')">Barchasi</button>
+        <button class="user-affiliation-btn" data-user-affiliation="affiliated" onclick="setUserAffiliation('affiliated')">Tashkilotlar bo'yicha</button>
+        <button class="user-affiliation-btn" data-user-affiliation="independent" onclick="setUserAffiliation('independent')">Mustaqil</button>
+      </div>
+      <select id="user-center-filter" class="user-center-select" style="display:none" onchange="setUserCenter(this.value)">
+        <option value="">Barcha tashkilotlar</option>
+      </select>
+      <span class="user-filter-summary" id="users-filter-summary">Foydalanuvchilar yuklanmoqda...</span>
+    </div>
     <div class="users-table-wrap">
       <table class="users-table">
         <thead>
           <tr>
+            <th>#</th>
             <th>Foydalanuvchi</th>
             <th>Email</th>
+            <th>Tashkilot</th>
             <th>Ro'yxatdan o'tgan</th>
             <th>Holat</th>
             <th>Urinishlar</th>
@@ -622,19 +640,70 @@ function renderChart(id, type, labels, datasets) {
 }
 
 // ─── USERS ────────────────────────────────────────────────
+let userAffiliation = 'all';
+let userCenterId = '';
+let userCenterOptionsLoaded = false;
+
+async function loadUserCenterOptions() {
+  if (userCenterOptionsLoaded) return;
+  const select = document.getElementById('user-center-filter');
+  try {
+    let rows = allCenters;
+    if (!rows.length) {
+      const res = await adminFetch('/api/admin/centers');
+      rows = await res.json();
+      if (!res.ok) throw new Error(rows.detail || 'Tashkilotlar yuklanmadi');
+    }
+    select.innerHTML = '<option value="">Barcha tashkilotlar</option>' + rows.map(center => {
+      const type = center.organization_type === 'school' ? 'Maktab' : "O'quv markazi";
+      return `<option value="${center.id}">${adminEsc(center.name)} · ${type}${center.deleted_at ? ' · Savatda' : ''}</option>`;
+    }).join('');
+    select.value = userCenterId;
+    userCenterOptionsLoaded = true;
+  } catch (error) {
+    select.innerHTML = '<option value="">Tashkilotlarni yuklab bo‘lmadi</option>';
+  }
+}
+
+function setUserAffiliation(mode) {
+  userAffiliation = ['all', 'affiliated', 'independent'].includes(mode) ? mode : 'all';
+  if (userAffiliation !== 'affiliated') userCenterId = '';
+  document.querySelectorAll('[data-user-affiliation]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.userAffiliation === userAffiliation);
+  });
+  const select = document.getElementById('user-center-filter');
+  select.style.display = userAffiliation === 'affiliated' ? '' : 'none';
+  if (userAffiliation === 'affiliated') loadUserCenterOptions();
+  loadUsers();
+}
+
+function setUserCenter(centerId) {
+  userCenterId = /^\d+$/.test(centerId) ? centerId : '';
+  loadUsers();
+}
+
 async function loadUsers() {
   const search = document.getElementById('user-search').value.trim();
   const tbody = document.getElementById('users-tbody');
   const emptyEl = document.getElementById('users-empty');
-  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);"><span class="spinner"></span> Yuklanmoqda...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);"><span class="spinner"></span> Yuklanmoqda...</td></tr>`;
   emptyEl.style.display = 'none';
 
   try {
-    const url = '/api/admin/users' + (search ? `?search=${encodeURIComponent(search)}` : '');
-    const res = await adminFetch(url);
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (userAffiliation !== 'all') params.set('affiliation', userAffiliation);
+    if (userAffiliation === 'affiliated' && userCenterId) params.set('center_id', userCenterId);
+    const res = await adminFetch('/api/admin/users?' + params);
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Foydalanuvchilarni yuklab bo\'lmadi');
     renderUsers(data.users || []);
+    const scope = userAffiliation === 'independent'
+      ? 'mustaqil'
+      : userAffiliation === 'affiliated'
+        ? (userCenterId ? 'tanlangan tashkilotda' : 'tashkilotlarga biriktirilgan')
+        : 'jami';
+    document.getElementById('users-filter-summary').textContent = `${data.total || 0} ta foydalanuvchi · ${scope}`;
   } catch(e) {
     tbody.innerHTML = '';
     emptyEl.textContent = '→ ' + e.message;
@@ -654,7 +723,8 @@ function renderUsers(users) {
   }
   emptyEl.style.display = 'none';
 
-  tbody.innerHTML = users.map(u => {
+  const roleLabels = {student:"O'quvchi",teacher:"O'qituvchi",head_teacher:'Head-teacher',director:'Direktor',school_staff:'Maktab xodimi',admin:'Admin'};
+  tbody.innerHTML = users.map((u, index) => {
     const date = new Date(u.created_at).toLocaleDateString('uz-UZ', {day:'2-digit',month:'2-digit',year:'numeric'});
     const verifiedBadge = u.email_verified
       ? `<span class="badge green">✓ Tasdiqlangan</span>`
@@ -663,21 +733,25 @@ function renderUsers(users) {
     const suspendLabel = u.is_suspended ? '✓ Blokdan chiqarish' : '⛔ Bloklash';
     const initials = (u.full_name || u.username || '?').trim().charAt(0).toUpperCase();
     const avatarHtml = u.avatar_url
-      ? `<div class="u-avatar"><img src="${u.avatar_url}?t=${Date.now()}" alt="${initials}" onerror="this.parentElement.textContent='${initials}'"></div>`
-      : `<div class="u-avatar">${initials}</div>`;
-
+      ? `<div class="u-avatar"><img src="${adminEsc(u.avatar_url)}?t=${Date.now()}" alt="${adminEsc(initials)}" onerror="this.parentElement.textContent='${adminEsc(initials)}'"></div>`
+      : `<div class="u-avatar">${adminEsc(initials)}</div>`;
+    const organizationHtml = u.center_id
+      ? `<span class="user-organization-name">${adminEsc(u.organization_name || 'Nomsiz tashkilot')}</span><span class="user-organization-meta">${u.organization_type === 'school' ? 'Maktab' : "O'quv markazi"} · ${adminEsc(roleLabels[u.role] || u.role || 'Foydalanuvchi')}</span>`
+      : `<span class="user-independent">Mustaqil foydalanuvchi</span><span class="user-organization-meta">${adminEsc(roleLabels[u.role] || u.role || 'Foydalanuvchi')}</span>`;
     return `
     <tr id="user-row-${u.id}">
+      <td class="user-row-number">${String(index + 1).padStart(2, '0')}</td>
       <td>
         <div class="u-avatar-cell">
           ${avatarHtml}
           <div>
-            <div class="u-name">${u.full_name}</div>
-            <div class="u-username">@${u.username}</div>
+            <div class="u-name">${adminEsc(u.full_name || u.username)}</div>
+            <div class="u-username">@${adminEsc(u.username)}</div>
           </div>
         </div>
       </td>
-      <td class="u-email">${u.email}</td>
+      <td class="u-email">${adminEsc(u.email)}</td>
+      <td class="user-organization-cell">${organizationHtml}</td>
       <td class="u-email">${date}</td>
       <td>${verifiedBadge} ${suspendedBadge}</td>
       <td>${u.attempts}</td>

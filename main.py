@@ -1546,24 +1546,42 @@ async def admin_results(_: None = Depends(require_admin)):
 
 
 @app.get("/api/admin/users")
-async def admin_users(search: Optional[str] = None, _: None = Depends(require_admin)):
+async def admin_users(
+    search: Optional[str] = None,
+    center_id: Optional[int] = None,
+    affiliation: str = "all",
+    _: None = Depends(require_admin),
+):
+    if affiliation not in {"all", "affiliated", "independent"}:
+        raise HTTPException(status_code=400, detail="Tashkilot filtri noto'g'ri")
+    if center_id is not None and center_id <= 0:
+        raise HTTPException(status_code=400, detail="Tashkilot ID noto'g'ri")
     db = await get_pool()
     search_term = f"%{search.strip()}%" if search and search.strip() else None
     async with db.acquire() as conn:
         rows = await conn.fetch(
             """
             SELECT u.id, u.username, u.email, u.full_name, u.created_at,
-                   u.email_verified, u.is_suspended, u.deleted_at,
+                   u.email_verified, u.is_suspended, u.deleted_at, u.role,
+                   u.center_id, c.name AS organization_name,
+                   c.organization_type,
                    (u.avatar_mime IS NOT NULL) AS has_avatar,
                    COUNT(er.id) AS attempts
             FROM users u
             LEFT JOIN exam_results er ON er.email = u.email
+            LEFT JOIN centers c ON c.id=u.center_id
             WHERE ($1::text IS NULL OR u.username ILIKE $1 OR u.email ILIKE $1 OR u.full_name ILIKE $1)
-            GROUP BY u.id
+              AND ($2::int IS NULL OR u.center_id=$2)
+              AND (
+                $3::text='all'
+                OR ($3='affiliated' AND u.center_id IS NOT NULL)
+                OR ($3='independent' AND u.center_id IS NULL)
+              )
+            GROUP BY u.id, c.id
             ORDER BY u.created_at DESC
             LIMIT 500
             """,
-            search_term
+            search_term, center_id, affiliation
         )
     return {
         "total": len(rows),
@@ -1577,6 +1595,10 @@ async def admin_users(search: Optional[str] = None, _: None = Depends(require_ad
                 "email_verified": r["email_verified"],
                 "is_suspended": r["is_suspended"],
                 "deleted_at": r["deleted_at"].isoformat() if r["deleted_at"] else None,
+                "role": r["role"],
+                "center_id": r["center_id"],
+                "organization_name": r["organization_name"],
+                "organization_type": r["organization_type"],
                 "attempts": r["attempts"],
                 "avatar_url": f"/api/auth/avatar/{r['username']}" if r.get("has_avatar") else None
             }

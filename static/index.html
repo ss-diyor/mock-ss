@@ -2041,7 +2041,7 @@ function calculateEstimatedBand() {
   const band = match ? match[1] : 0;
   document.getElementById('band-calc-raw').textContent = `${score} / 40`;
   document.getElementById('band-calc-band').textContent = Number(band).toFixed(1);
-  document.getElementById('band-calc-result-name').textContent = bandCalculatorMode === 'reading' ? 'Reading Academic band' : 'Listening band';
+  document.getElementById('band-calc-result-name').textContent = bandCalculatorMode === 'reading' ? 'Reading band' : 'Listening band';
   document.getElementById('band-calc-note').textContent = "Bu taxminiy konversiya. Aniq band test variantining rasmiy baholash jadvaliga qarab biroz farq qilishi mumkin.";
 }
 

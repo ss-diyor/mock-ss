@@ -1116,6 +1116,8 @@ async def create_organization_application(data: OrganizationApplicationIn):
 def testimonial_role_label(role: str, organization_type: Optional[str] = None) -> str:
     if role == "teacher":
         return "Ustoz"
+    if role == "director":
+        return "Maktab direktori"
     if role == "head_teacher":
         return "Maktab direktori" if organization_type == "school" else "O'quv markazi rahbari"
     if role == "school_staff":
@@ -2226,25 +2228,35 @@ async def admin_assign_head_teacher(center_id: int, data: AssignHeadTeacherIn, _
     db = await get_pool()
     async with db.acquire() as conn:
         async with conn.transaction():
-            center = await conn.fetchrow("SELECT id FROM centers WHERE id=$1 FOR UPDATE", center_id)
+            center = await conn.fetchrow(
+                "SELECT id, organization_type, owner_id FROM centers WHERE id=$1 FOR UPDATE",
+                center_id,
+            )
             if not center:
-                raise HTTPException(status_code=404, detail="Markaz topilmadi")
+                raise HTTPException(status_code=404, detail="Tashkilot topilmadi")
 
-            user = await conn.fetchrow("SELECT id, role FROM users WHERE id=$1", data.user_id)
+            user = await conn.fetchrow("SELECT id, role, center_id FROM users WHERE id=$1", data.user_id)
             if not user:
                 raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi")
-            if user["role"] != "student":
+            leader_role = "director" if center["organization_type"] == "school" else "head_teacher"
+            leader_label = "Direktor" if leader_role == "director" else "Head-teacher"
+            if user["center_id"] and user["center_id"] != center_id:
+                raise HTTPException(status_code=409, detail="Foydalanuvchi boshqa tashkilotga biriktirilgan")
+            if user["role"] not in {"student", "head_teacher", "director"}:
                 raise HTTPException(
                     status_code=400,
-                    detail="Faqat oddiy (student) hisob head-teacher qilib tayinlanishi mumkin"
+                    detail=f"Bu foydalanuvchini {leader_label.lower()} qilib tayinlab bo'lmaydi"
                 )
 
             await conn.execute(
-                "UPDATE users SET role='head_teacher', center_id=$1 WHERE id=$2", center_id, data.user_id
+                "UPDATE users SET role=$1, center_id=$2 WHERE id=$3",
+                leader_role,
+                center_id,
+                data.user_id,
             )
             await conn.execute("UPDATE centers SET owner_id=$1 WHERE id=$2", data.user_id, center_id)
 
-    return {"message": "Head-teacher tayinlandi"}
+    return {"message": f"{leader_label} tayinlandi", "role": leader_role}
 
 
 @app.post("/api/admin/centers/{center_id}/deactivate")

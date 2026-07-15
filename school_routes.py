@@ -227,7 +227,7 @@ async def add_staff(data: StaffCreateIn, current_user: dict = Depends(get_curren
         await conn.execute(
             """
             UPDATE users SET center_id=$1,
-                role=CASE WHEN role='head_teacher' THEN role ELSE 'school_staff' END
+                role=CASE WHEN role IN ('head_teacher','director') THEN role ELSE 'school_staff' END
             WHERE id=$2
             """,
             school["id"], user["id"]

@@ -509,6 +509,10 @@ function handlePostAuthRedirect(fromAuth = false) {
     window.location.href = '/school-staff';
     return;
   }
+  if (fromAuth && ['head_teacher', 'director'].includes(currentUser.role)) {
+    window.location.href = '/head-teacher';
+    return;
+  }
 
   if (redirectTarget === 'exam') {
     if (currentUser.email_verified) {
@@ -692,6 +696,10 @@ function renderDashboard() {
   }
   if (currentUser && currentUser.role === 'school_staff') {
     window.location.href = '/school-staff';
+    return;
+  }
+  if (currentUser && ['head_teacher', 'director'].includes(currentUser.role)) {
+    window.location.href = '/head-teacher';
     return;
   }
   showView('view-dashboard');

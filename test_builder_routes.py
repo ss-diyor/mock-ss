@@ -41,7 +41,7 @@ async def get_current_head_teacher(
     db = await get_pool()
     async with db.acquire() as conn:
         row = await conn.fetchrow("SELECT id,center_id,role FROM users WHERE id=$1 AND is_suspended=FALSE", user_id)
-    if not row or row["role"] != "head_teacher" or not row["center_id"]:
+    if not row or row["role"] not in {"head_teacher", "director"} or not row["center_id"]:
         raise HTTPException(status_code=403, detail="Faqat super-admin yoki tashkilot rahbari uchun")
     return dict(row) | {"is_admin": False}
 

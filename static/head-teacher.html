@@ -475,7 +475,7 @@ async function doLogin() {
 }
 
 function afterAuthResolved() {
-  if (!currentUser || currentUser.role !== 'head_teacher') {
+  if (!currentUser || !['head_teacher', 'director'].includes(currentUser.role)) {
     showView('view-denied');
     return;
   }

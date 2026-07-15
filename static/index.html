@@ -1488,7 +1488,7 @@ async function checkAuthStatus() {
     } else if (authUser.role === 'school_staff') {
       dashboardLink = '/school-staff';
       dashboardText = `🏫 Xodim Panel`;
-    } else if (authUser.role === 'head_teacher') {
+    } else if (['head_teacher', 'director'].includes(authUser.role)) {
       dashboardLink = '/head-teacher';
       dashboardText = authUser.organization_type === 'school' ? `🏫 Direktor paneli` : `🏢 Markaz paneli`;
     }
@@ -1752,7 +1752,7 @@ function getSmartOnboarding() {
     ctaDescription: "Sizga biriktirilgan sinf, o'quvchi va maktab vazifalarini boshqaring.",
     ctaLabel: '→ Xodimlar paneli'
   };
-  if (authUser.role === 'head_teacher') {
+  if (['head_teacher', 'director'].includes(authUser.role)) {
     const isSchool = authUser.organization_type === 'school';
     return {
       target: '/head-teacher',

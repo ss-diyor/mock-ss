@@ -359,10 +359,10 @@ async def get_current_teacher(current_user: dict = Depends(get_current_user)):
 
 
 async def get_current_head_teacher(current_user: dict = Depends(get_current_user)):
-    if current_user.get("role") != "head_teacher":
-        raise HTTPException(status_code=403, detail="Faqat markaz rahbarlari uchun")
+    if current_user.get("role") not in {"head_teacher", "director"}:
+        raise HTTPException(status_code=403, detail="Faqat tashkilot rahbarlari uchun")
     if not current_user.get("center_id"):
-        raise HTTPException(status_code=403, detail="Sizga hech qanday markaz biriktirilmagan")
+        raise HTTPException(status_code=403, detail="Sizga hech qanday tashkilot biriktirilmagan")
     return current_user
 
 

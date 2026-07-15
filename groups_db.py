@@ -123,6 +123,22 @@ async def ensure_center_group_tables():
         await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'student'")
         await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL")
         await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS center_id INTEGER REFERENCES centers(id) ON DELETE SET NULL")
+        # Tashkilot rahbarining roli tashkilot turiga mos bo'lishi kerak.
+        # Oldingi versiyalar maktab direktorlarini ham head_teacher qilib saqlagan.
+        await conn.execute("""
+            UPDATE users AS u
+            SET role = CASE
+                WHEN c.organization_type = 'school' THEN 'director'
+                ELSE 'head_teacher'
+            END,
+            center_id = c.id
+            FROM centers AS c
+            WHERE c.owner_id = u.id
+              AND (
+                    (c.organization_type = 'school' AND u.role = 'head_teacher')
+                 OR (c.organization_type = 'learning_center' AND u.role = 'director')
+              )
+        """)
 
         # Bulk CSV import orqali oldindan qo'shiladigan email ro'yxati ("roster").
         # Agar guruh uchun bu jadvalda qatorlar bo'lsa, register paytida

@@ -41,6 +41,7 @@ from notification_center import (
     create_notification,
     notify_admin,
 )
+from support_routes import router as support_router, ensure_support_tables
 
 app = FastAPI(title="IELTS Mock SS")
 app.include_router(feature_router)
@@ -53,6 +54,7 @@ app.include_router(billing_router)
 app.include_router(test_catalog_router)
 app.include_router(test_builder_router)
 app.include_router(notification_router)
+app.include_router(support_router)
 
 
 @app.middleware("http")
@@ -127,6 +129,7 @@ async def startup():
     await ensure_center_group_tables()
     async with db.acquire() as conn:
         await ensure_notification_tables(conn)
+        await ensure_support_tables(conn)
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS feedback_templates (
                 id SERIAL PRIMARY KEY,

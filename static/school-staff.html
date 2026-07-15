@@ -44,4 +44,4 @@ async function loadStaffTests(){const box=document.getElementById('staff-tests-l
 async function attachStaffTest(id){const fd=new FormData();['listening','reading','writing','speaking'].forEach(s=>{const f=document.getElementById(`staff-${id}-${s}`).files[0];if(f)fd.append(s,f)});try{await api(STAFF_API,`/tests/${id}/sections`,{method:'POST',body:fd});loadStaffTests()}catch(e){alert(e.message)}}
 async function submitStaffTest(id){try{await api(STAFF_API,`/tests/${id}/submit`,{method:'POST'});loadStaffTests()}catch(e){alert(e.message)}}
 (async()=>{if(token)await loadProfile()})();document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('view-auth').classList.contains('active'))doLogin()});
-</script><script src="/static/branding.js"></script><script src="/static/site-logo.js"></script></body></html>
+</script><script src="/static/branding.js"></script><script src="/static/site-logo.js"></script><script src="/static/support-chat.js"></script></body></html>

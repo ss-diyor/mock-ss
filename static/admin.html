@@ -155,6 +155,16 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   background:var(--bg);flex-wrap:wrap;align-items:center;}
 .center-owner-form input{max-width:260px;}
 .faq-admin-grid{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(260px,2fr) minmax(100px,.5fr);gap:12px;}
+.support-admin-layout{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:16px;min-height:560px}
+.support-admin-list,.support-admin-detail{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.support-admin-list{padding:10px;overflow-y:auto;max-height:650px}.support-admin-detail{display:flex;flex-direction:column;padding:18px}
+.support-ticket-row{width:100%;padding:12px;border:1px solid transparent;border-radius:9px;background:transparent;text-align:left;cursor:pointer;color:var(--text)}
+.support-ticket-row:hover,.support-ticket-row.active{border-color:var(--border);background:var(--surface2)}.support-ticket-row+.support-ticket-row{margin-top:4px}
+.support-ticket-row-head{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700}.support-ticket-row p{margin:6px 0;color:var(--muted);font-size:11px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.support-ticket-row small{font:600 9px var(--mono);color:var(--muted)}.support-admin-messages{flex:1;min-height:260px;max-height:430px;overflow:auto;padding:14px 3px}
+.support-admin-message{max-width:78%;margin-bottom:9px;padding:10px 12px;border:1px solid var(--border);border-radius:12px 12px 12px 3px;background:var(--surface2);font-size:12px;line-height:1.5;white-space:pre-wrap}
+.support-admin-message.admin{margin-left:auto;border-color:var(--blue);border-radius:12px 12px 3px 12px;background:var(--blue);color:white}.support-admin-message small{display:block;margin-top:5px;font:600 8px var(--mono);opacity:.65}
+.support-admin-reply{display:grid;grid-template-columns:1fr auto;gap:8px;padding-top:12px;border-top:1px solid var(--border)}.support-admin-reply textarea{min-height:66px;resize:vertical}
 
 @media (max-width:768px){
   nav{padding:14px 16px;}
@@ -163,6 +173,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   .users-table-wrap{overflow-x:auto;}
   table.users-table{min-width:640px;}
   .faq-admin-grid{grid-template-columns:1fr;}
+  .support-admin-layout{grid-template-columns:1fr}.support-admin-list{max-height:300px}.support-admin-detail{min-height:520px}
 }
 </style>
 <script src="/static/notification-center.js"></script>
@@ -207,6 +218,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <button class="section-tab" id="tab-users" onclick="switchSection('users')">Foydalanuvchilar</button>
     <button class="section-tab" id="tab-centers" onclick="switchSection('centers')">Tashkilotlar</button>
     <button class="section-tab" id="tab-applications" onclick="switchSection('applications')">Arizalar</button>
+    <button class="section-tab" id="tab-support" onclick="switchSection('support')">Yordam</button>
     <button class="section-tab" id="tab-testimonials" onclick="switchSection('testimonials')">Fikrlar</button>
     <button class="section-tab" id="tab-faqs" onclick="switchSection('faqs')">FAQ</button>
     <button class="section-tab" id="tab-tests" onclick="switchSection('tests')">Testlar</button>
@@ -343,6 +355,23 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <div id="organization-applications-list"></div>
     <div id="organization-applications-empty" class="empty-state" style="display:none">Arizalar yo'q</div>
   </div>
+  <div class="section-view" id="section-support">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+      <div><div style="font-family:var(--mono);font-size:12px;color:var(--blue)">$ support --inbox</div><div style="font-size:13px;color:var(--muted);margin-top:5px">Foydalanuvchi va mehmonlarning yordam murojaatlari</div></div>
+      <button class="btn-outline btn-sm" onclick="loadSupportTickets()">↻ Yangilash</button>
+    </div>
+    <div class="filters" id="support-filters">
+      <button class="filter-btn active" data-support-filter="all" onclick="setSupportFilter('all')">Hammasi</button>
+      <button class="filter-btn" data-support-filter="waiting_admin" onclick="setSupportFilter('waiting_admin')">Javob kutilmoqda</button>
+      <button class="filter-btn" data-support-filter="waiting_user" onclick="setSupportFilter('waiting_user')">Foydalanuvchi javobi</button>
+      <button class="filter-btn" data-support-filter="resolved" onclick="setSupportFilter('resolved')">Yakunlangan</button>
+      <button class="filter-btn" data-support-filter="closed" onclick="setSupportFilter('closed')">Yopilgan</button>
+    </div>
+    <div class="support-admin-layout">
+      <div class="support-admin-list" id="support-admin-list"><div class="empty-state">Murojaatlar yuklanmoqda...</div></div>
+      <div class="support-admin-detail" id="support-admin-detail"><div class="empty-state">Javob berish uchun murojaatni tanlang</div></div>
+    </div>
+  </div>
   <div class="section-view" id="section-testimonials">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
       <div><div style="font-family:var(--mono);font-size:12px;color:var(--blue);">$ fikrlar --moderatsiya</div><div style="font-size:13px;color:var(--muted);margin-top:5px">Faqat haqiqiy foydalanuvchilar yuborgan fikrlarni tekshiring va landing sahifaga chiqaring.</div></div>
@@ -455,7 +484,15 @@ async function loadResults(isLogin=false) {
 
     renderStats();
     renderResults();
-    if (isLogin) loadUsers();
+    if (isLogin) {
+      loadUsers();
+      const params=new URLSearchParams(location.search);
+      if(params.get('section')==='support'){
+        switchSection('support');
+        const ticketId=Number(params.get('ticket'));
+        if(ticketId>0)setTimeout(()=>openSupportTicket(ticketId),250);
+      }
+    }
   } catch(e) {
     if (isLogin) {
       const errEl = document.getElementById('login-error');
@@ -473,6 +510,7 @@ function switchSection(which) {
   if (document.getElementById('tab-users')) document.getElementById('tab-users').classList.toggle('active', which === 'users');
   if (document.getElementById('tab-centers')) document.getElementById('tab-centers').classList.toggle('active', which === 'centers');
   if (document.getElementById('tab-applications')) document.getElementById('tab-applications').classList.toggle('active', which === 'applications');
+  if (document.getElementById('tab-support')) document.getElementById('tab-support').classList.toggle('active', which === 'support');
   if (document.getElementById('tab-testimonials')) document.getElementById('tab-testimonials').classList.toggle('active', which === 'testimonials');
   if (document.getElementById('tab-faqs')) document.getElementById('tab-faqs').classList.toggle('active', which === 'faqs');
   if (document.getElementById('tab-tests')) document.getElementById('tab-tests').classList.toggle('active', which === 'tests');
@@ -483,6 +521,7 @@ function switchSection(which) {
   if (document.getElementById('section-users')) document.getElementById('section-users').classList.toggle('active', which === 'users');
   if (document.getElementById('section-centers')) document.getElementById('section-centers').classList.toggle('active', which === 'centers');
   if (document.getElementById('section-applications')) document.getElementById('section-applications').classList.toggle('active', which === 'applications');
+  if (document.getElementById('section-support')) document.getElementById('section-support').classList.toggle('active', which === 'support');
   if (document.getElementById('section-testimonials')) document.getElementById('section-testimonials').classList.toggle('active', which === 'testimonials');
   if (document.getElementById('section-faqs')) document.getElementById('section-faqs').classList.toggle('active', which === 'faqs');
   if (document.getElementById('section-tests')) document.getElementById('section-tests').classList.toggle('active', which === 'tests');
@@ -492,6 +531,7 @@ function switchSection(which) {
   if (which === 'stats') loadStats();
   if (which === 'centers') loadCenters();
   if (which === 'applications') loadOrganizationApplications();
+  if (which === 'support') loadSupportTickets();
   if (which === 'testimonials') loadTestimonials();
   if (which === 'faqs') loadFaqsAdmin();
   if (which === 'tests') { loadCenters().then(fillAdminTestCenters); loadAdminTests(); }
@@ -1223,6 +1263,69 @@ async function reviewSubscriptionPayment(id,action) {
   catch(e){alert('Xatolik: '+e.message);}
 }
 
+const supportCategoryLabels={technical:'Texnik muammo',tests:'Test bilan muammo',results:'Natija va baholash',billing:"To\'lov va obuna",organizations:"Maktab / o\'quv markazi",other:'Boshqa'};
+const supportStatusLabels={open:'Yangi',waiting_admin:'Javob kutilmoqda',waiting_user:'Foydalanuvchi javobi',resolved:'Yakunlangan',closed:'Yopilgan'};
+let supportFilter='all',supportRows=[],activeSupportTicketId=null;
+
+function supportDate(value){const date=new Date(value);return Number.isNaN(date.getTime())?'':date.toLocaleString('uz-UZ')}
+
+function setSupportFilter(status){
+  supportFilter=status;
+  document.querySelectorAll('[data-support-filter]').forEach(button=>button.classList.toggle('active',button.dataset.supportFilter===status));
+  loadSupportTickets();
+}
+
+async function loadSupportTickets(){
+  const list=document.getElementById('support-admin-list');
+  if(!list)return;
+  list.innerHTML='<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>';
+  try{
+    const response=await adminFetch(`/api/admin/support/tickets?status=${encodeURIComponent(supportFilter)}`),rows=await response.json();
+    if(!response.ok)throw new Error(rows.detail||'Murojaatlar yuklanmadi');
+    supportRows=rows;
+    const waiting=rows.filter(row=>row.status==='waiting_admin').length;
+    document.getElementById('tab-support').textContent=waiting?`Yordam (${waiting})`:'Yordam';
+    if(!rows.length){list.innerHTML='<div class="empty-state">Murojaatlar topilmadi</div>';document.getElementById('support-admin-detail').innerHTML='<div class="empty-state">Javob berish uchun murojaatni tanlang</div>';return}
+    list.innerHTML=rows.map(row=>`<button type="button" class="support-ticket-row ${row.id===activeSupportTicketId?'active':''}" onclick="openSupportTicket(${row.id})"><span class="support-ticket-row-head"><span>#${row.id} · ${adminEsc(row.contact_name)}</span><span class="badge ${row.status==='waiting_admin'?'red':row.status==='resolved'?'green':''}">${adminEsc(supportStatusLabels[row.status]||row.status)}</span></span><p>${adminEsc(row.last_message||'')}</p><small>${adminEsc(supportCategoryLabels[row.category]||row.category)} · ${adminEsc(supportDate(row.last_message_at))}${row.unread_count?` · ${row.unread_count} yangi`:''}</small></button>`).join('');
+  }catch(error){list.innerHTML=`<div class="empty-state">→ ${adminEsc(error.message)}</div>`}
+}
+
+async function openSupportTicket(id){
+  activeSupportTicketId=id;
+  const detail=document.getElementById('support-admin-detail');
+  detail.innerHTML='<div class="empty-state"><span class="spinner"></span> Xabarlar yuklanmoqda...</div>';
+  try{
+    const response=await adminFetch(`/api/admin/support/tickets/${id}`),data=await response.json();
+    if(!response.ok)throw new Error(data.detail||'Murojaat yuklanmadi');
+    const ticket=data.ticket;
+    detail.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--border)"><div><div class="center-name">#${ticket.id} · ${adminEsc(ticket.contact_name)}</div><div class="center-meta">${adminEsc(ticket.contact_email)} · ${adminEsc(supportCategoryLabels[ticket.category]||ticket.category)}</div></div><select id="support-status-select" class="btn-outline" style="padding:8px" onchange="updateSupportStatus(${ticket.id},this.value)">${Object.entries(supportStatusLabels).map(([value,label])=>`<option value="${value}" ${ticket.status===value?'selected':''}>${adminEsc(label)}</option>`).join('')}</select></div>
+      <div class="support-admin-messages" id="support-admin-messages">${data.messages.map(message=>`<div class="support-admin-message ${message.sender_type==='admin'?'admin':''}">${adminEsc(message.body)}<small>${message.sender_type==='admin'?'Admin':'Foydalanuvchi'} · ${adminEsc(supportDate(message.created_at))}</small></div>`).join('')}</div>
+      ${ticket.status==='closed'?'<div class="alert">Murojaat yopilgan. Davom ettirish uchun holatini o\'zgartiring.</div>':`<form class="support-admin-reply" onsubmit="replySupportTicket(event,${ticket.id})"><textarea id="support-admin-reply-text" maxlength="3000" required placeholder="Javobingizni yozing..."></textarea><button class="btn-primary" type="submit">Javob yuborish →</button></form>`}`;
+    const messages=document.getElementById('support-admin-messages');messages.scrollTop=messages.scrollHeight;
+    loadSupportTickets();
+  }catch(error){detail.innerHTML=`<div class="empty-state">→ ${adminEsc(error.message)}</div>`}
+}
+
+async function replySupportTicket(event,id){
+  event.preventDefault();
+  const input=document.getElementById('support-admin-reply-text'),button=event.currentTarget.querySelector('button'),message=input.value.trim();
+  if(!message)return;
+  button.disabled=true;button.textContent='Yuborilmoqda...';
+  try{
+    const response=await adminFetch(`/api/admin/support/tickets/${id}/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message})}),data=await response.json();
+    if(!response.ok)throw new Error(data.detail||'Javob yuborilmadi');
+    await openSupportTicket(id);
+  }catch(error){alert(error.message);button.disabled=false;button.textContent='Javob yuborish →'}
+}
+
+async function updateSupportStatus(id,status){
+  try{
+    const response=await adminFetch(`/api/admin/support/tickets/${id}/status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}),data=await response.json();
+    if(!response.ok)throw new Error(data.detail||'Holat saqlanmadi');
+    await openSupportTicket(id);
+  }catch(error){alert(error.message)}
+}
+
 async function assignHeadTeacher(centerId, btnEl) {
   const input = document.getElementById(`owner-input-${centerId}`);
   const query = input.value.trim();
@@ -1260,4 +1363,4 @@ async function assignHeadTeacher(centerId, btnEl) {
 }
 </script>
 <script src="/static/site-logo.js"></script></body>
-</html>g
+</html>

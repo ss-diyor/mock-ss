@@ -120,5 +120,6 @@ async function loadDetail(slug){
 const match=decodeURIComponent(location.pathname).match(/^\/org\/([^/]+)\/?$/);
 if(match)loadDetail(match[1]);else{const initialType=new URLSearchParams(location.search).get('type');if(['school','learning_center'].includes(initialType)){currentType=initialType;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.type===initialType))}loadOrganizations()}
 </script>
+<script src="/static/support-chat.js"></script>
 </body>
 </html>

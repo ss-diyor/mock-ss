@@ -387,6 +387,8 @@ nav {
 .faq-item.open .faq-answer { grid-template-rows: 1fr; }
 .faq-item.open .faq-answer p { padding-bottom: 22px; opacity: 1; transform: translateY(0); }
 .faq-empty { padding: 42px 20px; color: var(--muted); text-align: center; font: 600 11px var(--mono); }
+.band-calculator-backdrop { position: fixed; inset: 0; z-index: 119; background: linear-gradient(135deg,rgba(10,28,65,.075),rgba(35,92,218,.035)); backdrop-filter: blur(1.7px); -webkit-backdrop-filter: blur(1.7px); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .25s,visibility .25s; }
+body.band-calculator-open .band-calculator-backdrop { opacity: 1; visibility: visible; pointer-events: auto; }
 .band-calculator-widget { position: fixed; right: 26px; bottom: 24px; z-index: 120; }
 .band-calculator-fab { position: relative; width: 64px; height: 64px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; background: linear-gradient(145deg,#3475ff,#164bcf); color: #fff; cursor: pointer; box-shadow: 0 16px 35px rgba(26,86,232,.32),inset 0 1px 0 rgba(255,255,255,.38); transition: transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s; }
 .band-calculator-fab:hover { transform: translateY(-4px) scale(1.04); box-shadow: 0 21px 42px rgba(26,86,232,.4),inset 0 1px 0 rgba(255,255,255,.4); }
@@ -399,7 +401,12 @@ nav {
 .band-calculator-panel::before { content: ''; position: absolute; z-index: -2; inset: 0; background: radial-gradient(circle at 16% 4%,rgba(255,255,255,.95),transparent 35%),radial-gradient(circle at 92% 80%,rgba(65,119,255,.22),transparent 42%); pointer-events: none; }
 .band-calculator-panel::after { content: ''; position: absolute; z-index: -1; width: 150px; height: 150px; right: -55px; top: 62px; border-radius: 50%; background: rgba(65,119,255,.2); filter: blur(30px); pointer-events: none; }
 .band-calculator-widget.open .band-calculator-panel { opacity: 1; visibility: visible; filter: blur(0); transform: translateY(0) scale(1); pointer-events: auto; }
-.band-calc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 20px 20px 16px; border-bottom: 1px solid rgba(177,197,239,.55); background: rgba(240,245,255,.38); }
+.band-calculator-panel.drag-positioned { transform-origin: center; }
+.band-calculator-panel.dragging { transition: opacity .25s,visibility .25s; box-shadow: 0 34px 95px rgba(11,23,51,.3),0 0 0 1px rgba(93,139,236,.13),inset 0 1px 0 rgba(255,255,255,.9); }
+.band-calc-head { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 20px 20px 16px; border-bottom: 1px solid rgba(177,197,239,.55); background: rgba(240,245,255,.38); cursor: grab; user-select: none; touch-action: none; }
+.band-calc-head::before { content: ''; position: absolute; top: 8px; left: 50%; width: 28px; height: 3px; border-radius: 99px; background: rgba(74,103,160,.2); transform: translateX(-50%); transition: width .2s,background .2s; }
+.band-calc-head:hover::before { width: 38px; background: rgba(26,86,232,.42); }
+.band-calculator-panel.dragging .band-calc-head { cursor: grabbing; }
 .band-calc-kicker { margin-bottom: 5px; color: var(--blue); font: 700 9px var(--mono); text-transform: uppercase; }
 .band-calc-head h2 { font-size: 19px; letter-spacing: -.35px; }
 .band-calc-close { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 32px; border: 1px solid rgba(255,255,255,.85); border-radius: 9px; background: rgba(255,255,255,.58); color: var(--muted); cursor: pointer; font-size: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,.9); backdrop-filter: blur(12px); transition: color .2s,border-color .2s,transform .2s; }
@@ -569,6 +576,8 @@ nav.nav-scrolled { border-bottom-color: rgba(154,177,230,.55); box-shadow: 0 10p
   .band-calculator-fab { width: 58px; height: 58px; }
   .band-calculator-fab::before { display: none; }
   .band-calculator-panel { right: -2px; bottom: 70px; width: calc(100vw - 24px); max-height: calc(100dvh - 190px); overflow-y: auto; overscroll-behavior: contain; }
+  .band-calc-head { cursor: default; touch-action: auto; }
+  .band-calc-head::before { display: none; }
   .band-calc-head { position: sticky; top: 0; z-index: 4; background: rgba(239,245,255,.78); backdrop-filter: blur(18px) saturate(170%); -webkit-backdrop-filter: blur(18px) saturate(170%); }
   .band-calc-head, .band-calc-body { padding: 17px; }
 }
@@ -1135,9 +1144,10 @@ footer {
     </section>
   </div>
 
+  <div class="band-calculator-backdrop" id="band-calculator-backdrop" aria-hidden="true"></div>
   <div class="band-calculator-widget" id="band-calculator-widget">
     <div class="band-calculator-panel" id="band-calculator-panel" role="dialog" aria-modal="false" aria-labelledby="band-calculator-title" aria-hidden="true">
-      <div class="band-calc-head">
+      <div class="band-calc-head" id="band-calculator-drag-handle" title="Oynani ko'chirish uchun torting">
         <div><p class="band-calc-kicker">$ score --estimate</p><h2 id="band-calculator-title">IELTS Band Calculator</h2></div>
         <button class="band-calc-close" type="button" onclick="closeBandCalculator()" aria-label="Calculatorni yopish">×</button>
       </div>
@@ -2192,6 +2202,7 @@ function openBandCalculator() {
   const panel = document.getElementById('band-calculator-panel');
   const button = document.getElementById('band-calculator-fab');
   widget.classList.add('open');
+  document.body.classList.add('band-calculator-open');
   panel.setAttribute('aria-hidden', 'false');
   button.setAttribute('aria-expanded', 'true');
   populateOverallBandInputs();
@@ -2207,6 +2218,7 @@ function closeBandCalculator() {
   const widget = document.getElementById('band-calculator-widget');
   if (!widget) return;
   widget.classList.remove('open');
+  document.body.classList.remove('band-calculator-open');
   document.getElementById('band-calculator-panel').setAttribute('aria-hidden', 'true');
   document.getElementById('band-calculator-fab').setAttribute('aria-expanded', 'false');
 }
@@ -2267,6 +2279,71 @@ function calculateOverallBand() {
   document.getElementById('band-calc-result-name').textContent = 'Overall Band';
   document.getElementById('band-calc-note').textContent = `O'rtacha ${average.toFixed(2)}. Natija IELTS usulida eng yaqin 0.5 bandga yaxlitlandi.`;
 }
+
+function initializeBandCalculatorDrag() {
+  const panel = document.getElementById('band-calculator-panel');
+  const handle = document.getElementById('band-calculator-drag-handle');
+  if (!panel || !handle) return;
+
+  const drag = { active: false, pointerId: null, offsetX: 0, offsetY: 0 };
+  const desktopDragEnabled = () => window.matchMedia('(min-width: 481px) and (pointer: fine)').matches;
+  const clampPosition = (left, top) => {
+    const rect = panel.getBoundingClientRect();
+    const edge = 12;
+    return {
+      left: Math.min(Math.max(edge, left), Math.max(edge, window.innerWidth - rect.width - edge)),
+      top: Math.min(Math.max(edge, top), Math.max(edge, window.innerHeight - rect.height - edge))
+    };
+  };
+  const placePanel = (left, top) => {
+    const position = clampPosition(left, top);
+    panel.style.left = `${position.left}px`;
+    panel.style.top = `${position.top}px`;
+  };
+  const finishDrag = event => {
+    if (!drag.active || (event && event.pointerId !== drag.pointerId)) return;
+    drag.active = false;
+    panel.classList.remove('dragging');
+    if (handle.hasPointerCapture?.(drag.pointerId)) handle.releasePointerCapture(drag.pointerId);
+    drag.pointerId = null;
+  };
+
+  handle.addEventListener('pointerdown', event => {
+    if (!desktopDragEnabled() || event.button !== 0 || event.target.closest('button, a, input, select, textarea')) return;
+    const rect = panel.getBoundingClientRect();
+    event.preventDefault();
+    drag.active = true;
+    drag.pointerId = event.pointerId;
+    drag.offsetX = event.clientX - rect.left;
+    drag.offsetY = event.clientY - rect.top;
+    panel.style.position = 'fixed';
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    panel.classList.add('drag-positioned', 'dragging');
+    placePanel(rect.left, rect.top);
+    handle.setPointerCapture?.(event.pointerId);
+  });
+  handle.addEventListener('pointermove', event => {
+    if (!drag.active || event.pointerId !== drag.pointerId) return;
+    placePanel(event.clientX - drag.offsetX, event.clientY - drag.offsetY);
+  });
+  handle.addEventListener('pointerup', finishDrag);
+  handle.addEventListener('pointercancel', finishDrag);
+  window.addEventListener('resize', () => {
+    if (!desktopDragEnabled()) {
+      finishDrag();
+      panel.classList.remove('drag-positioned');
+      ['position', 'left', 'top', 'right', 'bottom'].forEach(property => panel.style.removeProperty(property));
+      return;
+    }
+    if (panel.classList.contains('drag-positioned')) {
+      const rect = panel.getBoundingClientRect();
+      placePanel(rect.left, rect.top);
+    }
+  });
+}
+
+initializeBandCalculatorDrag();
 
 document.addEventListener('pointerdown', event => {
   const widget = document.getElementById('band-calculator-widget');

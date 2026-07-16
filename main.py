@@ -221,6 +221,27 @@ async def startup():
             )
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS faqs_public_idx ON faqs(is_published, sort_order, id)")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS partners (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                partnership_type TEXT NOT NULL,
+                description TEXT,
+                logo_url TEXT,
+                logo_data BYTEA,
+                logo_mime TEXT,
+                website_url TEXT,
+                status TEXT NOT NULL DEFAULT 'draft'
+                    CHECK(status IN ('draft','published','archived')),
+                is_verified BOOLEAN NOT NULL DEFAULT TRUE,
+                featured BOOLEAN NOT NULL DEFAULT FALSE,
+                sort_order INTEGER NOT NULL DEFAULT 100,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                published_at TIMESTAMP
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS partners_public_idx ON partners(status, featured DESC, sort_order, published_at DESC)")
         default_faqs = [
             ("tests", "Testlarni qanday boshlayman?", "Ro'yxatdan o'ting yoki profilingizga kiring, Testlar sahifasidan kerakli mock testni tanlang va Full mock yoki Practice rejimini boshlang.", 10),
             ("tests", "Full mock va Practice rejimlari o'rtasidagi farq nima?", "Full mock Listening, Reading, Writing va Speaking bo'limlarini ketma-ket topshiradi. Practice rejimida esa faqat kerakli bo'limni tanlaysiz.", 20),
@@ -287,6 +308,18 @@ class FaqUpsertIn(BaseModel):
     sort_order: int = 100
 
 
+class PartnerUpsertIn(BaseModel):
+    name: str
+    partnership_type: str
+    description: Optional[str] = None
+    logo_url: Optional[str] = None
+    website_url: Optional[str] = None
+    status: str = "draft"
+    is_verified: bool = True
+    featured: bool = False
+    sort_order: int = 100
+
+
 FAQ_CATEGORIES = {"tests", "results", "subscription", "organizations"}
 
 
@@ -303,6 +336,44 @@ def validate_faq(data: FaqUpsertIn) -> tuple[str, str, str, bool, int]:
     if not 0 <= data.sort_order <= 10000:
         raise HTTPException(status_code=400, detail="Tartib raqami 0 dan 10000 gacha bo'lishi kerak")
     return category, question, answer, data.is_published, data.sort_order
+
+
+PARTNER_STATUSES = {"draft", "published", "archived"}
+PARTNER_LOGO_MIMES = {"image/png", "image/jpeg", "image/webp"}
+PARTNER_LOGO_MAX_BYTES = 2 * 1024 * 1024
+
+
+def validate_partner(data: PartnerUpsertIn) -> dict:
+    name = re.sub(r"\s+", " ", data.name or "").strip()
+    partnership_type = re.sub(r"\s+", " ", data.partnership_type or "").strip()
+    description = re.sub(r"\s+", " ", data.description or "").strip() or None
+    logo_url = (data.logo_url or "").strip() or None
+    website_url = (data.website_url or "").strip() or None
+    status = (data.status or "").strip().lower()
+    if not 2 <= len(name) <= 150:
+        raise HTTPException(status_code=400, detail="Hamkor nomi 2 dan 150 tagacha belgidan iborat bo'lishi kerak")
+    if not 2 <= len(partnership_type) <= 80:
+        raise HTTPException(status_code=400, detail="Hamkorlik turi 2 dan 80 tagacha belgidan iborat bo'lishi kerak")
+    if description and len(description) > 600:
+        raise HTTPException(status_code=400, detail="Tavsif 600 belgidan oshmasligi kerak")
+    for value, label in ((logo_url, "Logo URL"), (website_url, "Rasmiy sayt URL")):
+        if value and not re.fullmatch(r"https://[^\s]+", value, flags=re.IGNORECASE):
+            raise HTTPException(status_code=400, detail=f"{label} HTTPS manzil bo'lishi kerak")
+    if status not in PARTNER_STATUSES:
+        raise HTTPException(status_code=400, detail="Hamkor holati noto'g'ri")
+    if not 0 <= data.sort_order <= 10000:
+        raise HTTPException(status_code=400, detail="Tartib raqami 0 dan 10000 gacha bo'lishi kerak")
+    return {
+        "name": name,
+        "partnership_type": partnership_type,
+        "description": description,
+        "logo_url": logo_url,
+        "website_url": website_url,
+        "status": status,
+        "is_verified": data.is_verified,
+        "featured": data.featured,
+        "sort_order": data.sort_order,
+    }
 
 
 class SubmitResult(BaseModel):
@@ -1174,6 +1245,57 @@ async def public_faqs():
     return [dict(row) for row in rows]
 
 
+def partner_payload(row, include_admin_fields: bool = False) -> dict:
+    item = dict(row)
+    has_uploaded_logo = bool(item.pop("has_uploaded_logo", item.get("logo_mime")))
+    item.pop("logo_data", None)
+    item.pop("logo_mime", None)
+    external_logo_url = item.get("logo_url")
+    logo_version = item.get("updated_at") or item.get("published_at")
+    version_suffix = f"?v={int(logo_version.timestamp())}" if logo_version else ""
+    item["logo_url"] = external_logo_url or (f"/api/partners/{item['id']}/logo{version_suffix}" if has_uploaded_logo else None)
+    if include_admin_fields:
+        item["external_logo_url"] = external_logo_url
+        item["has_uploaded_logo"] = has_uploaded_logo
+    return item
+
+
+@app.get("/api/partners/public")
+async def public_partners():
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, name, partnership_type, description, logo_url, website_url,
+                   is_verified, featured, sort_order, updated_at, published_at,
+                   (logo_data IS NOT NULL AND logo_mime IS NOT NULL) AS has_uploaded_logo
+            FROM partners
+            WHERE status='published'
+              AND (logo_url IS NOT NULL OR (logo_data IS NOT NULL AND logo_mime IS NOT NULL))
+            ORDER BY featured DESC, sort_order ASC, published_at DESC NULLS LAST, id ASC
+            LIMIT 40
+            """
+        )
+    return [partner_payload(row) for row in rows]
+
+
+@app.get("/api/partners/{partner_id}/logo")
+async def partner_logo(partner_id: int):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT logo_data, logo_mime FROM partners WHERE id=$1",
+            partner_id,
+        )
+    if not row or not row["logo_data"] or not row["logo_mime"]:
+        raise HTTPException(status_code=404, detail="Hamkor logosi topilmadi")
+    return Response(
+        content=bytes(row["logo_data"]),
+        media_type=row["logo_mime"],
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
 @app.get("/api/testimonials/me")
 async def my_testimonial(current_user: dict = Depends(get_current_user)):
     db = await get_pool()
@@ -1353,6 +1475,151 @@ async def admin_delete_faq(faq_id: int, _: None = Depends(require_admin)):
         deleted = await conn.fetchval("DELETE FROM faqs WHERE id=$1 RETURNING id", faq_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="FAQ topilmadi")
+    return {"ok": True}
+
+
+@app.get("/api/admin/partners")
+async def admin_partners(_: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, name, partnership_type, description, logo_url, website_url,
+                   status, is_verified, featured, sort_order, created_at, updated_at,
+                   published_at,
+                   (logo_data IS NOT NULL AND logo_mime IS NOT NULL) AS has_uploaded_logo
+            FROM partners
+            ORDER BY (status='published') DESC, featured DESC, sort_order ASC, id ASC
+            """
+        )
+    return [partner_payload(row, include_admin_fields=True) for row in rows]
+
+
+@app.post("/api/admin/partners")
+async def admin_create_partner(data: PartnerUpsertIn, _: None = Depends(require_admin)):
+    values = validate_partner(data)
+    if values["status"] == "published" and not values["logo_url"]:
+        raise HTTPException(status_code=400, detail="Publish qilishdan oldin logo URL kiriting yoki logoni fayl sifatida yuklang")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        if await conn.fetchval("SELECT 1 FROM partners WHERE LOWER(name)=LOWER($1)", values["name"]):
+            raise HTTPException(status_code=409, detail="Bu nomdagi hamkor allaqachon mavjud")
+        row = await conn.fetchrow(
+            """
+            INSERT INTO partners
+                (name, partnership_type, description, logo_url, website_url, status,
+                 is_verified, featured, sort_order, published_at)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,
+                    CASE WHEN $6='published' THEN NOW() ELSE NULL END)
+            RETURNING id, name, partnership_type, description, logo_url, website_url,
+                      status, is_verified, featured, sort_order, created_at, updated_at,
+                      published_at, FALSE AS has_uploaded_logo
+            """,
+            values["name"], values["partnership_type"], values["description"],
+            values["logo_url"], values["website_url"], values["status"],
+            values["is_verified"], values["featured"], values["sort_order"],
+        )
+    return partner_payload(row, include_admin_fields=True)
+
+
+@app.put("/api/admin/partners/{partner_id}")
+async def admin_update_partner(partner_id: int, data: PartnerUpsertIn, _: None = Depends(require_admin)):
+    values = validate_partner(data)
+    db = await get_pool()
+    async with db.acquire() as conn:
+        current = await conn.fetchrow(
+            "SELECT id, logo_data, logo_mime FROM partners WHERE id=$1",
+            partner_id,
+        )
+        if not current:
+            raise HTTPException(status_code=404, detail="Hamkor topilmadi")
+        if values["status"] == "published" and not values["logo_url"] and not (current["logo_data"] and current["logo_mime"]):
+            raise HTTPException(status_code=400, detail="Publish qilishdan oldin logo URL kiriting yoki logoni fayl sifatida yuklang")
+        if await conn.fetchval(
+            "SELECT 1 FROM partners WHERE LOWER(name)=LOWER($1) AND id<>$2",
+            values["name"], partner_id,
+        ):
+            raise HTTPException(status_code=409, detail="Bu nomdagi hamkor allaqachon mavjud")
+        row = await conn.fetchrow(
+            """
+            UPDATE partners SET
+                name=$2, partnership_type=$3, description=$4, logo_url=$5,
+                logo_data=CASE WHEN $5 IS NOT NULL THEN NULL ELSE logo_data END,
+                logo_mime=CASE WHEN $5 IS NOT NULL THEN NULL ELSE logo_mime END,
+                website_url=$6, status=$7, is_verified=$8, featured=$9,
+                sort_order=$10, updated_at=NOW(),
+                published_at=CASE
+                    WHEN $7='published' THEN COALESCE(published_at, NOW())
+                    ELSE NULL
+                END
+            WHERE id=$1
+            RETURNING id, name, partnership_type, description, logo_url, website_url,
+                      status, is_verified, featured, sort_order, created_at, updated_at,
+                      published_at,
+                      (logo_data IS NOT NULL AND logo_mime IS NOT NULL) AS has_uploaded_logo
+            """,
+            partner_id, values["name"], values["partnership_type"], values["description"],
+            values["logo_url"], values["website_url"], values["status"],
+            values["is_verified"], values["featured"], values["sort_order"],
+        )
+    return partner_payload(row, include_admin_fields=True)
+
+
+@app.post("/api/admin/partners/{partner_id}/logo")
+async def admin_upload_partner_logo(
+    partner_id: int,
+    logo: UploadFile = File(...),
+    _: None = Depends(require_admin),
+):
+    mime = (logo.content_type or "").lower()
+    if mime not in PARTNER_LOGO_MIMES:
+        raise HTTPException(status_code=400, detail="Logo PNG, JPG yoki WebP formatida bo'lishi kerak")
+    content = await logo.read(PARTNER_LOGO_MAX_BYTES + 1)
+    if not content:
+        raise HTTPException(status_code=400, detail="Logo fayli bo'sh")
+    if len(content) > PARTNER_LOGO_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Logo hajmi 2 MB dan oshmasligi kerak")
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE partners SET logo_data=$2, logo_mime=$3, logo_url=NULL, updated_at=NOW()
+            WHERE id=$1
+            RETURNING id
+            """,
+            partner_id, content, mime,
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Hamkor topilmadi")
+    return {"ok": True, "logo_url": f"/api/partners/{partner_id}/logo"}
+
+
+@app.delete("/api/admin/partners/{partner_id}/logo")
+async def admin_delete_partner_logo(partner_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE partners SET logo_data=NULL, logo_mime=NULL, logo_url=NULL,
+                status=CASE WHEN status='published' THEN 'draft' ELSE status END,
+                published_at=CASE WHEN status='published' THEN NULL ELSE published_at END,
+                updated_at=NOW()
+            WHERE id=$1 RETURNING id
+            """,
+            partner_id,
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Hamkor topilmadi")
+    return {"ok": True}
+
+
+@app.delete("/api/admin/partners/{partner_id}")
+async def admin_delete_partner(partner_id: int, _: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        deleted = await conn.fetchval("DELETE FROM partners WHERE id=$1 RETURNING id", partner_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Hamkor topilmadi")
     return {"ok": True}
 
 

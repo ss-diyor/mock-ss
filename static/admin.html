@@ -177,6 +177,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
 .org-action-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:13px;border-top:1px solid #e0e8f7}.org-action-main,.org-action-danger{display:flex;gap:7px;flex-wrap:wrap}.org-action-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #cfdbf4;border-radius:8px;background:rgba(255,255,255,.8);color:#34425f;cursor:pointer;font:700 9px var(--mono);transition:.16s transform,.16s border-color,.16s background}.org-action-btn:hover{transform:translateY(-1px);border-color:var(--org-accent);background:color-mix(in srgb,var(--org-accent) 5%,#fff);color:var(--org-accent)}.org-action-btn.primary{border-color:var(--org-accent);background:var(--org-accent);color:#fff;box-shadow:0 8px 18px color-mix(in srgb,var(--org-accent) 22%,transparent)}.org-action-btn.danger{color:#d24742}.org-action-btn.danger:hover{border-color:#e05a55;background:#fff3f3;color:#bd332f}.org-action-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .org-inventory-slot{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed #cfdbf1}.org-owner-setup{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 23px;border-top:1px solid #dbe5f8;background:linear-gradient(90deg,color-mix(in srgb,var(--org-accent) 6%,#f7f9ff),#f7f9ff)}.org-owner-prompt{display:flex;align-items:center;gap:9px;color:#8b6200;font:700 10px var(--mono)}.org-owner-prompt span{width:27px;height:27px;display:grid;place-items:center;border-radius:8px;background:#fff3d7}.org-owner-controls{display:flex;gap:7px;flex:1;justify-content:flex-end}.org-owner-controls input{max-width:300px}
 .faq-admin-grid{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(260px,2fr) minmax(100px,.5fr);gap:12px;}
+.partner-admin-grid{display:grid;grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) minmax(120px,.65fr);gap:12px}.partner-admin-card{overflow:hidden;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(17,46,112,.055);margin-bottom:14px}.partner-admin-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 17px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#f8faff,#eef3ff)}.partner-admin-identity{display:flex;align-items:center;gap:12px;min-width:0}.partner-admin-logo{width:52px;height:52px;flex:0 0 52px;display:grid;place-items:center;overflow:hidden;border:1px solid #cddafa;border-radius:13px;background:#fff;color:var(--blue);font:800 13px var(--mono)}.partner-admin-logo img{width:100%;height:100%;object-fit:contain;padding:5px}.partner-admin-name{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.partner-admin-type{margin-top:4px;color:var(--muted);font:600 9px var(--mono)}.partner-admin-body{padding:17px}.partner-admin-options{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:12px}.partner-admin-options label{display:flex;align-items:center;gap:7px;margin:0;text-transform:none;font:600 10px var(--mono)}.partner-admin-options input{width:16px}.partner-logo-note{display:block;margin-top:5px;color:var(--muted);font:500 8px var(--mono)}
 .support-admin-layout{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:16px;min-height:560px}
 .support-admin-list,.support-admin-detail{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .support-admin-list{padding:10px;overflow-y:auto;max-height:650px}.support-admin-detail{display:flex;flex-direction:column;padding:18px}
@@ -196,6 +197,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
   table.users-table{min-width:1120px;}
   .user-filter-toolbar{align-items:stretch;flex-direction:column}.user-affiliation-tabs{overflow-x:auto}.user-center-select,.user-advanced-select{width:100%;max-width:none}.user-filter-summary{margin-left:0}.user-pagination{align-items:stretch;flex-direction:column}.user-pagination-actions{overflow-x:auto}
   .faq-admin-grid{grid-template-columns:1fr;}
+  .partner-admin-grid{grid-template-columns:1fr}.partner-admin-head{align-items:flex-start}.partner-admin-options{align-items:flex-start;flex-direction:column}
   .org-card-hero{flex-direction:column}.org-statuses{justify-content:flex-start;max-width:none}.org-metrics-grid{grid-template-columns:1fr}.org-action-bar,.org-owner-setup{align-items:stretch;flex-direction:column}.org-action-danger{padding-top:8px;border-top:1px solid #e1e8f6}.org-owner-controls{justify-content:stretch}.org-owner-controls input{max-width:none}.org-title{white-space:normal}.org-list-toolbar{align-items:stretch;flex-direction:column}.org-list-heading div>span{max-width:240px}.org-list-actions{justify-content:space-between}.org-filter-tabs{overflow-x:auto}.org-order{width:35px;height:35px;flex-basis:35px}.org-logo{width:52px;height:52px;flex-basis:52px}.org-identity{gap:9px}
   .support-admin-layout{grid-template-columns:1fr}.support-admin-list{max-height:300px}.support-admin-detail{min-height:520px}
 }
@@ -245,6 +247,7 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <button class="section-tab" id="tab-applications" onclick="switchSection('applications')">Arizalar</button>
     <button class="section-tab" id="tab-support" onclick="switchSection('support')">Yordam</button>
     <button class="section-tab" id="tab-testimonials" onclick="switchSection('testimonials')">Fikrlar</button>
+    <button class="section-tab" id="tab-partners" onclick="switchSection('partners')">Hamkorlar</button>
     <button class="section-tab" id="tab-faqs" onclick="switchSection('faqs')">FAQ</button>
     <button class="section-tab" id="tab-tests" onclick="switchSection('tests')">Testlar</button>
     <button class="section-tab" id="tab-subscriptions" onclick="switchSection('subscriptions')">Obuna to'lovlari</button>
@@ -449,6 +452,42 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
     <div id="testimonials-list"></div>
     <div id="testimonials-empty" class="empty-state" style="display:none">Fikrlar topilmadi</div>
   </div>
+  <div class="section-view" id="section-partners">
+    <div class="form-card" style="margin-bottom:20px">
+      <div class="form-card-head">$ partners --create</div>
+      <div class="form-card-body">
+        <form id="partner-create-form" onsubmit="createPartner(event)" style="width:100%">
+          <div class="partner-admin-grid">
+            <div><label>Hamkor nomi</label><input id="partner-create-name" maxlength="150" required placeholder="Masalan: Example Education"></div>
+            <div><label>Hamkorlik turi</label><input id="partner-create-type" maxlength="80" required placeholder="Ta'limiy hamkor"></div>
+            <div><label>Holat</label><select id="partner-create-status" class="btn-outline" style="width:100%;padding:10px"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Arxiv</option></select></div>
+            <div><label>Logo URL (HTTPS)</label><input id="partner-create-logo-url" type="url" placeholder="https://..."><small class="partner-logo-note">URL yoki quyidagi logo faylidan bittasini kiriting.</small></div>
+            <div><label>Rasmiy sayt (HTTPS)</label><input id="partner-create-website" type="url" placeholder="https://..."></div>
+            <div><label>Tartib</label><input id="partner-create-order" type="number" min="0" max="10000" value="100"></div>
+          </div>
+          <div style="margin-top:12px"><label>Qisqa tavsif</label><textarea id="partner-create-description" maxlength="600" rows="3" placeholder="Hamkorlik haqida qisqa va haqiqiy ma'lumot..."></textarea></div>
+          <div class="partner-admin-options">
+            <label><input id="partner-create-verified" type="checkbox" checked> Tasdiqlangan hamkor</label>
+            <label><input id="partner-create-featured" type="checkbox"> Asosiy hamkor</label>
+            <label style="display:block"><span style="display:block;margin-bottom:6px">Logo fayli (PNG/JPG/WebP, 2 MB)</span><input id="partner-create-logo-file" type="file" accept="image/png,image/jpeg,image/webp" style="width:100%"></label>
+            <button class="btn-primary btn-sm" type="submit">+ Hamkor qo'shish</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+      <div><div style="font-family:var(--mono);font-size:12px;color:var(--blue)">$ partners --manage</div><div style="font-size:13px;color:var(--muted);margin-top:5px">Faqat haqiqiy hamkorlarni publish qiling; published kartalar landing sahifada avtomatik chiqadi.</div></div>
+      <button class="btn-outline btn-sm" onclick="loadPartnersAdmin()">↻ Yangilash</button>
+    </div>
+    <div class="filters" id="partner-filters">
+      <button class="filter-btn active" data-partner-filter="all" onclick="setPartnerFilter('all')">Hammasi</button>
+      <button class="filter-btn" data-partner-filter="draft" onclick="setPartnerFilter('draft')">Draft</button>
+      <button class="filter-btn" data-partner-filter="published" onclick="setPartnerFilter('published')">Published</button>
+      <button class="filter-btn" data-partner-filter="archived" onclick="setPartnerFilter('archived')">Arxiv</button>
+    </div>
+    <div id="partners-admin-list"></div>
+    <div id="partners-admin-empty" class="empty-state" style="display:none">Hamkorlar topilmadi</div>
+  </div>
   <div class="section-view" id="section-faqs">
     <div class="form-card" style="margin-bottom:20px">
       <div class="form-card-head">$ faq --create</div>
@@ -550,7 +589,7 @@ async function loadResults(isLogin=false) {
       loadUsers();
       const params=new URLSearchParams(location.search);
       const requestedSection=params.get('section');
-      const allowedSections=['stats','results','users','centers','applications','support','testimonials','faqs','tests','subscriptions'];
+      const allowedSections=['stats','results','users','centers','applications','support','testimonials','partners','faqs','tests','subscriptions'];
       if(allowedSections.includes(requestedSection))switchSection(requestedSection);
       if(requestedSection==='support'){
         const ticketId=Number(params.get('ticket'));
@@ -576,6 +615,7 @@ function switchSection(which) {
   if (document.getElementById('tab-applications')) document.getElementById('tab-applications').classList.toggle('active', which === 'applications');
   if (document.getElementById('tab-support')) document.getElementById('tab-support').classList.toggle('active', which === 'support');
   if (document.getElementById('tab-testimonials')) document.getElementById('tab-testimonials').classList.toggle('active', which === 'testimonials');
+  if (document.getElementById('tab-partners')) document.getElementById('tab-partners').classList.toggle('active', which === 'partners');
   if (document.getElementById('tab-faqs')) document.getElementById('tab-faqs').classList.toggle('active', which === 'faqs');
   if (document.getElementById('tab-tests')) document.getElementById('tab-tests').classList.toggle('active', which === 'tests');
   if (document.getElementById('tab-subscriptions')) document.getElementById('tab-subscriptions').classList.toggle('active', which === 'subscriptions');
@@ -587,6 +627,7 @@ function switchSection(which) {
   if (document.getElementById('section-applications')) document.getElementById('section-applications').classList.toggle('active', which === 'applications');
   if (document.getElementById('section-support')) document.getElementById('section-support').classList.toggle('active', which === 'support');
   if (document.getElementById('section-testimonials')) document.getElementById('section-testimonials').classList.toggle('active', which === 'testimonials');
+  if (document.getElementById('section-partners')) document.getElementById('section-partners').classList.toggle('active', which === 'partners');
   if (document.getElementById('section-faqs')) document.getElementById('section-faqs').classList.toggle('active', which === 'faqs');
   if (document.getElementById('section-tests')) document.getElementById('section-tests').classList.toggle('active', which === 'tests');
   if (document.getElementById('section-subscriptions')) document.getElementById('section-subscriptions').classList.toggle('active', which === 'subscriptions');
@@ -597,6 +638,7 @@ function switchSection(which) {
   if (which === 'applications') loadOrganizationApplications();
   if (which === 'support') loadSupportTickets();
   if (which === 'testimonials') loadTestimonials();
+  if (which === 'partners') loadPartnersAdmin();
   if (which === 'faqs') loadFaqsAdmin();
   if (which === 'tests') { loadCenters().then(fillAdminTestCenters); loadAdminTests(); }
   if (which === 'subscriptions') loadSubscriptionPayments();
@@ -1543,6 +1585,136 @@ async function deleteTestimonialAdmin(id){
   const res=await adminFetch(`/api/admin/testimonials/${id}`,{method:'DELETE'}),data=await res.json();
   if(!res.ok)return alert(data.detail||'Xatolik');
   await loadTestimonials();
+}
+
+let adminPartners=[];
+let partnerFilter='all';
+const partnerStatusLabels={draft:'Draft',published:'Published',archived:'Arxivlangan'};
+
+function partnerInitials(name){
+  return String(name||'HM').trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase();
+}
+
+function partnerFormPayload(prefix){
+  return {
+    name:document.getElementById(`${prefix}-name`).value.trim(),
+    partnership_type:document.getElementById(`${prefix}-type`).value.trim(),
+    description:document.getElementById(`${prefix}-description`).value.trim()||null,
+    logo_url:document.getElementById(`${prefix}-logo-url`).value.trim()||null,
+    website_url:document.getElementById(`${prefix}-website`).value.trim()||null,
+    status:document.getElementById(`${prefix}-status`).value,
+    is_verified:document.getElementById(`${prefix}-verified`).checked,
+    featured:document.getElementById(`${prefix}-featured`).checked,
+    sort_order:Number(document.getElementById(`${prefix}-order`).value||100),
+  };
+}
+
+async function uploadPartnerLogo(id,file){
+  const form=new FormData();form.append('logo',file);
+  const res=await adminFetch(`/api/admin/partners/${id}/logo`,{method:'POST',body:form}),data=await res.json();
+  if(!res.ok)throw new Error(data.detail||'Logo yuklanmadi');
+}
+
+async function loadPartnersAdmin(){
+  const list=document.getElementById('partners-admin-list'),empty=document.getElementById('partners-admin-empty');
+  list.innerHTML='<div class="empty-state"><span class="spinner"></span> Yuklanmoqda...</div>';empty.style.display='none';
+  try{
+    const res=await adminFetch('/api/admin/partners'),rows=await res.json();
+    if(!res.ok)throw new Error(rows.detail||'Hamkorlar yuklanmadi');
+    adminPartners=rows;renderPartnersAdmin();
+  }catch(e){list.innerHTML=`<div class="alert danger">→ ${adminEsc(e.message)}</div>`}
+}
+
+function setPartnerFilter(value){
+  partnerFilter=value;
+  document.querySelectorAll('[data-partner-filter]').forEach(btn=>btn.classList.toggle('active',btn.dataset.partnerFilter===value));
+  renderPartnersAdmin();
+}
+
+function partnerStatusOptions(selected){
+  return Object.entries(partnerStatusLabels).map(([value,label])=>`<option value="${value}" ${value===selected?'selected':''}>${label}</option>`).join('');
+}
+
+function renderPartnersAdmin(){
+  const list=document.getElementById('partners-admin-list'),empty=document.getElementById('partners-admin-empty');
+  const rows=adminPartners.filter(row=>partnerFilter==='all'||row.status===partnerFilter);
+  empty.style.display=rows.length?'none':'block';
+  list.innerHTML=rows.map(row=>{
+    const initials=adminEsc(partnerInitials(row.name));
+    const logo=row.logo_url?`<img src="${adminEsc(row.logo_url)}" alt="${adminEsc(row.name)}" onerror="this.parentElement.textContent='${initials}'">`:initials;
+    return `<article class="partner-admin-card">
+      <div class="partner-admin-head">
+        <div class="partner-admin-identity"><div class="partner-admin-logo">${logo}</div><div style="min-width:0"><div class="partner-admin-name">${adminEsc(row.name)}</div><div class="partner-admin-type">${adminEsc(row.partnership_type)} · tartib ${row.sort_order}</div></div></div>
+        <span class="badge ${row.status==='published'?'green':row.status==='draft'?'amber':'muted'}">${adminEsc(partnerStatusLabels[row.status]||row.status)}</span>
+      </div>
+      <div class="partner-admin-body">
+        <div class="partner-admin-grid">
+          <div><label>Nomi</label><input id="partner-${row.id}-name" maxlength="150" value="${adminEsc(row.name)}"></div>
+          <div><label>Hamkorlik turi</label><input id="partner-${row.id}-type" maxlength="80" value="${adminEsc(row.partnership_type)}"></div>
+          <div><label>Holat</label><select id="partner-${row.id}-status" class="btn-outline" style="width:100%;padding:10px">${partnerStatusOptions(row.status)}</select></div>
+          <div><label>Logo URL (HTTPS)</label><input id="partner-${row.id}-logo-url" type="url" value="${adminEsc(row.external_logo_url||'')}" placeholder="https://..."><small class="partner-logo-note">${row.has_uploaded_logo?'Logo fayl sifatida yuklangan. URL kiritsangiz u almashtiriladi.':'URL yoki logo faylini kiriting.'}</small></div>
+          <div><label>Rasmiy sayt</label><input id="partner-${row.id}-website" type="url" value="${adminEsc(row.website_url||'')}" placeholder="https://..."></div>
+          <div><label>Tartib</label><input id="partner-${row.id}-order" type="number" min="0" max="10000" value="${row.sort_order}"></div>
+        </div>
+        <div style="margin-top:12px"><label>Tavsif</label><textarea id="partner-${row.id}-description" maxlength="600" rows="3">${adminEsc(row.description||'')}</textarea></div>
+        <div class="partner-admin-options">
+          <label><input id="partner-${row.id}-verified" type="checkbox" ${row.is_verified?'checked':''}> Tasdiqlangan hamkor</label>
+          <label><input id="partner-${row.id}-featured" type="checkbox" ${row.featured?'checked':''}> Asosiy hamkor</label>
+          <label style="display:block"><span style="display:block;margin-bottom:6px">Yangi logo fayli</span><input id="partner-${row.id}-logo-file" type="file" accept="image/png,image/jpeg,image/webp" style="width:100%"></label>
+          <button class="btn-primary btn-sm" onclick="savePartnerAdmin(${row.id})">Saqlash</button>
+          ${row.logo_url?`<button class="btn-outline btn-sm" onclick="removePartnerLogo(${row.id})">Logoni olib tashlash</button>`:''}
+          <button class="btn-outline btn-sm danger" onclick="deletePartnerAdmin(${row.id})">Butunlay o'chirish</button>
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+async function createPartner(event){
+  event.preventDefault();
+  const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),payload=partnerFormPayload('partner-create');
+  const file=document.getElementById('partner-create-logo-file').files[0]||null;
+  const needsStaging=Boolean(file&&payload.status==='published'&&!payload.logo_url);
+  button.disabled=true;button.textContent='Saqlanmoqda...';
+  try{
+    const firstPayload={...payload,status:needsStaging?'draft':payload.status};
+    let res=await adminFetch('/api/admin/partners',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(firstPayload)}),row=await res.json();
+    if(!res.ok)throw new Error(row.detail||'Hamkor qo\'shilmadi');
+    if(file)await uploadPartnerLogo(row.id,file);
+    if(needsStaging){
+      res=await adminFetch(`/api/admin/partners/${row.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});row=await res.json();
+      if(!res.ok)throw new Error(row.detail||'Hamkor publish qilinmadi');
+    }
+    form.reset();document.getElementById('partner-create-verified').checked=true;document.getElementById('partner-create-order').value=100;await loadPartnersAdmin();
+  }catch(e){alert(e.message)}finally{button.disabled=false;button.textContent="+ Hamkor qo'shish"}
+}
+
+async function savePartnerAdmin(id){
+  const row=adminPartners.find(item=>item.id===id),payload=partnerFormPayload(`partner-${id}`),file=document.getElementById(`partner-${id}-logo-file`).files[0]||null;
+  const needsStaging=Boolean(file&&payload.status==='published'&&!payload.logo_url&&!row?.has_uploaded_logo);
+  try{
+    let firstPayload={...payload,status:needsStaging?'draft':payload.status};
+    let res=await adminFetch(`/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(firstPayload)}),data=await res.json();
+    if(!res.ok)throw new Error(data.detail||'Hamkor saqlanmadi');
+    if(file)await uploadPartnerLogo(id,file);
+    if(needsStaging){
+      res=await adminFetch(`/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});data=await res.json();
+      if(!res.ok)throw new Error(data.detail||'Hamkor publish qilinmadi');
+    }
+    await loadPartnersAdmin();
+  }catch(e){alert(e.message)}
+}
+
+async function removePartnerLogo(id){
+  if(!confirm("Hamkor logosini olib tashlaysizmi? Published hamkor avtomatik Draft holatiga o'tadi."))return;
+  const res=await adminFetch(`/api/admin/partners/${id}/logo`,{method:'DELETE'}),data=await res.json();
+  if(!res.ok)return alert(data.detail||'Logo olib tashlanmadi');await loadPartnersAdmin();
+}
+
+async function deletePartnerAdmin(id){
+  if(!confirm("Hamkorni butunlay o'chirasizmi?"))return;
+  const res=await adminFetch(`/api/admin/partners/${id}`,{method:'DELETE'}),data=await res.json();
+  if(!res.ok)return alert(data.detail||'Hamkor o\'chirilmadi');await loadPartnersAdmin();
 }
 
 const faqCategoryLabels={tests:'Testlar',results:'Natijalar',subscription:'Obuna',organizations:'Maktab va markazlar'};

@@ -284,6 +284,37 @@ nav {
 .role-activity-row:last-child { border-bottom: 0; }
 .role-activity-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 4px rgba(26,86,232,.1); }
 @keyframes role-stage-enter { from { opacity: .45; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+.partners-section[hidden] { display: none; }
+.partners-shell { position: relative; overflow: hidden; padding: 22px; border: 1px solid var(--border); border-radius: 19px; background: linear-gradient(145deg,rgba(255,255,255,.96),rgba(239,244,255,.9)); box-shadow: 0 22px 58px rgba(11,23,51,.065); }
+.partners-shell::before { content: ''; position: absolute; width: 260px; height: 260px; right: -145px; top: -175px; border-radius: 50%; background: radial-gradient(circle,rgba(26,86,232,.18),transparent 70%); pointer-events: none; }
+.partners-carousel { position: relative; display: grid; grid-template-columns: 42px minmax(0,1fr) 42px; align-items: center; gap: 12px; }
+.partners-track { display: flex; gap: 13px; min-width: 0; padding: 6px 2px 16px; overflow-x: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.partners-track::-webkit-scrollbar { display: none; }
+.partner-card { position: relative; flex: 0 0 min(286px,calc(100vw - 100px)); min-height: 238px; display: flex; flex-direction: column; overflow: hidden; padding: 20px; border: 1px solid #d4e0fa; border-radius: 15px; background: rgba(255,255,255,.94); color: var(--text); text-decoration: none; scroll-snap-align: start; box-shadow: 0 12px 30px rgba(11,23,51,.055); animation: partner-card-enter .55s cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--partner-order,0) * 70ms); transition: transform .28s cubic-bezier(.2,.8,.2,1),border-color .28s,box-shadow .28s; }
+.partner-card:hover { transform: translateY(-6px); border-color: #abc3ff; box-shadow: 0 22px 46px rgba(11,23,51,.11); }
+.partner-card.featured { border-color: #aec5ff; background: linear-gradient(145deg,#fff 28%,#eef4ff); }
+.partner-card::after { content: attr(data-order); position: absolute; right: 13px; bottom: -13px; color: rgba(26,86,232,.052); font: 900 64px var(--mono); line-height: 1; pointer-events: none; }
+.partner-card-top { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.partner-logo { width: 72px; height: 72px; flex: 0 0 72px; display: grid; place-items: center; overflow: hidden; border: 1px solid #cfdbf6; border-radius: 15px; background: #fff; color: var(--blue); font: 850 17px var(--mono); box-shadow: 0 10px 24px rgba(26,86,232,.09); }
+.partner-logo img { width: 100%; height: 100%; object-fit: contain; padding: 7px; }
+.partner-badges { display: flex; justify-content: flex-end; gap: 5px; flex-wrap: wrap; }
+.partner-verified,.partner-featured { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 999px; font: 700 8px var(--mono); white-space: nowrap; }
+.partner-verified { background: #e9f9f0; color: #13814a; }
+.partner-verified::before { content: '✓'; width: 14px; height: 14px; display: grid; place-items: center; border-radius: 50%; background: #21ad65; color: #fff; font-size: 8px; }
+.partner-featured { background: #fff4d7; color: #996300; }
+.partner-type { position: relative; z-index: 1; margin-top: 18px; color: var(--blue); font: 700 9px var(--mono); letter-spacing: .05em; text-transform: uppercase; }
+.partner-name { position: relative; z-index: 1; margin-top: 7px; font-size: 17px; font-weight: 850; line-height: 1.25; }
+.partner-description { position: relative; z-index: 1; flex: 1; margin-top: 9px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.partner-link { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 17px; padding-top: 12px; border-top: 1px solid #e0e8f8; color: var(--blue); font: 700 9px var(--mono); }
+.partner-link::after { content: '↗'; font-size: 13px; transition: transform .2s; }
+.partner-card:hover .partner-link::after { transform: translate(2px,-2px); }
+.partners-nav { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #cbd8f5; border-radius: 12px; background: rgba(255,255,255,.92); color: var(--blue); cursor: pointer; font: 800 18px var(--mono); box-shadow: 0 9px 22px rgba(26,86,232,.08); transition: transform .2s,border-color .2s,background .2s; }
+.partners-nav:hover { transform: translateY(-2px); border-color: var(--blue); background: #fff; }
+.partners-nav:disabled { opacity: .35; cursor: default; transform: none; }
+.partners-footer { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 3px 54px 0; color: var(--muted); font: 600 9px var(--mono); }
+.partners-progress { flex: 1; max-width: 210px; height: 4px; overflow: hidden; border-radius: 999px; background: #dfe7f7; }
+.partners-progress span { display: block; width: var(--partners-progress,0%); height: 100%; border-radius: inherit; background: linear-gradient(90deg,var(--blue),#78a0ff); transition: width .3s; }
+@keyframes partner-card-enter { from { opacity:0; transform:translateY(15px) scale(.985); } to { opacity:1; transform:none; } }
 .testimonials-section[hidden] { display: none; }
 .testimonial-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 15px; }
 .testimonial-card { position: relative; display: flex; min-height: 260px; flex-direction: column; padding: 24px; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,.94); box-shadow: 0 14px 38px rgba(11,23,51,.055); animation: testimonial-enter .65s cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--testimonial-order,0) * 75ms); transform: perspective(900px) translate3d(var(--testimonial-tx,0),var(--testimonial-ty,0),0) rotateX(var(--testimonial-rx,0deg)) rotateY(var(--testimonial-ry,0deg)); transform-style: preserve-3d; transition: transform .24s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s; will-change: transform; }
@@ -456,6 +487,7 @@ nav.nav-scrolled { border-bottom-color: rgba(154,177,230,.55); box-shadow: 0 10p
   .role-copy { padding: 34px; }
   .role-dashboard-wrap { margin-top: 0; }
   .organizations-layout { grid-template-columns: 1fr; }
+  .partner-card { flex-basis: 270px; }
   .testimonial-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media (max-width: 650px) {
@@ -467,6 +499,12 @@ nav.nav-scrolled { border-bottom-color: rgba(154,177,230,.55); box-shadow: 0 10p
   .trust-head { align-items: flex-start; flex-direction: column; gap: 10px; }
   .sections-grid, .workflow { grid-template-columns: 1fr; }
   .organization-types, .application-grid { grid-template-columns: 1fr; }
+  .partners-shell { margin: 0 -6px; padding: 17px 0 14px; }
+  .partners-carousel { display: block; }
+  .partners-track { gap: 12px; padding: 5px 18px 17px; }
+  .partner-card { flex-basis:min(82vw,310px); min-height:226px; }
+  .partners-nav { display: none; }
+  .partners-footer { margin: 2px 18px 0; }
   .testimonial-grid { display:flex; gap:12px; overflow-x:auto; margin:0 -18px; padding:4px 18px 18px; scroll-snap-type:x mandatory; scrollbar-width:none; }
   .testimonial-grid::-webkit-scrollbar { display:none; }
   .testimonial-card { min-width:min(84vw,340px); min-height:250px; scroll-snap-align:start; }
@@ -992,6 +1030,21 @@ footer {
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="landing-section partners-section" id="partners" aria-labelledby="partners-title" hidden>
+      <div class="landing-section-head">
+        <div><p class="eyebrow">$ partners --verified</p><h2 id="partners-title">Hamkorlarimiz</h2></div>
+        <p class="section-lead">IELTS Mock SS bilan ta'limiy, texnik va strategik yo'nalishlarda hamkorlik qilayotgan tasdiqlangan tashkilotlar.</p>
+      </div>
+      <div class="partners-shell" id="partners-shell">
+        <div class="partners-carousel">
+          <button class="partners-nav" id="partners-prev" type="button" onclick="movePartners(-1)" aria-label="Oldingi hamkor">‹</button>
+          <div class="partners-track" id="partners-track" aria-live="polite"></div>
+          <button class="partners-nav" id="partners-next" type="button" onclick="movePartners(1)" aria-label="Keyingi hamkor">›</button>
+        </div>
+        <div class="partners-footer"><span id="partners-count">0 ta tasdiqlangan hamkor</span><div class="partners-progress" aria-hidden="true"><span id="partners-progress"></span></div><span>Mobil qurilmada suring ↔</span></div>
       </div>
     </section>
 
@@ -1538,6 +1591,149 @@ loadPublicStats();
 function testimonialInitials(name) {
   return String(name || 'F').trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('').toUpperCase() || 'F';
 }
+
+let publicPartners = [];
+let partnerAutoTimer = 0;
+
+function partnerInitialsLanding(name) {
+  return String(name || 'HM').trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase();
+}
+
+function updatePartnersProgress() {
+  const track = document.getElementById('partners-track');
+  const progress = document.getElementById('partners-progress');
+  const prev = document.getElementById('partners-prev');
+  const next = document.getElementById('partners-next');
+  if (!track || !progress) return;
+  const max = Math.max(0, track.scrollWidth - track.clientWidth);
+  const value = max > 0 ? Math.min(100, Math.max(0, track.scrollLeft / max * 100)) : 100;
+  progress.style.setProperty('--partners-progress', `${value}%`);
+  progress.style.width = `${value}%`;
+  if (prev) prev.disabled = max <= 1;
+  if (next) next.disabled = max <= 1;
+}
+
+function movePartners(direction) {
+  const track = document.getElementById('partners-track');
+  if (!track) return;
+  const card = track.querySelector('.partner-card');
+  if (!card) return;
+  const gap = Number.parseFloat(getComputedStyle(track).gap) || 13;
+  const step = card.getBoundingClientRect().width + gap;
+  const max = Math.max(0, track.scrollWidth - track.clientWidth);
+  let target = track.scrollLeft + direction * step;
+  if (direction > 0 && target > max - 4) target = 0;
+  if (direction < 0 && target < 4) target = max;
+  track.scrollTo({ left: target, behavior: 'smooth' });
+}
+
+function stopPartnerAuto() {
+  if (partnerAutoTimer) window.clearInterval(partnerAutoTimer);
+  partnerAutoTimer = 0;
+}
+
+function startPartnerAuto() {
+  stopPartnerAuto();
+  if (publicPartners.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  partnerAutoTimer = window.setInterval(() => {
+    if (!document.hidden) movePartners(1);
+  }, 5200);
+}
+
+async function loadPublicPartners() {
+  const section = document.getElementById('partners');
+  const shell = document.getElementById('partners-shell');
+  const track = document.getElementById('partners-track');
+  const count = document.getElementById('partners-count');
+  if (!section || !shell || !track) return;
+  try {
+    const response = await fetch('/api/partners/public');
+    const rows = await response.json();
+    if (!response.ok || !Array.isArray(rows) || rows.length === 0) {
+      section.hidden = true;
+      return;
+    }
+    publicPartners = rows;
+    track.replaceChildren();
+    rows.forEach((row, index) => {
+      const card = document.createElement(row.website_url ? 'a' : 'article');
+      card.className = `partner-card${row.featured ? ' featured' : ''}`;
+      card.dataset.order = String(index + 1).padStart(2, '0');
+      card.style.setProperty('--partner-order', index);
+      if (row.website_url) {
+        card.href = row.website_url;
+        card.target = '_blank';
+        card.rel = 'noopener noreferrer';
+        card.setAttribute('aria-label', `${row.name} rasmiy saytini ochish`);
+      }
+
+      const top = document.createElement('div');
+      top.className = 'partner-card-top';
+      const logo = document.createElement('span');
+      logo.className = 'partner-logo';
+      const initials = partnerInitialsLanding(row.name);
+      logo.textContent = initials;
+      if (row.logo_url) {
+        const image = document.createElement('img');
+        image.src = row.logo_url;
+        image.alt = `${row.name} logosi`;
+        image.loading = 'lazy';
+        image.addEventListener('load', () => logo.replaceChildren(image));
+        image.addEventListener('error', () => { image.remove(); logo.textContent = initials; });
+        logo.appendChild(image);
+      }
+      const badges = document.createElement('span');
+      badges.className = 'partner-badges';
+      if (row.is_verified) {
+        const verified = document.createElement('span');
+        verified.className = 'partner-verified';
+        verified.textContent = 'Tasdiqlangan';
+        badges.appendChild(verified);
+      }
+      if (row.featured) {
+        const featured = document.createElement('span');
+        featured.className = 'partner-featured';
+        featured.textContent = 'Asosiy hamkor';
+        badges.appendChild(featured);
+      }
+      top.append(logo, badges);
+
+      const type = document.createElement('div');
+      type.className = 'partner-type';
+      type.textContent = row.partnership_type;
+      const name = document.createElement('div');
+      name.className = 'partner-name';
+      name.textContent = row.name;
+      card.append(top, type, name);
+      if (row.description) {
+        const description = document.createElement('p');
+        description.className = 'partner-description';
+        description.textContent = row.description;
+        card.appendChild(description);
+      }
+      if (row.website_url) {
+        const link = document.createElement('span');
+        link.className = 'partner-link';
+        link.textContent = 'Rasmiy sayt';
+        card.appendChild(link);
+      }
+      track.appendChild(card);
+    });
+    count.textContent = `${rows.length} ta tasdiqlangan hamkor`;
+    section.hidden = false;
+    requestAnimationFrame(updatePartnersProgress);
+    track.addEventListener('scroll', updatePartnersProgress, { passive: true });
+    shell.addEventListener('pointerenter', stopPartnerAuto);
+    shell.addEventListener('pointerleave', startPartnerAuto);
+    shell.addEventListener('focusin', stopPartnerAuto);
+    shell.addEventListener('focusout', startPartnerAuto);
+    window.addEventListener('resize', updatePartnersProgress, { passive: true });
+    startPartnerAuto();
+  } catch (_) {
+    section.hidden = true;
+  }
+}
+loadPublicPartners();
 
 function enableTestimonialTilt(card) {
   if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -2577,7 +2773,7 @@ function moveMobileDeck(step) {
   const revealSelector = [
     '.trust-head', '.trust-card', '.trust-note', '.landing-section-head',
     '.section-card', '.workflow-card', '.result-copy', '.result-points',
-    '.roles-shell', '.organizations-copy', '.brand-preview', '.faq-shell', '.landing-cta'
+    '.roles-shell', '.partners-shell', '.organizations-copy', '.brand-preview', '.faq-shell', '.landing-cta'
   ].join(',');
   const revealNodes = Array.from(document.querySelectorAll(revealSelector));
   revealNodes.forEach(node => {

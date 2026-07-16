@@ -25,7 +25,7 @@
       .forEach(replaceMark);
 
     const header = document.querySelector('body > header');
-    if (header && !header.querySelector('.nav-logo-icon, .site-logo, .global-site-logo')) {
+    if (header && !header.querySelector('.nav-logo-icon, .site-logo, .brand > .logo, .global-site-logo')) {
       const link = document.createElement('a');
       link.href = '/';
       link.className = 'global-site-logo';

@@ -41,6 +41,7 @@ async def ensure_center_group_tables():
                 directory_telegram_url TEXT,
                 directory_instagram_url TEXT,
                 directory_gallery_urls TEXT[] NOT NULL DEFAULT '{}',
+                directory_gallery_captions TEXT[] NOT NULL DEFAULT '{}',
                 directory_show_email BOOLEAN DEFAULT FALSE,
                 directory_show_phone BOOLEAN DEFAULT FALSE,
                 directory_show_address BOOLEAN DEFAULT FALSE,
@@ -73,6 +74,7 @@ async def ensure_center_group_tables():
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_telegram_url TEXT")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_instagram_url TEXT")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_gallery_urls TEXT[] NOT NULL DEFAULT '{}'")
+        await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_gallery_captions TEXT[] NOT NULL DEFAULT '{}'")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_show_email BOOLEAN NOT NULL DEFAULT FALSE")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_show_phone BOOLEAN NOT NULL DEFAULT FALSE")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS directory_show_address BOOLEAN NOT NULL DEFAULT FALSE")

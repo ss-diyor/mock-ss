@@ -126,10 +126,37 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
 .roster-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 12px; font-family: var(--mono); border-bottom: 1px solid var(--border); }
 .roster-row:last-child { border-bottom: none; }
 
+/* PUBLIC GALLERY EDITOR */
+.gallery-editor { grid-column: 1 / -1; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: linear-gradient(145deg, var(--bg), var(--surface)); }
+.gallery-editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.gallery-editor-head p { margin-top: 5px; color: var(--muted); font: 500 10px/1.55 var(--mono); }
+.gallery-items { display: grid; gap: 10px; }
+.gallery-item { display: grid; grid-template-columns: 44px minmax(0, 1.2fr) minmax(0, .8fr) auto; align-items: end; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); transition: border-color .2s, box-shadow .2s, transform .2s; }
+.gallery-item.active { border-color: var(--blue); box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 12%, transparent); transform: translateY(-1px); }
+.gallery-item-number { width: 40px; height: 40px; display: grid; place-items: center; align-self: center; border-radius: 11px; background: var(--blue-light); color: var(--blue); font: 700 12px var(--mono); }
+.gallery-item label { margin-bottom: 5px; }
+.gallery-item-remove { align-self: center; }
+.gallery-caption-lab { position: relative; margin-top: 14px; padding: 15px; overflow: hidden; border: 1px dashed var(--blue-mid); border-radius: 12px; background: color-mix(in srgb, var(--blue-light) 62%, var(--surface)); }
+.gallery-caption-lab::after { content: ''; position: absolute; right: -48px; top: -54px; width: 150px; height: 150px; border-radius: 50%; background: color-mix(in srgb, var(--blue) 9%, transparent); pointer-events: none; }
+.gallery-caption-lab-head { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+.gallery-caption-lab-head b { font-size: 12px; }
+.gallery-caption-lab-head span { color: var(--muted); font: 500 9px var(--mono); }
+.gallery-caption-bubbles { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; }
+.gallery-caption-bubble { appearance: none; border: 1px solid color-mix(in srgb, var(--blue) 26%, var(--border)); border-radius: 999px; padding: 8px 12px; background: color-mix(in srgb, var(--surface) 82%, transparent); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 5px 14px var(--shadow); font: 600 10px var(--mono); cursor: pointer; transition: transform .18s, border-color .18s, color .18s, background .18s; }
+.gallery-caption-bubble:hover { border-color: var(--blue); color: var(--blue); transform: translateY(-2px) scale(1.03); }
+.gallery-caption-bubble.selected { border-color: var(--blue); background: var(--blue); color: #fff; }
+.gallery-caption-bubble.burst { animation: galleryBubbleBurst .42s cubic-bezier(.2,.8,.2,1); }
+@keyframes galleryBubbleBurst { 0% { transform: scale(1); opacity: 1; } 45% { transform: scale(1.2); opacity: .9; } 70% { transform: scale(.72); opacity: .25; } 100% { transform: scale(1.35); opacity: 0; } }
+.gallery-editor-empty { padding: 18px; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); text-align: center; font: 500 11px var(--mono); }
+
 @media (max-width: 700px) {
   nav { padding: 14px 16px; }
   .wrap { padding: 0 16px; }
   .group-row { flex-direction: column; align-items: flex-start; }
+  .gallery-editor-head, .gallery-caption-lab-head { align-items: flex-start; flex-direction: column; }
+  .gallery-item { grid-template-columns: 40px minmax(0, 1fr); }
+  .gallery-item > div:nth-child(3) { grid-column: 2; }
+  .gallery-item-remove { grid-column: 2; justify-self: start; }
 }
 </style>
 <script src="/static/notification-center.js"></script>
@@ -365,7 +392,17 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
               <div><label>Rasmiy sayt (HTTPS)</label><input id="directory-website" placeholder="https://..."></div>
               <div><label>Telegram (HTTPS)</label><input id="directory-telegram" placeholder="https://t.me/..."></div>
               <div><label>Instagram (HTTPS)</label><input id="directory-instagram" placeholder="https://instagram.com/..."></div>
-              <div style="grid-column:1/-1"><label>Tashkilot suratlari — har qatorda bitta HTTPS URL (maksimal 8 ta)</label><textarea id="directory-gallery" maxlength="6500" placeholder="https://.../bino.jpg&#10;https://.../sinfxona.jpg&#10;https://.../tadbir.jpg" style="min-height:110px"></textarea><small style="display:block;margin-top:6px;color:var(--muted);font:600 9px var(--mono)">Suratlar public sahifada swipe galereya sifatida ko‘rsatiladi.</small></div>
+              <div class="gallery-editor">
+                <div class="gallery-editor-head">
+                  <div><label style="margin:0">Tashkilot suratlari va captionlar</label><p>Har bir HTTPS suratga tayyor bubble caption tanlang yoki caption maydoniga o‘zingiz yozing. Maksimal 8 ta surat.</p></div>
+                  <button class="btn-outline btn-sm" type="button" id="add-gallery-item" onclick="addGalleryItem()">+ Surat qo‘shish</button>
+                </div>
+                <div class="gallery-items" id="directory-gallery-items"></div>
+                <div class="gallery-caption-lab" id="gallery-caption-lab">
+                  <div class="gallery-caption-lab-head"><b id="gallery-caption-target">01-rasm uchun caption</b><span>Bubble ustiga bosing — tanlanganda yorilish effekti ishlaydi</span></div>
+                  <div class="gallery-caption-bubbles" id="gallery-caption-bubbles"></div>
+                </div>
+              </div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:16px;">
               <label style="display:flex;align-items:center;gap:7px;text-transform:none"><input id="directory-show-email" type="checkbox" style="width:auto"> Emailni ko'rsatish</label>
@@ -1099,6 +1136,100 @@ function applyBranding(branding) {
   else window.addEventListener('load', () => window.renderWhiteLabelContactFooter?.(branding), {once:true});
 }
 
+const GALLERY_CAPTION_PRESETS = [
+  "Tashkilot binosi", "Ta'lim muhiti", "Tashkilot hayoti",
+  "Zamonaviy sinfxonalar", "Kutubxona", "Kompyuter xonasi",
+  "Laboratoriya", "Sport va salomatlik", "O'quvchilarimiz",
+  "Ustozlar jamoasi", "Dars jarayoni", "Tadbirlar",
+  "Yutuqlarimiz", "Ijodiy mashg'ulotlar", "Kampus hayoti"
+];
+let galleryDraft = [];
+let activeGalleryIndex = 0;
+
+function setGalleryDraft(urls = [], captions = []) {
+  galleryDraft = urls.slice(0, 8).map((url, index) => ({
+    url: url || '',
+    caption: captions[index] || GALLERY_CAPTION_PRESETS[index % GALLERY_CAPTION_PRESETS.length]
+  }));
+  activeGalleryIndex = 0;
+  renderGalleryEditor();
+}
+
+function renderGalleryEditor() {
+  const container = document.getElementById('directory-gallery-items');
+  const lab = document.getElementById('gallery-caption-lab');
+  document.getElementById('add-gallery-item').disabled = galleryDraft.length >= 8;
+  if (!galleryDraft.length) {
+    container.innerHTML = '<div class="gallery-editor-empty">Hali surat qo‘shilmagan. “Surat qo‘shish” tugmasini bosing.</div>';
+    lab.style.display = 'none';
+    return;
+  }
+  lab.style.display = 'block';
+  container.innerHTML = galleryDraft.map((item, index) => `
+    <div class="gallery-item${index === activeGalleryIndex ? ' active' : ''}" data-gallery-item="${index}" onclick="selectGalleryItem(${index})">
+      <div class="gallery-item-number">${String(index + 1).padStart(2, '0')}</div>
+      <div><label>Surat URL (HTTPS)</label><input value="${escapeHtml(item.url)}" placeholder="https://.../surat.jpg" maxlength="800" onfocus="selectGalleryItem(${index})" oninput="updateGalleryField(${index},'url',this.value)"></div>
+      <div><label>Caption</label><input id="gallery-caption-${index}" value="${escapeHtml(item.caption)}" placeholder="Captionni yozing yoki bubble tanlang" maxlength="120" onfocus="selectGalleryItem(${index})" oninput="updateGalleryField(${index},'caption',this.value)"></div>
+      <button class="btn-outline btn-sm danger gallery-item-remove" type="button" onclick="event.stopPropagation();removeGalleryItem(${index})">Olib tashlash</button>
+    </div>`).join('');
+  renderGalleryBubbles();
+}
+
+function renderGalleryBubbles() {
+  if (!galleryDraft.length) return;
+  const current = galleryDraft[activeGalleryIndex]?.caption || '';
+  document.getElementById('gallery-caption-target').textContent = `${String(activeGalleryIndex + 1).padStart(2, '0')}-rasm uchun caption`;
+  document.getElementById('gallery-caption-bubbles').innerHTML = GALLERY_CAPTION_PRESETS.map((caption, index) =>
+    `<button class="gallery-caption-bubble${caption === current ? ' selected' : ''}" type="button" onclick="chooseGalleryCaption(${index},this)">${escapeHtml(caption)}</button>`
+  ).join('');
+}
+
+function selectGalleryItem(index) {
+  if (!galleryDraft[index]) return;
+  activeGalleryIndex = index;
+  document.querySelectorAll('[data-gallery-item]').forEach((item, itemIndex) => item.classList.toggle('active', itemIndex === index));
+  renderGalleryBubbles();
+}
+
+function updateGalleryField(index, field, value) {
+  if (!galleryDraft[index]) return;
+  galleryDraft[index][field] = value;
+  if (field === 'caption' && index === activeGalleryIndex) renderGalleryBubbles();
+}
+
+function addGalleryItem() {
+  if (galleryDraft.length >= 8) return;
+  const index = galleryDraft.length;
+  galleryDraft.push({url: '', caption: GALLERY_CAPTION_PRESETS[index % GALLERY_CAPTION_PRESETS.length]});
+  activeGalleryIndex = index;
+  renderGalleryEditor();
+  document.querySelector(`[data-gallery-item="${index}"] input`)?.focus();
+}
+
+function removeGalleryItem(index) {
+  galleryDraft.splice(index, 1);
+  activeGalleryIndex = Math.max(0, Math.min(activeGalleryIndex, galleryDraft.length - 1));
+  renderGalleryEditor();
+}
+
+function chooseGalleryCaption(presetIndex, bubble) {
+  if (!galleryDraft[activeGalleryIndex]) return;
+  const caption = GALLERY_CAPTION_PRESETS[presetIndex];
+  galleryDraft[activeGalleryIndex].caption = caption;
+  const input = document.getElementById(`gallery-caption-${activeGalleryIndex}`);
+  if (input) input.value = caption;
+  bubble.classList.add('burst');
+  setTimeout(() => renderGalleryBubbles(), 390);
+}
+
+function collectGalleryPayload() {
+  const items = galleryDraft.map(item => ({url: item.url.trim(), caption: item.caption.trim()})).filter(item => item.url);
+  return {
+    urls: items.map(item => item.url),
+    captions: items.map((item, index) => item.caption || GALLERY_CAPTION_PRESETS[index % GALLERY_CAPTION_PRESETS.length])
+  };
+}
+
 function fillBrandingForm(b) {
   if (!b) return;
   document.getElementById('brand-name').value = b.brand_name || '';
@@ -1117,7 +1248,7 @@ function fillBrandingForm(b) {
   document.getElementById('directory-website').value = b.directory_website_url || '';
   document.getElementById('directory-telegram').value = b.directory_telegram_url || '';
   document.getElementById('directory-instagram').value = b.directory_instagram_url || '';
-  document.getElementById('directory-gallery').value = (b.directory_gallery_urls || []).join('\n');
+  setGalleryDraft(b.directory_gallery_urls || [], b.directory_gallery_captions || []);
   document.getElementById('directory-show-email').checked = b.directory_show_email === true;
   document.getElementById('directory-show-phone').checked = b.directory_show_phone === true;
   document.getElementById('directory-show-address').checked = b.directory_show_address === true;
@@ -1136,6 +1267,7 @@ async function saveBranding() {
   const err = document.getElementById('branding-error');
   err.style.display = 'none'; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saqlanmoqda...';
   try {
+    const gallery = collectGalleryPayload();
     const data = await apiCall(HT_API, '/center/branding', {
       method: 'PUT', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -1154,7 +1286,8 @@ async function saveBranding() {
         directory_website_url: document.getElementById('directory-website').value,
         directory_telegram_url: document.getElementById('directory-telegram').value,
         directory_instagram_url: document.getElementById('directory-instagram').value,
-        directory_gallery_urls: document.getElementById('directory-gallery').value.split(/\r?\n/).map(value => value.trim()).filter(Boolean),
+        directory_gallery_urls: gallery.urls,
+        directory_gallery_captions: gallery.captions,
         directory_show_email: document.getElementById('directory-show-email').checked,
         directory_show_phone: document.getElementById('directory-show-phone').checked,
         directory_show_address: document.getElementById('directory-show-address').checked,
@@ -1307,6 +1440,21 @@ async function loadStats() {
 
 // ─── INIT ─────────────────────────────────────────────────
 (async function init() {
+  const previewParams = new URLSearchParams(location.search);
+  const localGalleryPreview = previewParams.get('preview') === 'gallery-captions' && ['localhost', '127.0.0.1', ''].includes(location.hostname);
+  if (localGalleryPreview) {
+    showView('view-dashboard');
+    switchSection('branding');
+    document.getElementById('nav-right').innerHTML = '<span class="badge success">Preview</span>';
+    fillBrandingForm({
+      brand_name: "Bo‘stonliq ITMA", slug: 'bustanlik-itma', primary_color: '#1a56e8', secondary_color: '#0b1733',
+      directory_gallery_urls: ['https://i.ibb.co/example/building.jpg', 'https://i.ibb.co/example/classroom.jpg', 'https://i.ibb.co/example/students.jpg'],
+      directory_gallery_captions: ['Tashkilot binosi', "Ta'lim muhiti", 'Tashkilot hayoti']
+    });
+    const saveButton = document.getElementById('save-branding-btn');
+    saveButton.disabled = true; saveButton.textContent = 'Preview rejimi';
+    return;
+  }
   if (!token) { showView('view-auth'); return; }
   try {
     const data = await apiCall(AUTH_API, '/me');

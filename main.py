@@ -31,7 +31,7 @@ from school_staff_routes import router as school_staff_router
 from billing_routes import router as billing_router
 from test_catalog_routes import router as test_catalog_router, _can_access_test
 from test_builder_routes import router as test_builder_router
-from branding import ORGANIZATION_TYPES, SLUG_RE, branding_payload
+from branding import GALLERY_CAPTION_PRESETS, ORGANIZATION_TYPES, SLUG_RE, branding_payload
 from notification_center import (
     router as notification_router,
     ensure_notification_tables,
@@ -2035,6 +2035,7 @@ async def admin_center_detail(center_id: int, _: None = Depends(require_admin)):
                    c.brand_contact_phone, c.directory_description, c.directory_region,
                    c.directory_address, c.directory_website_url, c.directory_telegram_url,
                    c.directory_instagram_url, c.directory_gallery_urls,
+                   c.directory_gallery_captions,
                    c.directory_show_email, c.directory_show_phone,
                    c.directory_show_address, c.directory_show_statistics,
                    c.directory_show_testimonials, c.directory_featured,
@@ -2102,6 +2103,17 @@ async def admin_center_detail(center_id: int, _: None = Depends(require_admin)):
         "telegram_url": row["directory_telegram_url"],
         "instagram_url": row["directory_instagram_url"],
         "gallery_urls": list(row["directory_gallery_urls"] or []),
+        "gallery_items": [
+            {
+                "url": url,
+                "caption": (
+                    row["directory_gallery_captions"][index]
+                    if index < len(row["directory_gallery_captions"] or []) and row["directory_gallery_captions"][index]
+                    else GALLERY_CAPTION_PRESETS[index % len(GALLERY_CAPTION_PRESETS)]
+                ),
+            }
+            for index, url in enumerate(row["directory_gallery_urls"] or [])
+        ],
         "show_email": row["directory_show_email"] is True,
         "show_phone": row["directory_show_phone"] is True,
         "show_address": row["directory_show_address"] is True,
@@ -2360,6 +2372,19 @@ async def admin_review_subscription_payment(
 
 def public_organization_payload(row: dict) -> dict:
     show_stats = row["directory_show_statistics"] is True
+    gallery_urls = list(row.get("directory_gallery_urls") or [])
+    gallery_captions = list(row.get("directory_gallery_captions") or [])
+    gallery_items = [
+        {
+            "url": url,
+            "caption": (
+                gallery_captions[index].strip()
+                if index < len(gallery_captions) and gallery_captions[index] and gallery_captions[index].strip()
+                else GALLERY_CAPTION_PRESETS[index % len(GALLERY_CAPTION_PRESETS)]
+            ),
+        }
+        for index, url in enumerate(gallery_urls)
+    ]
     return {
         "id": row["id"],
         "slug": row["slug"],
@@ -2375,7 +2400,8 @@ def public_organization_payload(row: dict) -> dict:
         "website_url": row["directory_website_url"],
         "telegram_url": row["directory_telegram_url"],
         "instagram_url": row["directory_instagram_url"],
-        "gallery_urls": list(row.get("directory_gallery_urls") or []),
+        "gallery_urls": gallery_urls,
+        "gallery_items": gallery_items,
         "students_count": row["students_count"] if show_stats else None,
         "groups_count": row["groups_count"] if show_stats else None,
         "featured": row["directory_featured"] is True,
@@ -2397,6 +2423,7 @@ async def public_organizations(organization_type: Optional[str] = None, q: Optio
                    c.brand_contact_phone, c.directory_description, c.directory_region,
                    c.directory_address, c.directory_website_url, c.directory_telegram_url,
                    c.directory_instagram_url, c.directory_gallery_urls,
+                   c.directory_gallery_captions,
                    c.directory_show_email, c.directory_show_phone,
                    c.directory_show_address, c.directory_show_statistics,
                    c.directory_show_testimonials, c.directory_featured,
@@ -2433,6 +2460,7 @@ async def public_organization_detail(slug: str):
                    c.brand_contact_phone, c.directory_description, c.directory_region,
                    c.directory_address, c.directory_website_url, c.directory_telegram_url,
                    c.directory_instagram_url, c.directory_gallery_urls,
+                   c.directory_gallery_captions,
                    c.directory_show_email, c.directory_show_phone,
                    c.directory_show_address, c.directory_show_statistics,
                    c.directory_show_testimonials, c.directory_featured,
@@ -2486,6 +2514,7 @@ async def public_branding(slug: str):
                    directory_opt_in, directory_admin_override, directory_description,
                    directory_region, directory_address, directory_website_url,
                    directory_telegram_url, directory_instagram_url, directory_gallery_urls,
+                   directory_gallery_captions,
                    directory_show_email,
                    directory_show_phone, directory_show_address, directory_show_statistics,
                    directory_show_testimonials

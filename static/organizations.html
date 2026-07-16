@@ -136,17 +136,18 @@ function floatingStats(row){
 }
 
 function gallerySection(row){
-  const urls=Array.isArray(row.gallery_urls)?row.gallery_urls.filter(Boolean).slice(0,8):[];
-  if(!urls.length)return '';
+  const defaults=["Tashkilot binosi","Ta'lim muhiti","Tashkilot hayoti","Zamonaviy sinfxonalar","Kutubxona","Kompyuter xonasi","Laboratoriya","Sport va salomatlik","O'quvchilarimiz","Ustozlar jamoasi","Dars jarayoni","Tadbirlar","Yutuqlarimiz","Ijodiy mashg'ulotlar","Kampus hayoti"];
+  const items=(Array.isArray(row.gallery_items)&&row.gallery_items.length?row.gallery_items:(row.gallery_urls||[]).map((url,index)=>({url,caption:defaults[index%defaults.length]}))).filter(item=>item&&item.url).slice(0,8);
+  if(!items.length)return '';
   const fallback=typeIcon(row);
   return `<section class="gallery-panel detail-panel" aria-labelledby="organization-gallery-title">
     <div class="gallery-heading"><div><div class="section-label">$ campus --gallery</div><h2 id="organization-gallery-title">Tashkilot muhiti</h2><p>Suratlarni chapga yoki o‘ngga suring.</p></div>
-      ${urls.length>1?`<div class="gallery-controls"><button type="button" onclick="moveGallery(-1)" aria-label="Oldingi surat">←</button><span id="gallery-position">01 / ${String(urls.length).padStart(2,'0')}</span><button type="button" onclick="moveGallery(1)" aria-label="Keyingi surat">→</button></div>`:''}
+      ${items.length>1?`<div class="gallery-controls"><button type="button" onclick="moveGallery(-1)" aria-label="Oldingi surat">←</button><span id="gallery-position">01 / ${String(items.length).padStart(2,'0')}</span><button type="button" onclick="moveGallery(1)" aria-label="Keyingi surat">→</button></div>`:''}
     </div>
     <div class="gallery-track" id="organization-gallery" tabindex="0" role="region" aria-roledescription="carousel" aria-label="${esc(row.name)} suratlari">
-      ${urls.map((url,index)=>`<figure class="gallery-slide" data-gallery-index="${index}"><div class="gallery-fallback">${fallback}<span>${esc(row.name)}</span></div><img src="${esc(url)}" alt="${esc(row.name)} — ${index+1}-surat" loading="${index?'lazy':'eager'}" draggable="false" onerror="this.closest('.gallery-slide').classList.add('image-error');this.remove()"><figcaption><span>${String(index+1).padStart(2,'0')}</span><b>${index===0?'Tashkilot binosi':index===1?'Ta’lim muhiti':'Tashkilot hayoti'}</b></figcaption></figure>`).join('')}
+      ${items.map((item,index)=>`<figure class="gallery-slide" data-gallery-index="${index}"><div class="gallery-fallback">${fallback}<span>${esc(row.name)}</span></div><img src="${esc(item.url)}" alt="${esc(row.name)} — ${esc(item.caption||defaults[index%defaults.length])}" loading="${index?'lazy':'eager'}" draggable="false" onerror="this.closest('.gallery-slide').classList.add('image-error');this.remove()"><figcaption><span>${String(index+1).padStart(2,'0')}</span><b>${esc(item.caption||defaults[index%defaults.length])}</b></figcaption></figure>`).join('')}
     </div>
-    ${urls.length>1?`<div class="gallery-dots">${urls.map((_,index)=>`<button type="button" data-gallery-dot="${index}" onclick="goToGallery(${index})" aria-label="${index+1}-surat"${index===0?' class="active" aria-current="true"':''}></button>`).join('')}</div>`:''}
+    ${items.length>1?`<div class="gallery-dots">${items.map((_,index)=>`<button type="button" data-gallery-dot="${index}" onclick="goToGallery(${index})" aria-label="${index+1}-surat"${index===0?' class="active" aria-current="true"':''}></button>`).join('')}</div>`:''}
   </section>`;
 }
 
@@ -204,7 +205,7 @@ async function loadDetail(slug){
   catch(error){box.innerHTML=`<div class="empty-state"><b>${esc(error.message)}</b><a class="button button-secondary" href="/organizations">Katalogga qaytish</a></div>`}
 }
 
-const previewOrganization={name:"Bo‘stonliq ITMA",organization_type:'school',description:"Bo‘stonliq tumanidagi zamonaviy ta’lim muhiti, IELTS tayyorgarligi va o‘quvchi natijalarini yagona platformada birlashtirgan ixtisoslashtirilgan maktab.",region:"Toshkent viloyati, Bo‘stonliq tumani",address:"G‘azalkent shahri, Birlik ko‘chasi 21-uy",logo_url:'/static/assets/site-logo-sd.png',primary_color:'#1a56e8',contact_email:'info@bustanlik-itma.uz',contact_phone:'+998 99 254 24 85',website_url:'https://ielts.sultanov.space',telegram_url:'https://t.me/ielts_mock_ss',instagram_url:null,students_count:486,groups_count:18,gallery_urls:['https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1400&q=85','https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1400&q=85','https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=85'],testimonials:[]};
+const previewOrganization={name:"Bo‘stonliq ITMA",organization_type:'school',description:"Bo‘stonliq tumanidagi zamonaviy ta’lim muhiti, IELTS tayyorgarligi va o‘quvchi natijalarini yagona platformada birlashtirgan ixtisoslashtirilgan maktab.",region:"Toshkent viloyati, Bo‘stonliq tumani",address:"G‘azalkent shahri, Birlik ko‘chasi 21-uy",logo_url:'/static/assets/site-logo-sd.png',primary_color:'#1a56e8',contact_email:'info@bustanlik-itma.uz',contact_phone:'+998 99 254 24 85',website_url:'https://ielts.sultanov.space',telegram_url:'https://t.me/ielts_mock_ss',instagram_url:null,students_count:486,groups_count:18,gallery_items:[{url:'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1400&q=85',caption:'Tashkilot binosi'},{url:'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1400&q=85',caption:'Ta’lim muhiti'},{url:'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=85',caption:'Tashkilot hayoti'}],testimonials:[]};
 const params=new URLSearchParams(location.search),localPreview=params.get('preview')==='organization-wow'&&['','localhost','127.0.0.1'].includes(location.hostname);
 const match=decodeURIComponent(location.pathname).match(/^\/org\/([^/]+)\/?$/);
 if(localPreview){document.getElementById('catalog-view').classList.add('hidden');document.getElementById('detail-view').classList.add('visible');renderOrganizationDetail(previewOrganization)}

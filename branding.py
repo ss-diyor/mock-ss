@@ -11,6 +11,23 @@ DEFAULT_SECONDARY_COLOR = "#0b1733"
 ORGANIZATION_TYPES = {"learning_center", "school"}
 HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+GALLERY_CAPTION_PRESETS = (
+    "Tashkilot binosi",
+    "Ta'lim muhiti",
+    "Tashkilot hayoti",
+    "Zamonaviy sinfxonalar",
+    "Kutubxona",
+    "Kompyuter xonasi",
+    "Laboratoriya",
+    "Sport va salomatlik",
+    "O'quvchilarimiz",
+    "Ustozlar jamoasi",
+    "Dars jarayoni",
+    "Tadbirlar",
+    "Yutuqlarimiz",
+    "Ijodiy mashg'ulotlar",
+    "Kampus hayoti",
+)
 
 
 class BrandingUpdateIn(BaseModel):
@@ -30,6 +47,7 @@ class BrandingUpdateIn(BaseModel):
     directory_telegram_url: Optional[str] = None
     directory_instagram_url: Optional[str] = None
     directory_gallery_urls: list[str] = Field(default_factory=list)
+    directory_gallery_captions: list[str] = Field(default_factory=list)
     directory_show_email: bool = False
     directory_show_phone: bool = False
     directory_show_address: bool = False
@@ -88,9 +106,12 @@ def validate_branding(data: BrandingUpdateIn) -> dict:
                 raise HTTPException(status_code=400, detail="Katalog havolalari HTTPS formatida bo'lishi kerak")
 
     gallery_urls = []
+    gallery_captions = []
     if len(data.directory_gallery_urls) > 8:
         raise HTTPException(status_code=400, detail="Galereyaga ko'pi bilan 8 ta surat qo'shish mumkin")
-    for raw_url in data.directory_gallery_urls:
+    if len(data.directory_gallery_captions) > 8:
+        raise HTTPException(status_code=400, detail="Galereyaga ko'pi bilan 8 ta caption qo'shish mumkin")
+    for source_index, raw_url in enumerate(data.directory_gallery_urls):
         url = clean_optional(raw_url, 800)
         if not url:
             continue
@@ -99,6 +120,8 @@ def validate_branding(data: BrandingUpdateIn) -> dict:
             raise HTTPException(status_code=400, detail="Galereya suratlari faqat to'g'ri HTTPS URL bo'lishi kerak")
         if url not in gallery_urls:
             gallery_urls.append(url)
+            raw_caption = data.directory_gallery_captions[source_index] if source_index < len(data.directory_gallery_captions) else None
+            gallery_captions.append(clean_optional(raw_caption, 120) or GALLERY_CAPTION_PRESETS[len(gallery_urls) - 1])
 
     return {
         "brand_name": brand_name,
@@ -115,6 +138,7 @@ def validate_branding(data: BrandingUpdateIn) -> dict:
         "directory_address": clean_optional(data.directory_address, 300),
         **directory_urls,
         "directory_gallery_urls": gallery_urls,
+        "directory_gallery_captions": gallery_captions,
         "directory_show_email": data.directory_show_email,
         "directory_show_phone": data.directory_show_phone,
         "directory_show_address": data.directory_show_address,
@@ -131,6 +155,15 @@ def branding_payload(row) -> dict:
         gallery_urls = list(row["directory_gallery_urls"] or [])
     except (KeyError, TypeError):
         gallery_urls = []
+    try:
+        stored_captions = list(row["directory_gallery_captions"] or [])
+    except (KeyError, TypeError):
+        stored_captions = []
+    gallery_captions = [
+        (stored_captions[index].strip() if index < len(stored_captions) and stored_captions[index] and stored_captions[index].strip()
+         else GALLERY_CAPTION_PRESETS[index % len(GALLERY_CAPTION_PRESETS)])
+        for index in range(len(gallery_urls))
+    ]
     return {
         "organization_id": row["id"],
         "organization_type": organization_type,
@@ -152,6 +185,11 @@ def branding_payload(row) -> dict:
         "directory_telegram_url": row["directory_telegram_url"],
         "directory_instagram_url": row["directory_instagram_url"],
         "directory_gallery_urls": gallery_urls,
+        "directory_gallery_captions": gallery_captions,
+        "directory_gallery_items": [
+            {"url": url, "caption": gallery_captions[index]}
+            for index, url in enumerate(gallery_urls)
+        ],
         "directory_show_email": row["directory_show_email"] is True,
         "directory_show_phone": row["directory_show_phone"] is True,
         "directory_show_address": row["directory_show_address"] is True,

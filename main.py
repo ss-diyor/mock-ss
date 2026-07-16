@@ -1543,13 +1543,15 @@ async def admin_update_partner(partner_id: int, data: PartnerUpsertIn, _: None =
         row = await conn.fetchrow(
             """
             UPDATE partners SET
-                name=$2, partnership_type=$3, description=$4, logo_url=$5,
-                logo_data=CASE WHEN $5 IS NOT NULL THEN NULL ELSE logo_data END,
-                logo_mime=CASE WHEN $5 IS NOT NULL THEN NULL ELSE logo_mime END,
-                website_url=$6, status=$7, is_verified=$8, featured=$9,
-                sort_order=$10, updated_at=NOW(),
+                name=$2::text, partnership_type=$3::text, description=$4::text,
+                logo_url=$5::text,
+                logo_data=CASE WHEN $5::text IS NOT NULL THEN NULL ELSE logo_data END,
+                logo_mime=CASE WHEN $5::text IS NOT NULL THEN NULL ELSE logo_mime END,
+                website_url=$6::text, status=$7::text,
+                is_verified=$8::boolean, featured=$9::boolean,
+                sort_order=$10::integer, updated_at=NOW(),
                 published_at=CASE
-                    WHEN $7='published' THEN COALESCE(published_at, NOW())
+                    WHEN $7::text='published' THEN COALESCE(published_at, NOW())
                     ELSE NULL
                 END
             WHERE id=$1

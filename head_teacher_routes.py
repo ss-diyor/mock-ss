@@ -66,6 +66,84 @@ async def get_center(current_user: dict = Depends(get_current_head_teacher)):
     }
 
 
+@router.get("/leader-profile")
+async def get_leader_profile(current_user: dict = Depends(get_current_head_teacher)):
+    """Direktor va o'quv markazi rahbari uchun birlashtirilgan profil ma'lumotlari."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT u.id, u.username, u.email, u.full_name, u.bio, u.created_at,
+                   u.email_verified, u.telegram_chat_id,
+                   (u.avatar_mime IS NOT NULL) AS has_avatar,
+                   c.id AS center_id, c.name AS center_name, c.organization_type,
+                   c.slug, c.is_active, c.created_at AS center_created_at,
+                   c.brand_name, c.brand_logo_url, c.brand_primary_color,
+                   c.subscription_required,
+                   COALESCE(sub.status, 'not_required') AS subscription_status,
+                   (SELECT COUNT(*) FROM users student
+                    WHERE student.center_id=c.id AND student.role='student'
+                      AND student.deleted_at IS NULL) AS students_count,
+                   (SELECT COUNT(*) FROM groups g
+                    WHERE g.center_id=c.id AND g.deleted_at IS NULL AND g.is_active=TRUE) AS groups_count,
+                   (SELECT COUNT(*) FROM school_classes sc
+                    WHERE sc.center_id=c.id AND sc.is_active=TRUE) AS classes_count,
+                   (SELECT COUNT(*) FROM users employee
+                    WHERE employee.center_id=c.id AND employee.role<>'student'
+                      AND employee.deleted_at IS NULL) AS employees_count,
+                   (SELECT COUNT(*) FROM tests t
+                    WHERE t.center_id=c.id AND t.deleted_at IS NULL) AS tests_count
+            FROM users u
+            JOIN centers c ON c.id=u.center_id
+            LEFT JOIN organization_subscriptions sub ON sub.center_id=c.id
+            WHERE u.id=$1 AND c.id=$2 AND c.deleted_at IS NULL
+            """,
+            current_user["id"], current_user["center_id"]
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Rahbar profili topilmadi")
+
+    role = current_user.get("role")
+    role_label = "Maktab direktori" if role == "director" else "O'quv markazi rahbari"
+    organization_name = row["brand_name"] or row["center_name"]
+    return {
+        "user": {
+            "id": row["id"],
+            "username": row["username"],
+            "email": row["email"],
+            "full_name": row["full_name"],
+            "bio": row["bio"],
+            "role": role,
+            "role_label": role_label,
+            "email_verified": row["email_verified"] is True,
+            "telegram_chat_id": row["telegram_chat_id"],
+            "avatar_url": f"/api/auth/avatar/{row['username']}" if row["has_avatar"] else None,
+            "member_since": row["created_at"].isoformat() if row["created_at"] else None,
+        },
+        "organization": {
+            "id": row["center_id"],
+            "name": organization_name,
+            "internal_name": row["center_name"],
+            "organization_type": row["organization_type"],
+            "type_label": "Maktab" if row["organization_type"] == "school" else "O'quv markazi",
+            "slug": row["slug"],
+            "public_url": f"/org/{row['slug']}" if row["slug"] else None,
+            "logo_url": row["brand_logo_url"],
+            "primary_color": row["brand_primary_color"] or "#1a56e8",
+            "is_active": row["is_active"] is True,
+            "created_at": row["center_created_at"].isoformat() if row["center_created_at"] else None,
+            "subscription_required": row["subscription_required"] is True,
+            "subscription_status": row["subscription_status"],
+        },
+        "statistics": {
+            "students": row["students_count"],
+            "groups_or_classes": row["classes_count"] if row["organization_type"] == "school" else row["groups_count"],
+            "employees": row["employees_count"],
+            "tests": row["tests_count"],
+        },
+    }
+
+
 @router.put("/center/branding")
 async def update_center_branding(
     data: BrandingUpdateIn,

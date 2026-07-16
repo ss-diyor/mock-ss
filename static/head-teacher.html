@@ -519,6 +519,7 @@ function afterAuthResolved() {
   }
   document.getElementById('nav-right').innerHTML = `
     <span class="badge muted">@${currentUser.username}</span>
+    <a class="btn-outline btn-sm" href="/leader-profile" style="display:inline-flex;align-items:center;text-decoration:none">Profilim</a>
     <button class="btn-outline btn-sm" onclick="logout()">Chiqish</button>
   `;
   window.NotificationCenter?.mount({ target: document.getElementById('nav-right'), getToken: () => token });

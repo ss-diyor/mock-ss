@@ -3277,6 +3277,10 @@ async def profile_page():
 async def head_teacher_page():
     return FileResponse("static/head-teacher.html")
 
+@app.get("/leader-profile")
+async def leader_profile_page():
+    return FileResponse("static/leader-profile.html")
+
 @app.get("/teacher")
 async def teacher_page():
     return FileResponse("static/teacher.html")

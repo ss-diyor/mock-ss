@@ -6,10 +6,8 @@ from pydantic import BaseModel
 from typing import Optional
 import os
 import json
-import httpx
 import asyncio
 import io
-import base64
 import csv
 import hmac
 import re
@@ -21,6 +19,7 @@ from datetime import datetime
 from fpdf import FPDF
 
 from db import get_pool
+from email_service import send_email, send_email_with_attachment
 from scoring import get_band_score
 from auth import router as auth_router, ensure_users_table, get_current_user
 from groups_db import ensure_center_group_tables, DEFAULT_MAX_GROUPS_PER_CENTER, DEFAULT_MAX_STUDENTS_PER_CENTER
@@ -69,11 +68,6 @@ async def no_cache_api(request, call_next):
 
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET")
 MIN_ADMIN_SECRET_LENGTH = 32
-
-# Email konfiguratsiyasi (Resend)
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-EMAIL_FROM = os.environ.get("EMAIL_FROM", "noreply@ielts.sultanov.space")
-
 
 @app.on_event("startup")
 async def startup():
@@ -426,59 +420,6 @@ async def public_platform_stats():
             """
         )
     return dict(row)
-
-
-# ─── Email yuborish (Resend API) ───────────────────────────────────────────────
-
-async def send_email(to_email: str, to_name: str, subject: str, html_body: str):
-    if not RESEND_API_KEY:
-        raise RuntimeError("RESEND_API_KEY sozlanmagan")
-
-    async with httpx.AsyncClient(timeout=15) as client:
-        response = await client.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "from": f"IELTS Mock SS <{EMAIL_FROM}>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html_body
-            }
-        )
-        if response.status_code >= 400:
-            raise RuntimeError(f"Resend xatosi: {response.text}")
-
-async def send_email_with_attachment(to_email: str, to_name: str, subject: str, html_body: str, attachment_bytes: bytes, attachment_filename: str):
-    if not RESEND_API_KEY:
-        raise RuntimeError("RESEND_API_KEY sozlanmagan")
-
-    b64_content = base64.b64encode(attachment_bytes).decode('utf-8')
-
-    async with httpx.AsyncClient(timeout=15) as client:
-        response = await client.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "from": f"IELTS Mock SS <{EMAIL_FROM}>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html_body,
-                "attachments": [
-                    {
-                        "filename": attachment_filename,
-                        "content": b64_content
-                    }
-                ]
-            }
-        )
-        if response.status_code >= 400:
-            raise RuntimeError(f"Resend xatosi: {response.text}")
 
 
 def build_result_email(name: str, section: str, score, total, band, feedback=None) -> str:

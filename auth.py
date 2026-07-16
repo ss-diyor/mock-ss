@@ -5,7 +5,6 @@ import secrets
 import random
 import bcrypt
 import jwt
-import httpx
 import hashlib
 import hmac
 import time
@@ -17,6 +16,7 @@ from typing import Optional
 from PIL import Image
 
 from db import get_pool
+from email_service import send_email
 from scoring import get_band_score
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -36,10 +36,6 @@ JWT_EXPIRE_DAYS = 30
 
 USERNAME_RE = re.compile(r"^[a-z0-9_]{3,20}$")
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
-
-# Email konfiguratsiyasi (Resend) — main.py bilan bir xil environment variable'lar
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-EMAIL_FROM = os.environ.get("EMAIL_FROM", "noreply@ielts.sultanov.space")
 
 VERIFICATION_CODE_TTL_MINUTES = 15
 VERIFICATION_RESEND_COOLDOWN_SECONDS = 60
@@ -99,30 +95,6 @@ async def ensure_users_table():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-
-
-# ─── Email yuborish (Resend API) ────────────────────────────────────────────────
-
-async def send_email(to_email: str, to_name: str, subject: str, html_body: str):
-    if not RESEND_API_KEY:
-        raise RuntimeError("RESEND_API_KEY sozlanmagan")
-
-    async with httpx.AsyncClient(timeout=15) as client:
-        response = await client.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "from": f"IELTS Mock SS <{EMAIL_FROM}>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html_body
-            }
-        )
-        if response.status_code >= 400:
-            raise RuntimeError(f"Resend xatosi: {response.text}")
 
 
 def build_verification_email(name: str, code: str) -> str:

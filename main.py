@@ -31,6 +31,7 @@ from school_staff_routes import router as school_staff_router
 from billing_routes import router as billing_router
 from test_catalog_routes import router as test_catalog_router, _can_access_test
 from test_builder_routes import router as test_builder_router
+from question_bank_routes import router as question_bank_router
 from branding import GALLERY_CAPTION_PRESETS, ORGANIZATION_TYPES, SLUG_RE, branding_payload
 from notification_center import (
     router as notification_router,
@@ -53,6 +54,7 @@ app.include_router(school_staff_router)
 app.include_router(billing_router)
 app.include_router(test_catalog_router)
 app.include_router(test_builder_router)
+app.include_router(question_bank_router)
 app.include_router(notification_router)
 app.include_router(support_router)
 

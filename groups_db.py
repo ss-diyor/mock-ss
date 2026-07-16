@@ -388,6 +388,123 @@ async def ensure_center_group_tables():
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS builder_sections_test_idx ON test_builder_sections(test_id,sort_order)")
         await conn.execute("CREATE INDEX IF NOT EXISTS builder_questions_section_idx ON test_builder_questions(section_id,sort_order)")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS question_bank_sets (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER REFERENCES centers(id) ON DELETE CASCADE,
+                section TEXT NOT NULL CHECK(section IN ('listening','reading','writing','speaking')),
+                title TEXT NOT NULL,
+                instructions TEXT,
+                passage TEXT,
+                topic TEXT,
+                difficulty TEXT NOT NULL DEFAULT 'medium' CHECK(difficulty IN ('easy','medium','hard')),
+                band_min NUMERIC,
+                band_max NUMERIC,
+                source_name TEXT,
+                source_url TEXT,
+                license_note TEXT,
+                status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','review','approved','retired')),
+                created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                review_note TEXT,
+                planned_publish_at TIMESTAMP,
+                review_due_at TIMESTAMP,
+                version INTEGER NOT NULL DEFAULT 1,
+                usage_count INTEGER NOT NULL DEFAULT 0,
+                last_used_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS question_bank_media (
+                id SERIAL PRIMARY KEY,
+                set_id INTEGER NOT NULL REFERENCES question_bank_sets(id) ON DELETE CASCADE,
+                kind TEXT NOT NULL CHECK(kind IN ('audio','image')),
+                original_filename TEXT NOT NULL,
+                mime_type TEXT NOT NULL,
+                file_data BYTEA NOT NULL,
+                file_size INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS question_bank_questions (
+                id SERIAL PRIMARY KEY,
+                set_id INTEGER NOT NULL REFERENCES question_bank_sets(id) ON DELETE CASCADE,
+                question_type TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                options JSONB NOT NULL DEFAULT '[]'::jsonb,
+                correct_answer JSONB,
+                points NUMERIC NOT NULL DEFAULT 1,
+                explanation TEXT,
+                media_id INTEGER REFERENCES question_bank_media(id) ON DELETE SET NULL,
+                skill TEXT,
+                tags TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+                difficulty TEXT NOT NULL DEFAULT 'medium' CHECK(difficulty IN ('easy','medium','hard')),
+                band_min NUMERIC,
+                band_max NUMERIC,
+                content_hash TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','review','approved','retired')),
+                version INTEGER NOT NULL DEFAULT 1,
+                usage_count INTEGER NOT NULL DEFAULT 0,
+                last_used_at TIMESTAMP,
+                created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                review_note TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS question_bank_versions (
+                id SERIAL PRIMARY KEY,
+                bank_question_id INTEGER NOT NULL REFERENCES question_bank_questions(id) ON DELETE CASCADE,
+                version INTEGER NOT NULL,
+                snapshot JSONB NOT NULL,
+                changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(bank_question_id, version)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS question_bank_imports (
+                id SERIAL PRIMARY KEY,
+                center_id INTEGER REFERENCES centers(id) ON DELETE CASCADE,
+                uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                original_filename TEXT NOT NULL,
+                file_format TEXT NOT NULL,
+                status TEXT NOT NULL,
+                total_rows INTEGER NOT NULL DEFAULT 0,
+                imported_rows INTEGER NOT NULL DEFAULT 0,
+                errors JSONB NOT NULL DEFAULT '[]'::jsonb,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS test_builder_question_groups (
+                id SERIAL PRIMARY KEY,
+                section_id INTEGER NOT NULL REFERENCES test_builder_sections(id) ON DELETE CASCADE,
+                title TEXT NOT NULL,
+                instructions TEXT,
+                passage TEXT,
+                media_id INTEGER REFERENCES test_builder_media(id) ON DELETE SET NULL,
+                bank_set_id INTEGER REFERENCES question_bank_sets(id) ON DELETE SET NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        await conn.execute("ALTER TABLE test_builder_questions ADD COLUMN IF NOT EXISTS bank_question_id INTEGER REFERENCES question_bank_questions(id) ON DELETE SET NULL")
+        await conn.execute("ALTER TABLE test_builder_questions ADD COLUMN IF NOT EXISTS bank_question_version INTEGER")
+        await conn.execute("ALTER TABLE test_builder_questions ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES test_builder_question_groups(id) ON DELETE SET NULL")
+        await conn.execute("ALTER TABLE question_bank_sets ADD COLUMN IF NOT EXISTS planned_publish_at TIMESTAMP")
+        await conn.execute("ALTER TABLE question_bank_sets ADD COLUMN IF NOT EXISTS review_due_at TIMESTAMP")
+        await conn.execute("CREATE INDEX IF NOT EXISTS question_bank_sets_scope_idx ON question_bank_sets(center_id,status,section)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS question_bank_questions_filter_idx ON question_bank_questions(status,difficulty,skill)")
+        await conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS question_bank_question_hash_idx ON question_bank_questions(content_hash)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS builder_questions_bank_idx ON test_builder_questions(bank_question_id)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS builder_question_groups_section_idx ON test_builder_question_groups(section_id,sort_order)")
         await conn.execute("ALTER TABLE centers ADD COLUMN IF NOT EXISTS test_upload_enabled BOOLEAN NOT NULL DEFAULT TRUE")
         await conn.execute("""
             INSERT INTO tests(slug,title,description,test_type,visibility,duration_minutes,difficulty,status,legacy_url,card_order)

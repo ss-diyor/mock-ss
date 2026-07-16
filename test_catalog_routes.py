@@ -533,7 +533,16 @@ async def admin_test_status(test_id:int,status:str,_:None=Depends(require_admin)
     db=await get_pool()
     async with db.acquire() as conn:
         if status == "published":
-            ready = await conn.fetchval("SELECT legacy_url IS NOT NULL OR EXISTS(SELECT 1 FROM test_html_sections WHERE test_id=tests.id) FROM tests WHERE id=$1",test_id)
+            ready = await conn.fetchval(
+                """SELECT legacy_url IS NOT NULL
+                          OR EXISTS(SELECT 1 FROM test_html_sections WHERE test_id=tests.id)
+                          OR EXISTS(
+                            SELECT 1 FROM test_builder_sections s
+                            WHERE s.test_id=tests.id
+                              AND EXISTS(SELECT 1 FROM test_builder_questions q WHERE q.section_id=s.id)
+                          )
+                   FROM tests WHERE id=$1""", test_id
+            )
             if not ready: raise HTTPException(400,"Available qilish uchun kamida bitta section fayli kerak")
         row=await conn.fetchrow("UPDATE tests SET status=$2,updated_at=NOW() WHERE id=$1 RETURNING id",test_id,status)
     if not row: raise HTTPException(404,"Test topilmadi")

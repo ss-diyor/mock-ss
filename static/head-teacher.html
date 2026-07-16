@@ -365,6 +365,7 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
               <div><label>Rasmiy sayt (HTTPS)</label><input id="directory-website" placeholder="https://..."></div>
               <div><label>Telegram (HTTPS)</label><input id="directory-telegram" placeholder="https://t.me/..."></div>
               <div><label>Instagram (HTTPS)</label><input id="directory-instagram" placeholder="https://instagram.com/..."></div>
+              <div style="grid-column:1/-1"><label>Tashkilot suratlari — har qatorda bitta HTTPS URL (maksimal 8 ta)</label><textarea id="directory-gallery" maxlength="6500" placeholder="https://.../bino.jpg&#10;https://.../sinfxona.jpg&#10;https://.../tadbir.jpg" style="min-height:110px"></textarea><small style="display:block;margin-top:6px;color:var(--muted);font:600 9px var(--mono)">Suratlar public sahifada swipe galereya sifatida ko‘rsatiladi.</small></div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:16px;">
               <label style="display:flex;align-items:center;gap:7px;text-transform:none"><input id="directory-show-email" type="checkbox" style="width:auto"> Emailni ko'rsatish</label>
@@ -1116,6 +1117,7 @@ function fillBrandingForm(b) {
   document.getElementById('directory-website').value = b.directory_website_url || '';
   document.getElementById('directory-telegram').value = b.directory_telegram_url || '';
   document.getElementById('directory-instagram').value = b.directory_instagram_url || '';
+  document.getElementById('directory-gallery').value = (b.directory_gallery_urls || []).join('\n');
   document.getElementById('directory-show-email').checked = b.directory_show_email === true;
   document.getElementById('directory-show-phone').checked = b.directory_show_phone === true;
   document.getElementById('directory-show-address').checked = b.directory_show_address === true;
@@ -1152,6 +1154,7 @@ async function saveBranding() {
         directory_website_url: document.getElementById('directory-website').value,
         directory_telegram_url: document.getElementById('directory-telegram').value,
         directory_instagram_url: document.getElementById('directory-instagram').value,
+        directory_gallery_urls: document.getElementById('directory-gallery').value.split(/\r?\n/).map(value => value.trim()).filter(Boolean),
         directory_show_email: document.getElementById('directory-show-email').checked,
         directory_show_phone: document.getElementById('directory-show-phone').checked,
         directory_show_address: document.getElementById('directory-show-address').checked,

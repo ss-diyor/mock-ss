@@ -98,27 +98,117 @@ async function loadOrganizations(){
   }catch(e){count.textContent='Katalogni yuklab bo‘lmadi';grid.innerHTML=`<div class="empty-state"><b>Ma’lumot yuklanmadi</b><span>${esc(e.message)}</span></div>`}
 }
 
-function contactLink(icon,label,value,href){return value?`<a class="contact-row" href="${esc(href)}"><span class="contact-icon">${icon}</span><span><small>${label}</small><b>${esc(value)}</b></span><i>↗</i></a>`:''}
-async function loadDetail(slug){
-  document.getElementById('catalog-view').classList.add('hidden');document.getElementById('detail-view').classList.add('visible');const box=document.getElementById('organization-detail');
-  try{
-    const res=await fetch('/api/organizations/public/'+encodeURIComponent(slug)),row=await res.json();if(!res.ok)throw new Error(row.detail||'Tashkilot topilmadi');
-    document.title=`${row.name} — IELTS Mock SS`;document.documentElement.style.setProperty('--org-primary',row.primary_color||'#1a56e8');
-    const stats=row.students_count!==null||row.groups_count!==null?`<div class="detail-stats">${row.students_count!==null?`<div><b>${row.students_count}</b><span>O'quvchilar</span></div>`:''}${row.groups_count!==null?`<div><b>${row.groups_count}</b><span>Guruh / sinflar</span></div>`:''}</div>`:'';
-    const phoneIcon='<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3 5.2 2 2 0 0 1 5 3h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.4 2.1L9 11a16 16 0 0 0 4 4l1.4-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>';
-    const mailIcon='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
-    const mapIcon='<svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
-    const contacts=contactLink(phoneIcon,'Telefon',row.contact_phone,'tel:'+row.contact_phone)+contactLink(mailIcon,'Email',row.contact_email,'mailto:'+row.contact_email)+contactLink(mapIcon,'Manzil',row.address,'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(row.address));
-    const socials=[['Rasmiy sayt',row.website_url],['Telegram',row.telegram_url],['Instagram',row.instagram_url]].filter(x=>x[1]).map(x=>`<a class="button button-secondary" target="_blank" rel="noopener" href="${esc(x[1])}">${x[0]} ↗</a>`).join('');
-    const quotes=(row.testimonials||[]).length?`<section class="detail-panel testimonials-panel"><div class="section-label">$ feedback --published</div><h2>Tasdiqlangan fikrlar</h2><div class="testimonials">${row.testimonials.map(x=>`<article class="quote"><p>“${esc(x.content)}”</p><b>${esc(x.full_name)}</b><small>${esc(x.role)}</small></article>`).join('')}</div></section>`:'';
-    box.innerHTML=`<section class="organization-hero"><div class="organization-identity">${logoHtml(row,'detail')}<div><span class="type-badge">${typeIcon(row)}${typeLabel(row)}</span><h1>${esc(row.name)}</h1>${row.region?`<p>${esc(row.region)}</p>`:''}</div></div><div class="hero-watermark">${typeIcon(row)}</div></section>
-      <div class="detail-layout"><section class="detail-panel about-panel"><div class="section-label">$ organization --about</div><h2>Tashkilot haqida</h2><p class="about-copy">${esc(row.description||'Tashkilot haqida ma’lumot hali kiritilmagan.')}</p>${stats}${socials?`<div class="social-links">${socials}</div>`:''}</section>
-      <aside class="detail-panel contact-panel"><div class="section-label">$ contact --public</div><h2>Bog'lanish</h2><div class="contact-list">${contacts||'<div class="no-contact">Public aloqa ma’lumotlari ko‘rsatilmagan.</div>'}</div><a class="button button-primary profile-button" href="/profile">Profil / Kirish →</a></aside></div>${quotes}`;
-  }catch(e){box.innerHTML=`<div class="empty-state"><b>${esc(e.message)}</b><a class="button button-secondary" href="/organizations">Katalogga qaytish</a></div>`}
+function contactLink(icon,label,value,href){return value?`<a class="contact-row" href="${esc(href)}"${href.startsWith('http')?' target="_blank" rel="noopener"':''}><span class="contact-icon">${icon}</span><span><small>${label}</small><b>${esc(value)}</b></span><i>↗</i></a>`:''}
+
+function setOrganizationTheme(color){
+  const safe=/^#[0-9a-f]{6}$/i.test(color||'')?color:'#1a56e8';
+  const rgb=[1,3,5].map(index=>parseInt(safe.slice(index,index+2),16));
+  const accent=rgb.map((value,index)=>Math.round(value*.7+[124,58,237][index]*.3));
+  document.documentElement.style.setProperty('--org-primary',safe);
+  document.documentElement.style.setProperty('--org-rgb',rgb.join(','));
+  document.documentElement.style.setProperty('--org-accent',`rgb(${accent.join(',')})`);
 }
 
+function extractLogoColor(url){
+  if(!url)return;
+  const image=new Image();image.crossOrigin='anonymous';image.decoding='async';
+  image.onload=()=>{try{
+    const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;
+    const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(image,0,0,32,32);
+    const pixels=context.getImageData(0,0,32,32).data;let red=0,green=0,blue=0,weightTotal=0;
+    for(let index=0;index<pixels.length;index+=16){
+      const r=pixels[index],g=pixels[index+1],b=pixels[index+2],alpha=pixels[index+3];
+      const light=(r+g+b)/3,saturation=Math.max(r,g,b)-Math.min(r,g,b);
+      if(alpha<180||light>238||light<20||saturation<18)continue;
+      const weight=1+saturation/80;red+=r*weight;green+=g*weight;blue+=b*weight;weightTotal+=weight;
+    }
+    if(weightTotal>4){const hex=[red,green,blue].map(value=>Math.round(value/weightTotal).toString(16).padStart(2,'0')).join('');setOrganizationTheme('#'+hex)}
+  }catch(_){/* CORS mavjud bo'lmasa saqlangan brend rangi ishlatiladi. */}};
+  image.src=url;
+}
+
+function floatingStats(row){
+  const items=[];
+  if(row.students_count!==null&&row.students_count!==undefined)items.push([row.students_count,"O'quvchi"]);
+  if(row.groups_count!==null&&row.groups_count!==undefined)items.push([row.groups_count,row.organization_type==='school'?'Sinf / guruh':'Guruh']);
+  if(!items.length)return '<div class="hero-public-chip"><i></i> Public profil</div>';
+  return `<div class="hero-floating-stats">${items.map((item,index)=>`<div class="floating-stat" style="--float-delay:${index*.7}s"><b>${esc(item[0])}</b><span>${esc(item[1])}</span></div>`).join('')}</div>`;
+}
+
+function gallerySection(row){
+  const urls=Array.isArray(row.gallery_urls)?row.gallery_urls.filter(Boolean).slice(0,8):[];
+  if(!urls.length)return '';
+  const fallback=typeIcon(row);
+  return `<section class="gallery-panel detail-panel" aria-labelledby="organization-gallery-title">
+    <div class="gallery-heading"><div><div class="section-label">$ campus --gallery</div><h2 id="organization-gallery-title">Tashkilot muhiti</h2><p>Suratlarni chapga yoki o‘ngga suring.</p></div>
+      ${urls.length>1?`<div class="gallery-controls"><button type="button" onclick="moveGallery(-1)" aria-label="Oldingi surat">←</button><span id="gallery-position">01 / ${String(urls.length).padStart(2,'0')}</span><button type="button" onclick="moveGallery(1)" aria-label="Keyingi surat">→</button></div>`:''}
+    </div>
+    <div class="gallery-track" id="organization-gallery" tabindex="0" role="region" aria-roledescription="carousel" aria-label="${esc(row.name)} suratlari">
+      ${urls.map((url,index)=>`<figure class="gallery-slide" data-gallery-index="${index}"><div class="gallery-fallback">${fallback}<span>${esc(row.name)}</span></div><img src="${esc(url)}" alt="${esc(row.name)} — ${index+1}-surat" loading="${index?'lazy':'eager'}" draggable="false" onerror="this.closest('.gallery-slide').classList.add('image-error');this.remove()"><figcaption><span>${String(index+1).padStart(2,'0')}</span><b>${index===0?'Tashkilot binosi':index===1?'Ta’lim muhiti':'Tashkilot hayoti'}</b></figcaption></figure>`).join('')}
+    </div>
+    ${urls.length>1?`<div class="gallery-dots">${urls.map((_,index)=>`<button type="button" data-gallery-dot="${index}" onclick="goToGallery(${index})" aria-label="${index+1}-surat"${index===0?' class="active" aria-current="true"':''}></button>`).join('')}</div>`:''}
+  </section>`;
+}
+
+function currentGalleryIndex(){
+  const track=document.getElementById('organization-gallery');if(!track)return 0;
+  const slides=[...track.querySelectorAll('.gallery-slide')];
+  return slides.reduce((best,slide,index)=>Math.abs(slide.offsetLeft-track.scrollLeft)<Math.abs(slides[best].offsetLeft-track.scrollLeft)?index:best,0);
+}
+function updateGalleryPosition(){
+  const track=document.getElementById('organization-gallery');if(!track)return;
+  const slides=[...track.querySelectorAll('.gallery-slide')],index=currentGalleryIndex();
+  const output=document.getElementById('gallery-position');if(output)output.textContent=`${String(index+1).padStart(2,'0')} / ${String(slides.length).padStart(2,'0')}`;
+  document.querySelectorAll('[data-gallery-dot]').forEach((dot,dotIndex)=>{dot.classList.toggle('active',dotIndex===index);dot.toggleAttribute('aria-current',dotIndex===index)});
+}
+function goToGallery(index){const track=document.getElementById('organization-gallery'),slide=track?.querySelectorAll('.gallery-slide')[index];if(slide)track.scrollTo({left:slide.offsetLeft,behavior:'smooth'})}
+function moveGallery(direction){const track=document.getElementById('organization-gallery');if(!track)return;const count=track.querySelectorAll('.gallery-slide').length;goToGallery(Math.max(0,Math.min(count-1,currentGalleryIndex()+direction)))}
+
+function initializeGallery(){
+  const track=document.getElementById('organization-gallery');if(!track)return;
+  let frame=0,dragging=false,startX=0,startScroll=0;
+  track.addEventListener('scroll',()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(updateGalleryPosition)},{passive:true});
+  track.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'){event.preventDefault();moveGallery(-1)}if(event.key==='ArrowRight'){event.preventDefault();moveGallery(1)}});
+  track.addEventListener('pointerdown',event=>{if(event.pointerType!=='mouse'||event.button!==0)return;dragging=true;startX=event.clientX;startScroll=track.scrollLeft;track.classList.add('dragging');track.setPointerCapture(event.pointerId)});
+  track.addEventListener('pointermove',event=>{if(dragging)track.scrollLeft=startScroll-(event.clientX-startX)});
+  const stop=event=>{if(!dragging)return;dragging=false;track.classList.remove('dragging');if(track.hasPointerCapture(event.pointerId))track.releasePointerCapture(event.pointerId)};
+  track.addEventListener('pointerup',stop);track.addEventListener('pointercancel',stop);updateGalleryPosition();
+}
+
+function initializeHeroParallax(){
+  const hero=document.getElementById('organization-parallax');
+  if(!hero||matchMedia('(prefers-reduced-motion: reduce)').matches||!matchMedia('(pointer: fine)').matches)return;
+  hero.addEventListener('pointermove',event=>{const rect=hero.getBoundingClientRect(),x=(event.clientX-rect.left)/rect.width-.5,y=(event.clientY-rect.top)/rect.height-.5;hero.style.setProperty('--parallax-x',`${x*18}px`);hero.style.setProperty('--parallax-y',`${y*14}px`)});
+  hero.addEventListener('pointerleave',()=>{hero.style.setProperty('--parallax-x','0px');hero.style.setProperty('--parallax-y','0px')});
+}
+
+function renderOrganizationDetail(row){
+  const box=document.getElementById('organization-detail');
+  document.title=`${row.name} — IELTS Mock SS`;setOrganizationTheme(row.primary_color||'#1a56e8');
+  const phoneIcon='<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3 5.2 2 2 0 0 1 5 3h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.4 2.1L9 11a16 16 0 0 0 4 4l1.4-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>';
+  const mailIcon='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+  const mapIcon='<svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+  const contacts=contactLink(phoneIcon,'Telefon',row.contact_phone,'tel:'+row.contact_phone)+contactLink(mailIcon,'Email',row.contact_email,'mailto:'+row.contact_email)+contactLink(mapIcon,'Manzil',row.address,'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(row.address));
+  const socials=[['Rasmiy sayt',row.website_url],['Telegram',row.telegram_url],['Instagram',row.instagram_url]].filter(item=>item[1]).map(item=>`<a class="button button-secondary" target="_blank" rel="noopener" href="${esc(item[1])}">${item[0]} ↗</a>`).join('');
+  const quotes=(row.testimonials||[]).length?`<section class="detail-panel testimonials-panel"><div class="section-label">$ feedback --published</div><h2>Tasdiqlangan fikrlar</h2><div class="testimonials">${row.testimonials.map(item=>`<article class="quote"><p>“${esc(item.content)}”</p><b>${esc(item.full_name)}</b><small>${esc(item.role)}</small></article>`).join('')}</div></section>`:'';
+  box.innerHTML=`<section class="organization-hero" id="organization-parallax"><div class="hero-aurora" aria-hidden="true"></div><div class="organization-identity">${logoHtml(row,'detail')}<div><span class="type-badge">${typeIcon(row)}${typeLabel(row)}</span><h1>${esc(row.name)}</h1>${row.region?`<p>${esc(row.region)}</p>`:''}</div></div>${floatingStats(row)}<div class="hero-watermark">${typeIcon(row)}</div></section>
+    ${gallerySection(row)}
+    <div class="detail-layout"><section class="detail-panel about-panel"><div class="section-label">$ organization --about</div><h2>Tashkilot haqida</h2><p class="about-copy">${esc(row.description||'Tashkilot haqida ma’lumot hali kiritilmagan.')}</p>${socials?`<div class="social-links">${socials}</div>`:''}</section>
+    <aside class="detail-panel contact-panel"><div class="contact-glow" aria-hidden="true"></div><div class="section-label">$ contact --public</div><h2>Bog‘lanish</h2><div class="contact-list">${contacts||'<div class="no-contact">Public aloqa ma’lumotlari ko‘rsatilmagan.</div>'}</div><a class="button button-primary profile-button" href="/profile">Profil / Kirish →</a></aside></div>${quotes}`;
+  initializeGallery();initializeHeroParallax();extractLogoColor(row.logo_url);
+}
+
+async function loadDetail(slug){
+  document.getElementById('catalog-view').classList.add('hidden');document.getElementById('detail-view').classList.add('visible');const box=document.getElementById('organization-detail');
+  try{const res=await fetch('/api/organizations/public/'+encodeURIComponent(slug)),row=await res.json();if(!res.ok)throw new Error(row.detail||'Tashkilot topilmadi');renderOrganizationDetail(row)}
+  catch(error){box.innerHTML=`<div class="empty-state"><b>${esc(error.message)}</b><a class="button button-secondary" href="/organizations">Katalogga qaytish</a></div>`}
+}
+
+const previewOrganization={name:"Bo‘stonliq ITMA",organization_type:'school',description:"Bo‘stonliq tumanidagi zamonaviy ta’lim muhiti, IELTS tayyorgarligi va o‘quvchi natijalarini yagona platformada birlashtirgan ixtisoslashtirilgan maktab.",region:"Toshkent viloyati, Bo‘stonliq tumani",address:"G‘azalkent shahri, Birlik ko‘chasi 21-uy",logo_url:'/static/assets/site-logo-sd.png',primary_color:'#1a56e8',contact_email:'info@bustanlik-itma.uz',contact_phone:'+998 99 254 24 85',website_url:'https://ielts.sultanov.space',telegram_url:'https://t.me/ielts_mock_ss',instagram_url:null,students_count:486,groups_count:18,gallery_urls:['https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1400&q=85','https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1400&q=85','https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=85'],testimonials:[]};
+const params=new URLSearchParams(location.search),localPreview=params.get('preview')==='organization-wow'&&['','localhost','127.0.0.1'].includes(location.hostname);
 const match=decodeURIComponent(location.pathname).match(/^\/org\/([^/]+)\/?$/);
-if(match)loadDetail(match[1]);else{const initialType=new URLSearchParams(location.search).get('type');if(['school','learning_center'].includes(initialType)){currentType=initialType;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.type===initialType))}loadOrganizations()}
+if(localPreview){document.getElementById('catalog-view').classList.add('hidden');document.getElementById('detail-view').classList.add('visible');renderOrganizationDetail(previewOrganization)}
+else if(match)loadDetail(match[1]);else{const initialType=params.get('type');if(['school','learning_center'].includes(initialType)){currentType=initialType;document.querySelectorAll('.filter').forEach(item=>item.classList.toggle('active',item.dataset.type===initialType))}loadOrganizations()}
 </script>
 <script src="/static/support-chat.js"></script>
 </body>

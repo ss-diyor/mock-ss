@@ -3,7 +3,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from fastapi import HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 DEFAULT_PRIMARY_COLOR = "#1a56e8"
@@ -29,6 +29,7 @@ class BrandingUpdateIn(BaseModel):
     directory_website_url: Optional[str] = None
     directory_telegram_url: Optional[str] = None
     directory_instagram_url: Optional[str] = None
+    directory_gallery_urls: list[str] = Field(default_factory=list)
     directory_show_email: bool = False
     directory_show_phone: bool = False
     directory_show_address: bool = False
@@ -86,6 +87,19 @@ def validate_branding(data: BrandingUpdateIn) -> dict:
             if parsed.scheme != "https" or not parsed.netloc:
                 raise HTTPException(status_code=400, detail="Katalog havolalari HTTPS formatida bo'lishi kerak")
 
+    gallery_urls = []
+    if len(data.directory_gallery_urls) > 8:
+        raise HTTPException(status_code=400, detail="Galereyaga ko'pi bilan 8 ta surat qo'shish mumkin")
+    for raw_url in data.directory_gallery_urls:
+        url = clean_optional(raw_url, 800)
+        if not url:
+            continue
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or not parsed.netloc or any(char in url for char in ('"', "'", "<", ">", " ", "\n", "\r", "\t")):
+            raise HTTPException(status_code=400, detail="Galereya suratlari faqat to'g'ri HTTPS URL bo'lishi kerak")
+        if url not in gallery_urls:
+            gallery_urls.append(url)
+
     return {
         "brand_name": brand_name,
         "slug": slug,
@@ -100,6 +114,7 @@ def validate_branding(data: BrandingUpdateIn) -> dict:
         "directory_region": clean_optional(data.directory_region, 160),
         "directory_address": clean_optional(data.directory_address, 300),
         **directory_urls,
+        "directory_gallery_urls": gallery_urls,
         "directory_show_email": data.directory_show_email,
         "directory_show_phone": data.directory_show_phone,
         "directory_show_address": data.directory_show_address,
@@ -112,6 +127,10 @@ def validate_branding(data: BrandingUpdateIn) -> dict:
 def branding_payload(row) -> dict:
     organization_type = row["organization_type"] or "learning_center"
     fallback_name = "Maktab" if organization_type == "school" else "O'quv markazi"
+    try:
+        gallery_urls = list(row["directory_gallery_urls"] or [])
+    except (KeyError, TypeError):
+        gallery_urls = []
     return {
         "organization_id": row["id"],
         "organization_type": organization_type,
@@ -132,6 +151,7 @@ def branding_payload(row) -> dict:
         "directory_website_url": row["directory_website_url"],
         "directory_telegram_url": row["directory_telegram_url"],
         "directory_instagram_url": row["directory_instagram_url"],
+        "directory_gallery_urls": gallery_urls,
         "directory_show_email": row["directory_show_email"] is True,
         "directory_show_phone": row["directory_show_phone"] is True,
         "directory_show_address": row["directory_show_address"] is True,

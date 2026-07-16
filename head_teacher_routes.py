@@ -38,6 +38,7 @@ async def get_center(current_user: dict = Depends(get_current_head_teacher)):
                    directory_opt_in, directory_admin_override, directory_description,
                    directory_region, directory_address, directory_website_url,
                    directory_telegram_url, directory_instagram_url, directory_show_email,
+                   directory_gallery_urls,
                    directory_show_phone, directory_show_address, directory_show_statistics,
                    directory_show_testimonials
             FROM centers WHERE id=$1
@@ -88,16 +89,18 @@ async def update_center_branding(
                 brand_contact_phone=$8, show_powered_by=$9,
                 directory_opt_in=$10, directory_description=$11, directory_region=$12,
                 directory_address=$13, directory_website_url=$14, directory_telegram_url=$15,
-                directory_instagram_url=$16, directory_show_email=$17,
-                directory_show_phone=$18, directory_show_address=$19,
-                directory_show_statistics=$20, directory_show_testimonials=$21
-            WHERE id=$22
+                directory_instagram_url=$16, directory_gallery_urls=$17,
+                directory_show_email=$18, directory_show_phone=$19,
+                directory_show_address=$20, directory_show_statistics=$21,
+                directory_show_testimonials=$22
+            WHERE id=$23
             RETURNING id, name, organization_type, slug, brand_name, brand_primary_color,
                       brand_secondary_color, brand_logo_url, brand_favicon_url,
                       brand_contact_email, brand_contact_phone, show_powered_by,
                       directory_opt_in, directory_admin_override, directory_description,
                       directory_region, directory_address, directory_website_url,
-                      directory_telegram_url, directory_instagram_url, directory_show_email,
+                      directory_telegram_url, directory_instagram_url, directory_gallery_urls,
+                      directory_show_email,
                       directory_show_phone, directory_show_address, directory_show_statistics,
                       directory_show_testimonials
             """,
@@ -106,7 +109,8 @@ async def update_center_branding(
             values["brand_contact_email"], values["brand_contact_phone"], values["show_powered_by"],
             values["directory_opt_in"], values["directory_description"], values["directory_region"],
             values["directory_address"], values["directory_website_url"], values["directory_telegram_url"],
-            values["directory_instagram_url"], values["directory_show_email"],
+            values["directory_instagram_url"], values["directory_gallery_urls"],
+            values["directory_show_email"],
             values["directory_show_phone"], values["directory_show_address"],
             values["directory_show_statistics"], values["directory_show_testimonials"],
             current_user["center_id"]

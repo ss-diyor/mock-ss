@@ -103,7 +103,7 @@
     state.view = 'new'; state.selectedId = null;
     setTabs();
     const body = document.querySelector('.sc-body');
-    body.innerHTML = `<div class="sc-welcome"><strong>Assalomu alaykum! 👋</strong>Savolingizni yozing. Murojaat saqlanadi va admin javob berganda shu yerda ko'rinadi.</div>
+    body.innerHTML = `<div class="sc-welcome"><strong>Assalomu alaykum! </strong>Savolingizni yozing. Murojaat saqlanadi va admin javob berganda shu yerda ko'rinadi.</div>
       <form class="sc-form" id="sc-new-form">${profileFields()}
         <div class="sc-field"><label>Mavzu</label><select id="sc-category">${Object.entries(categories).map(([value,label]) => `<option value="${value}">${label}</option>`).join('')}</select></div>
         <div class="sc-field"><label>Xabaringiz</label><textarea id="sc-message" maxlength="3000" required placeholder="Muammoni imkon qadar aniq yozing..."></textarea></div>

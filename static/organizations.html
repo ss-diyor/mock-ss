@@ -76,7 +76,8 @@ const typeIcon=row=>row.organization_type==='school'
   : '<svg viewBox="0 0 24 24"><path d="M5 21V3h14v18M2 21h20M9 7h.01M15 7h.01M9 11h.01M15 11h.01M10 21v-4h4v4"/></svg>';
 
 function logoHtml(row,size='card'){
-  const image=row.logo_url?`<img src="${esc(row.logo_url)}" alt="${esc(row.name)} logosi" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span hidden>${esc(initials(row.name))}</span>`:`<span>${esc(initials(row.name))}</span>`;
+  const handleError="this.parentElement.querySelectorAll('img').forEach(image=>image.hidden=true);this.parentElement.querySelector('span').hidden=false";
+  const image=row.logo_url?`<img class="organization-logo-fill" src="${esc(row.logo_url)}" alt="" aria-hidden="true" onerror="${handleError}"><img class="organization-logo-main" src="${esc(row.logo_url)}" alt="${esc(row.name)} logosi" onerror="${handleError}"><span hidden>${esc(initials(row.name))}</span>`:`<span>${esc(initials(row.name))}</span>`;
   return `<div class="organization-logo ${size==='detail'?'logo-detail':'card'}" style="--brand:${esc(row.primary_color||'#1a56e8')}">${image}</div>`;
 }
 function setType(type,button){currentType=type;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x===button));loadOrganizations()}

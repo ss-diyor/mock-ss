@@ -6,6 +6,7 @@
 <title>Teacher Panel — IELTS Mock SS</title>
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/role-profile.css">
 <style>
 :root {
   --blue:       #1a56e8;
@@ -82,7 +83,7 @@ input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,232,0.
 .badge.warning { background: var(--amber-light); color: var(--amber); }
 .badge.muted   { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
 
-.wrap { max-width: 900px; margin: 32px auto 80px; padding: 0 24px; }
+.wrap { max-width: 1120px; margin: 32px auto 80px; padding: 0 24px; }
 
 .dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 24px; }
 .dash-stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
@@ -141,6 +142,7 @@ table.students-table tr.clickable:hover { background: var(--bg); }
 .history-band { font-family: var(--mono); font-weight: 700; color: var(--blue); }
 </style>
 <script src="/static/notification-center.js"></script>
+<script src="/static/js/role-profile.js"></script>
 </head>
 <body>
 
@@ -198,9 +200,10 @@ table.students-table tr.clickable:hover { background: var(--bg); }
 <div class="view" id="view-dashboard">
   <div class="wrap">
     <p style="font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:8px;">$ teacher --dashboard</p>
-    <h2 id="group-title" style="font-size:22px; font-weight:800; margin-bottom:20px;"></h2>
+    <div id="teacher-profile-hero"></div>
+    <h2 id="group-title" style="display:none"></h2>
 
-    <div class="dash-stats" id="overview-stats"></div>
+    <div class="dash-stats" id="overview-stats" style="display:none"></div>
 
     <div class="dash-section">
       <div class="dash-section-head"><span>$ talaba --invite-code</span></div>
@@ -379,6 +382,27 @@ async function loadGroup() {
   try {
     const g = await apiCall(T_API, '/group');
     applyBranding(g.branding);
+    let teacherStats = {total_attempts: 0, average_band_by_section: {}, weakest_section: null};
+    try { teacherStats = await apiCall(T_API, '/stats'); } catch (_) {}
+    window.RoleProfileUI?.render('#teacher-profile-hero', {
+      user: {...currentUser, role_label: "O'qituvchi"},
+      accent: g.branding?.primary_color || '#1a56e8',
+      avatarId: 'teacher-premium-avatar',
+      onAvatarEdit: () => { location.href = '/profile'; },
+      stats: [
+        {value: g.students_count, label: "O'quvchilar"},
+        {value: teacherStats.total_attempts || 0, label: 'Guruh urinishlari'},
+        {value: Object.keys(teacherStats.average_band_by_section || {}).length, label: "Baholangan bo'limlar"},
+        {value: teacherStats.weakest_section || '—', label: 'Rivojlantirish bo‘limi'}
+      ],
+      context: {
+        kicker: g.branding?.organization_type === 'school' ? 'Maktab' : "O'quv markazi",
+        title: g.branding?.brand_name || 'IELTS Mock SS',
+        logo_url: g.branding?.logo_url || '/static/assets/site-logo-sd.png',
+        meta: [{label: 'Guruh', value: g.name}, {label: "O'quvchilar", value: g.students_count}],
+        actions: [{href: '/profile', label: 'Profilni tahrirlash'}, {href: '/tests', label: 'Testlar'}]
+      }
+    });
     document.getElementById('group-title').textContent = g.name;
     document.getElementById('overview-stats').innerHTML = `
       <div class="dash-stat-card"><div class="dash-stat-num">${g.students_count}</div><div class="dash-stat-label">Talabalar</div></div>

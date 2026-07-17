@@ -6,6 +6,7 @@
 <title>Profil — IELTS Mock SS</title>
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/role-profile.css">
 <style>
 :root {
   --blue:       #1a56e8;
@@ -119,11 +120,12 @@ textarea { resize: vertical; min-height: 80px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* DASHBOARD */
-.dash-wrap { max-width: 760px; margin: 48px auto 80px; padding: 0 24px; }
+.dash-wrap { max-width: 1120px; margin: 38px auto 80px; padding: 0 24px; }
 .profile-header {
   background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
   padding: 28px; display: flex; align-items: center; gap: 22px; margin-bottom: 24px; flex-wrap: wrap;
 }
+.profile-header, #dash-stats { display: none !important; }
 .avatar-wrap { position: relative; width: 88px; height: 88px; flex-shrink: 0; }
 .avatar-img {
   width: 88px; height: 88px; border-radius: 24px; object-fit: cover;
@@ -245,6 +247,7 @@ textarea { resize: vertical; min-height: 80px; }
 }
 </style>
 <script src="/static/notification-center.js"></script>
+<script src="/static/js/role-profile.js"></script>
 </head>
 <body>
 
@@ -334,6 +337,8 @@ textarea { resize: vertical; min-height: 80px; }
       <span>⚠ Email tasdiqlanmagan</span>
       <button id="resend-verify-btn" onclick="openVerifyModal()">Tasdiqlash</button>
     </div>
+
+    <div id="role-profile-hero"></div>
 
     <div class="profile-header">
       <div class="avatar-wrap">
@@ -754,6 +759,42 @@ async function doRegister() {
 }
 
 // ─── DASHBOARD RENDER ─────────────────────────────────────
+let roleProfileStats = [
+  { value: '—', label: 'Umumiy band' },
+  { value: '—', label: 'Urinishlar' },
+  { value: '—', label: "Topshirilgan bo'lim" }
+];
+
+function renderRoleProfileHero() {
+  const roles = {
+    student: "O'quvchi", teacher: "O'qituvchi", school_staff: 'Maktab xodimi',
+    head_teacher: "O'quv markazi rahbari", director: 'Maktab direktori', admin: 'Super-admin'
+  };
+  const destinations = {
+    student: ['/tests', 'Testlarni ochish'], teacher: ['/teacher', "O'qituvchi paneli"],
+    school_staff: ['/school-staff', 'Xodim paneli'], head_teacher: ['/leader-profile', 'Rahbar profili'],
+    director: ['/leader-profile', 'Direktor profili'], admin: ['/admin', 'Admin paneli']
+  };
+  const destination = destinations[currentUser.role] || ['/tests', 'Testlarni ochish'];
+  window.RoleProfileUI?.render('#role-profile-hero', {
+    user: {...currentUser, role_label: roles[currentUser.role] || 'Foydalanuvchi'},
+    avatarId: 'premium-profile-avatar',
+    onAvatarEdit: openAvatarPicker,
+    stats: roleProfileStats,
+    statsId: 'premium-profile-stats',
+    context: {
+      kicker: currentUser.organization_type === 'school' ? 'Maktab' : currentUser.organization_type === 'learning_center' ? "O'quv markazi" : 'IELTS Mock SS',
+      title: currentUser.organization_name || 'Shaxsiy kabinet',
+      logo_url: '/static/assets/site-logo-sd.png',
+      meta: [
+        {label: 'Rol', value: roles[currentUser.role] || currentUser.role},
+        {label: 'Holat', value: currentUser.email_verified ? 'Tasdiqlangan' : 'Tasdiqlash kutilmoqda'}
+      ],
+      actions: [{href: destination[0], label: destination[1], primary: true}, {href: '/', label: 'Bosh sahifa'}]
+    }
+  });
+}
+
 function renderDashboard() {
   showView('view-dashboard');
   document.getElementById('profile-fullname').textContent = currentUser.full_name;
@@ -775,6 +816,7 @@ function renderDashboard() {
   document.getElementById('referral-link').value = window.location.origin + '/?ref=' + (currentUser.referral_code || '');
 
   document.getElementById('verify-banner').style.display = currentUser.email_verified ? 'none' : 'flex';
+  renderRoleProfileHero();
   window.NotificationCenter?.mount({ target: document.querySelector('nav'), getToken: () => token });
 }
 
@@ -898,6 +940,14 @@ async function loadDashboardStats() {
       <div class="dash-stat-card"><div class="dash-stat-num">${data.overview.total_attempts}</div><div class="dash-stat-label">Urinishlar</div></div>
       <div class="dash-stat-card"><div class="dash-stat-num">${data.overview.completed_sections}</div><div class="dash-stat-label">Topshirilgan bo'lim</div></div>
     `;
+
+    roleProfileStats = [
+      {value: bandDisplay, label: 'Umumiy band'},
+      {value: data.overview.total_attempts, label: 'Urinishlar'},
+      {value: data.overview.completed_sections, label: "Topshirilgan bo'lim"}
+    ];
+    renderRoleProfileHero();
+    statsEl.style.display = 'none';
 
     const sectionLabels = { listening: 'Listening', reading: 'Reading', writing: 'Writing', speaking: 'Speaking' };
     const sectionCardsEl = document.getElementById('section-status-cards');

@@ -33,7 +33,7 @@
     .profile-card { margin-top:28px;background:rgba(255,255,255,.88);border:1px solid var(--line);border-radius:25px;padding:28px;display:flex;align-items:center;gap:22px;box-shadow:0 24px 70px rgba(43,80,150,.12);backdrop-filter:blur(18px); }
     .profile-avatar { width:104px;height:104px;border-radius:31px;padding:5px;background:linear-gradient(145deg,#fff,#d9e6ff);box-shadow:0 16px 32px rgba(36,99,235,.16);position:relative;flex:0 0 auto; }
     .profile-avatar img { width:100%;height:100%;display:block;border-radius:26px;object-fit:cover; }
-    .liquid-avatar { width:100%;height:100%;display:block;border-radius:inherit;background-image:url('/static/assets/avatars/liquid-glass-education-icons.png');background-repeat:no-repeat;background-size:500% 300%;background-color:#f7faff; }
+    .liquid-avatar { width:100%;height:100%;display:block;border-radius:inherit;object-fit:cover;background:#f7faff; }
     .edit-dot { position:absolute;right:-5px;bottom:-5px;width:34px;height:34px;border:4px solid white;border-radius:12px;background:var(--blue);color:white;display:grid;place-items:center;font-size:14px; }
     .profile-copy h2 { margin:4px 0 5px;font-size:26px;letter-spacing:-.025em; }
     .profile-copy p { margin:0;color:var(--muted);font:600 12px/1.6 "IBM Plex Mono",Consolas,monospace; }
@@ -130,15 +130,18 @@
   <div class="toast" id="toast">✓ Avatar tanlandi</div>
 
   <script>
-    const avatars = ['Profil','Kitob','Listening','Speaking','Writing','Reading','Maktab','Tillar','Yutuq','Vazifalar','Muloqot','Vaqt','Natijalar','G‘oya','To‘rt bo‘lim'];
+    const avatars = [
+      ['Profil','01-profile.png'],['Kitob','02-book.png'],['Listening','03-listening.png'],['Speaking','04-speaking.png'],['Writing','05-writing.png'],
+      ['Reading','06-reading.png'],['Maktab','07-school.png'],['Tillar','08-languages.png'],['Yutuq','09-trophy.png'],['Vazifalar','10-checklist.png'],
+      ['Muloqot','11-chat.png'],['Vaqt','12-stopwatch.png'],['Natijalar','13-progress.png'],['G‘oya','14-idea.png'],['To‘rt bo‘lim','15-four-sections.png']
+    ];
     let selected = 0, activeMode = 'collection', uploadedData = '';
     function avatarSprite(i){
-      const x=(i%5)*25;
-      const y=Math.floor(i/5)*50;
-      return `<span class="liquid-avatar" role="img" aria-label="${avatars[i]}" style="background-position:${x}% ${y}%"></span>`;
+      const [label,filename]=avatars[i];
+      return `<img class="liquid-avatar" src="/static/assets/avatars/liquid-glass/${filename}" alt="${label}">`;
     }
     const grid=document.getElementById('avatar-grid');
-    avatars.forEach((name,i)=>{const b=document.createElement('button');b.className='avatar-option'+(i===0?' selected':'');b.setAttribute('aria-label',name);b.title=name;b.innerHTML=avatarSprite(i)+'<span class="check">✓</span>';b.onclick=()=>selectAvatar(i);grid.appendChild(b)});
+    avatars.forEach(([name],i)=>{const b=document.createElement('button');b.className='avatar-option'+(i===0?' selected':'');b.setAttribute('aria-label',name);b.title=name;b.innerHTML=avatarSprite(i)+'<span class="check">✓</span>';b.onclick=()=>selectAvatar(i);grid.appendChild(b)});
     function selectAvatar(i){selected=i;uploadedData='';document.querySelectorAll('.avatar-option').forEach((e,n)=>e.classList.toggle('selected',n===i));}
     function switchTab(tab){activeMode=tab;document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('active',e.dataset.tab===tab));document.getElementById('collection-panel').style.display=tab==='collection'?'block':'none';document.getElementById('upload-panel').style.display=tab==='upload'?'block':'none';}
     function openPicker(){document.getElementById('overlay').style.display='grid';}

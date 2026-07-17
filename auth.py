@@ -8,6 +8,7 @@ import jwt
 import hashlib
 import hmac
 import time
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Depends
 from fastapi.responses import Response
@@ -36,6 +37,24 @@ JWT_EXPIRE_DAYS = 30
 
 USERNAME_RE = re.compile(r"^[a-z0-9_]{3,20}$")
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
+PRESET_AVATAR_DIR = Path(__file__).resolve().parent / "static" / "assets" / "avatars" / "liquid-glass"
+PRESET_AVATARS = {
+    "profile": "01-profile.png",
+    "book": "02-book.png",
+    "listening": "03-listening.png",
+    "speaking": "04-speaking.png",
+    "writing": "05-writing.png",
+    "reading": "06-reading.png",
+    "school": "07-school.png",
+    "languages": "08-languages.png",
+    "trophy": "09-trophy.png",
+    "checklist": "10-checklist.png",
+    "chat": "11-chat.png",
+    "stopwatch": "12-stopwatch.png",
+    "progress": "13-progress.png",
+    "idea": "14-idea.png",
+    "four-sections": "15-four-sections.png",
+}
 
 VERIFICATION_CODE_TTL_MINUTES = 15
 VERIFICATION_RESEND_COOLDOWN_SECONDS = 60
@@ -175,6 +194,10 @@ class ProfileUpdateIn(BaseModel):
     full_name: Optional[str] = None
     bio: Optional[str] = None
     telegram_chat_id: Optional[str] = None
+
+
+class PresetAvatarIn(BaseModel):
+    avatar_id: str
 
 
 class VerifyEmailIn(BaseModel):
@@ -857,6 +880,32 @@ async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depen
         )
 
     return {"avatar_url": f"/api/auth/avatar/{current_user['username']}"}
+
+
+@router.post("/avatar/preset")
+async def select_preset_avatar(data: PresetAvatarIn, current_user: dict = Depends(get_current_user)):
+    avatar_id = data.avatar_id.strip().lower()
+    filename = PRESET_AVATARS.get(avatar_id)
+    if not filename:
+        raise HTTPException(status_code=400, detail="Tanlangan avatar mavjud emas")
+
+    avatar_path = PRESET_AVATAR_DIR / filename
+    try:
+        avatar_bytes = avatar_path.read_bytes()
+    except OSError:
+        raise HTTPException(status_code=500, detail="Avatar faylini yuklab bo'lmadi")
+
+    db = await get_pool()
+    async with db.acquire() as conn:
+        await conn.execute(
+            "UPDATE users SET avatar_data=$1, avatar_mime='image/png' WHERE id=$2",
+            avatar_bytes, current_user["id"]
+        )
+
+    return {
+        "avatar_id": avatar_id,
+        "avatar_url": f"/api/auth/avatar/{current_user['username']}"
+    }
 
 
 @router.get("/avatar/{username}")

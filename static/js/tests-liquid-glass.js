@@ -1,5 +1,25 @@
 (function(){
   const finePointer=window.matchMedia('(hover:hover) and (pointer:fine)');
+  const reducedMotion=window.matchMedia('(prefers-reduced-motion:reduce)');
+  function revealCards(root){
+    const cards=root.querySelectorAll('.card');
+    cards.forEach((card,index)=>{
+      card.style.setProperty('--glass-enter-index',String(index));
+      if(reducedMotion.matches)return;
+      card.classList.add('glass-card-enter');
+      card.addEventListener('animationend',()=>card.classList.remove('glass-card-enter'),{once:true});
+    });
+  }
+  function observeCatalog(){
+    const grid=document.getElementById('tests-grid')||document.querySelector('.grid');
+    if(!grid)return;
+    revealCards(grid);
+    new MutationObserver(mutations=>{
+      if(mutations.some(mutation=>mutation.addedNodes.length))revealCards(grid);
+    }).observe(grid,{childList:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeCatalog,{once:true});
+  else observeCatalog();
   document.addEventListener('pointermove',event=>{
     if(!finePointer.matches)return;
     const card=event.target.closest('.card');

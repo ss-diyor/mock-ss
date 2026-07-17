@@ -238,6 +238,18 @@ async def startup():
             )
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS partners_public_idx ON partners(status, featured DESC, sort_order, published_at DESC)")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS site_settings (
+                setting_key TEXT PRIMARY KEY,
+                enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """)
+        await conn.execute("""
+            INSERT INTO site_settings(setting_key, enabled)
+            VALUES ('landing_trust_stats', TRUE)
+            ON CONFLICT(setting_key) DO NOTHING
+        """)
         default_faqs = [
             ("tests", "Testlarni qanday boshlayman?", "Ro'yxatdan o'ting yoki profilingizga kiring, Testlar sahifasidan kerakli mock testni tanlang va Full mock yoki Practice rejimini boshlang.", 10),
             ("tests", "Full mock va Practice rejimlari o'rtasidagi farq nima?", "Full mock Listening, Reading, Writing va Speaking bo'limlarini ketma-ket topshiradi. Practice rejimida esa faqat kerakli bo'limni tanlaysiz.", 20),
@@ -274,6 +286,10 @@ class OrganizationApplicationIn(BaseModel):
     student_count: Optional[int] = None
     message: Optional[str] = None
     website: Optional[str] = None
+
+
+class SiteSettingUpdateIn(BaseModel):
+    enabled: bool
 
 
 class OrganizationApplicationReviewIn(BaseModel):
@@ -420,6 +436,17 @@ async def public_platform_stats():
             """
         )
     return dict(row)
+
+
+@app.get("/api/public/site-settings")
+async def public_site_settings():
+    """Landing uchun faqat ommaga taalluqli ko'rinish sozlamalari."""
+    db = await get_pool()
+    async with db.acquire() as conn:
+        enabled = await conn.fetchval(
+            "SELECT enabled FROM site_settings WHERE setting_key='landing_trust_stats'"
+        )
+    return {"landing_trust_stats": True if enabled is None else bool(enabled)}
 
 
 def build_result_email(name: str, section: str, score, total, band, feedback=None) -> str:
@@ -1327,6 +1354,35 @@ def check_admin(secret: str):
 
 def require_admin(x_admin_secret: str = Header("", alias="X-Admin-Secret")):
     check_admin(x_admin_secret)
+
+
+@app.get("/api/admin/site-settings")
+async def admin_site_settings(_: None = Depends(require_admin)):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        enabled = await conn.fetchval(
+            "SELECT enabled FROM site_settings WHERE setting_key='landing_trust_stats'"
+        )
+    return {"landing_trust_stats": True if enabled is None else bool(enabled)}
+
+
+@app.put("/api/admin/site-settings/landing-trust-stats")
+async def update_landing_trust_stats(
+    data: SiteSettingUpdateIn,
+    _: None = Depends(require_admin),
+):
+    db = await get_pool()
+    async with db.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO site_settings(setting_key, enabled, updated_at)
+            VALUES ('landing_trust_stats', $1, NOW())
+            ON CONFLICT(setting_key)
+            DO UPDATE SET enabled=EXCLUDED.enabled, updated_at=NOW()
+            """,
+            data.enabled,
+        )
+    return {"ok": True, "landing_trust_stats": data.enabled}
 
 
 @app.get("/api/admin/notifications")

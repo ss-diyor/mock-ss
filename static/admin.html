@@ -255,6 +255,19 @@ table.users-table .u-email{font-family:var(--mono);font-size:12px;color:var(--mu
 
   <!-- STATS SECTION -->
   <div class="section-view" id="section-stats">
+    <div class="form-card" style="margin-bottom:18px;overflow:hidden">
+      <div class="form-card-head">$ landing --visibility</div>
+      <div class="form-card-body" style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:800;font-size:15px">Ishonch ko'rsatkichlari</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:5px">Landing sahifadagi o'quvchilar, ishlangan testlar, maktablar va o'quv markazlari soni.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge" id="trust-visibility-label">Yuklanmoqda</span>
+          <button class="btn-outline btn-sm" id="trust-visibility-btn" type="button" onclick="toggleTrustStatsVisibility()" disabled>…</button>
+        </div>
+      </div>
+    </div>
     <div class="stats-row" id="dashboard-stats-row"></div>
     <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;">
       <div style="flex:1;min-width:300px;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border);">
@@ -633,7 +646,7 @@ function switchSection(which) {
   if (document.getElementById('section-subscriptions')) document.getElementById('section-subscriptions').classList.toggle('active', which === 'subscriptions');
 
   if (which === 'users') loadUsers();
-  if (which === 'stats') loadStats();
+  if (which === 'stats') { loadStats(); loadTrustStatsVisibility(); }
   if (which === 'centers') loadCenters();
   if (which === 'applications') loadOrganizationApplications();
   if (which === 'support') loadSupportTickets();
@@ -651,6 +664,50 @@ function openAdminBuilder() {
 }
 
 let charts = {};
+let landingTrustStatsVisible = true;
+
+async function loadTrustStatsVisibility() {
+  const label = document.getElementById('trust-visibility-label');
+  const button = document.getElementById('trust-visibility-btn');
+  if (!label || !button) return;
+  button.disabled = true;
+  try {
+    const response = await adminFetch('/api/admin/site-settings');
+    const settings = await response.json();
+    if (!response.ok) throw new Error(settings.detail || 'Sozlama yuklanmadi');
+    landingTrustStatsVisible = settings.landing_trust_stats !== false;
+    label.textContent = landingTrustStatsVisible ? '● Ko\'rinmoqda' : '○ Yashirilgan';
+    label.className = `badge ${landingTrustStatsVisible ? 'green' : 'orange'}`;
+    button.textContent = landingTrustStatsVisible ? 'Yashirish' : 'Qayta ko\'rsatish';
+  } catch (error) {
+    label.textContent = 'Sozlama yuklanmadi';
+    label.className = 'badge orange';
+    button.textContent = 'Qayta urinish';
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function toggleTrustStatsVisibility() {
+  const button = document.getElementById('trust-visibility-btn');
+  if (!button) return;
+  button.disabled = true;
+  try {
+    const response = await adminFetch('/api/admin/site-settings/landing-trust-stats', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({enabled: !landingTrustStatsVisible})
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'Sozlama saqlanmadi');
+    landingTrustStatsVisible = data.landing_trust_stats !== false;
+    await loadTrustStatsVisibility();
+  } catch (error) {
+    alert(error.message);
+    button.disabled = false;
+  }
+}
+
 async function loadStats() {
   try {
     const res = await adminFetch('/api/admin/stats');

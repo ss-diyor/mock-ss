@@ -193,6 +193,7 @@ nav {
 }
 
 .trust-section { padding: 5px 0 0; }
+.trust-section[hidden] { display: none; }
 .trust-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
 .trust-head h2 { margin-top: 5px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.8px; }
 .trust-kicker { color: var(--blue); font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
@@ -931,7 +932,7 @@ footer {
       </div>
     </section>
 
-    <section class="trust-section" aria-labelledby="trust-title">
+    <section class="trust-section" id="trust-section" aria-labelledby="trust-title" hidden>
       <div class="trust-head">
         <div><p class="trust-kicker">$ platform --live</p><h2 id="trust-title">Ishonch ko'rsatkichlari</h2></div>
         <span class="trust-status" id="trust-status">Haqiqiy ma'lumotlar</span>
@@ -1596,7 +1597,22 @@ async function loadPublicStats() {
     status.classList.add('unavailable');
   }
 }
-loadPublicStats();
+
+async function loadTrustSection() {
+  const section = document.getElementById('trust-section');
+  if (!section) return;
+  try {
+    const response = await fetch('/api/public/site-settings');
+    if (!response.ok) throw new Error('Sozlama yuklanmadi');
+    const settings = await response.json();
+    if (settings.landing_trust_stats === false) return;
+  } catch (_) {
+    // Sozlama endpointi vaqtincha ishlamasa, mavjud landing ma'lumotlarini yashirmaymiz.
+  }
+  section.hidden = false;
+  loadPublicStats();
+}
+loadTrustSection();
 
 function testimonialInitials(name) {
   return String(name || 'F').trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('').toUpperCase() || 'F';
